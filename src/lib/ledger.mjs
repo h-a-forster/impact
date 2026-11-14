@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { matchesAny, ROUTES } from "./classifier.mjs";
 import { DATA } from "./paths.mjs";
+import { contestClaims } from "./claims.mjs";
 
 const TIETO = path.join(DATA, "tieto");
 const short = (sha) => (sha ?? "").slice(0, 7);
@@ -109,6 +110,19 @@ function rowView(row, stage) {
     findings: row.findings ?? [],
     refusals: row.refusals ?? [],
   };
+}
+
+/**
+ * The pack's findings in the shape contestClaims reads. A finding is linked to the rows it is filed against
+ * (either side may record the link) and covers the lines it cites plus the lines of those rows.
+ */
+function disputesOf(pack, rows) {
+  const span = (l) => ({ file: l.file, line: l.line, endLine: l.end_line ?? l.line, side: l.side });
+  return pack.findings.map((f) => {
+    const rowIds = [...new Set([...(f.rows ?? []), ...rows.filter((r) => r.findings.includes(f.id)).map((r) => r.id)])];
+    const filedOn = rows.filter((r) => rowIds.includes(r.id) && r.location).map((r) => span(r.location));
+    return { id: f.id, category: f.severity === "important" ? "Important" : "Minor", title: f.title, kind: f.kind, rowIds, spans: [...(f.refs ?? []).map(span), ...filedOn] };
+  });
 }
 
 export function buildLedgerModel(pr, key) {
@@ -223,8 +237,10 @@ export function buildLedgerModel(pr, key) {
     kind: r.type, label: CLAIM_LABEL[r.state],
     reason: `${r.why}${r.state === "proven" && r.proof === "changed" ? " The check fails before the change and passes after it." : r.state === "proven" && r.proof === "held" ? " The check passes before and after: the statement held; this does not show the change caused it." : ""}`,
     missing: r.wouldResolve, link: { kind: "row", rowId: r.id },
+    where: r.location ? { file: r.location.file, line: r.location.line, endLine: r.location.end_line, side: r.location.side } : null,
+    clauseKind: r.type === "requirement" ? pack.requirement.clauses.find((c) => c.id === r.id)?.kind ?? null : null,
   });
-  const claims = [...rows.filter((r) => r.type === "requirement"), ...rows.filter((r) => r.type === "claim")].map(labelRow);
+  const claims = contestClaims([...rows.filter((r) => r.type === "requirement"), ...rows.filter((r) => r.type === "claim")].map(labelRow), disputesOf(pack, rows));
 
   // ---- Classifiers: read, not recomputed ----
   const f1 = factory.classifier_1;
