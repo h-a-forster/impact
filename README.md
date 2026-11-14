@@ -109,12 +109,15 @@ much ("wide"). What they touched is the zone a fix can reasonably reach. The rea
 - **Maths:** `src/lib/blast.mjs`, served by `GET /api/blast?pr=<id>`. Functions are found by a
   simple reader of the C# text, the same way for all 4 changes. Callers come from the saved
   Graphify run and the recorded compiler data; code they do not cover shows "not known".
-- **Trust label rule.** Look at product code only (not docs, not unit tests): the files the real
-  change touches and the functions it edits that already existed.
+- **File level.** The picture and the main table show files: one box and one row per file, with
+  lines added and removed per change. Function numbers, reach and overlap sit in a fold.
+- **Trust label rule.** Look at the product code files the real change touches (not docs, not
+  unit tests).
   1. No agent touched one of them: "Touches code no agent touched".
   2. Else, only the wide agent touched one of them: "Touches more than needed".
   3. Else: "Inside the expected zone".
-  New functions are not scored. The other 3 PRs have no runs and say so.
+  Docs, unit test files and functions are not scored. They are named in the line under the
+  label. The other 3 PRs have no runs and say so.
 
 ## What is real, what is recorded, what is rule-based
 

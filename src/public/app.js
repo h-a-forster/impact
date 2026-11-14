@@ -529,14 +529,14 @@ function blastBox(x) {
   const tags = [
     x.by.real ? `<span class="btag real">REAL CHANGE</span>` : "",
     x.agents === 3 ? `<span class="btag all">ALL 3 AGENTS</span>` : "",
-    x.isNew ? `<span class="btag">NEW</span>` : "",
     x.kind === "test" ? `<span class="btag">UNIT TEST</span>` : x.kind === "doc" ? `<span class="btag">DOC</span>` : "",
   ].join("");
   const sel = state.sel?.type === "blast" && state.sel.id === x.id;
   return `<button type="button" class="bbox${x.by.real ? " real" : ""}${sel ? " selected" : ""}" data-blast="${esc(x.id)}" title="${esc(x.sub)}">
-    <span class="bbox-label">${esc(x.label)}</span><span class="bbox-sub"><bdi>${esc(x.sub)}</bdi></span>
+    <span class="bbox-label">${esc(x.label)}</span>
     <span class="bbox-foot"><span class="pips">${blastPips(x.by)}</span>${tags}</span></button>`;
 }
+// The tab works at file level only: one box and one table row per file. Function numbers sit in a fold.
 function renderBlast() {
   const el = $("blastView"), b = state.blast[state.prId];
   if (!b) {
@@ -551,83 +551,70 @@ function renderBlast() {
     el.innerHTML = `<p class="blast-what">We give the same task to 3 agents: one careful, one normal, one that changes too much. What they touch is the "blast radius" of the task. Then we lay the real change over it.</p><div class="callout info">${esc(b.message)}</div>`;
     return;
   }
-  const level = state.level;
-  const items = b.items.filter((x) => x.level === level);
-  const rank = (x) => (x.by.real ? 0 : 10) - x.agents;
-  const sorted = (list) => [...list].sort((p, q) => rank(p) - rank(q) || p.label.localeCompare(q.label));
-  // New functions cannot be shared between runs, so they sit in their own strip, not in a zone.
-  const zoned = items.filter((x) => !(level === "function" && x.isNew));
-  const fresh = items.filter((x) => level === "function" && x.isNew);
-  const inZone = (z) => sorted(zoned.filter((x) => x.zone === z));
+  const files = b.items.filter((x) => x.level === "file");
+  const zoneRank = { tight: 0, normal: 1, wide: 2, outside: 3 };
+  const sorted = (list) => [...list].sort((p, q) => zoneRank[p.zone] - zoneRank[q.zone] || (p.by.real ? 0 : 1) - (q.by.real ? 0 : 1) || p.label.localeCompare(q.label));
+  const inZone = (z) => sorted(files.filter((x) => x.zone === z));
   const boxesOr = (boxes) => (boxes.length ? `<div class="bz-boxes">${boxes.map(blastBox).join("")}</div>` : `<div class="bz-empty">Nothing here.</div>`);
   const zoneHtml = (i) => {
     if (i >= BLAST_ZONES.length) return "";
     const [z, name, text] = BLAST_ZONES[i];
     return `<div class="bz bz-${z}"><div class="bz-title">${name} <span>${text}</span></div>${boxesOr(inZone(z))}${zoneHtml(i + 1)}</div>`;
   };
-  const word = BLAST_LEVEL[level], plural = (n) => `${n} ${word}${n === 1 ? "" : "s"}`;
-  const names = (list) => list.map((x) => `<code>${esc(x.label)}</code>`).join(", ");
-  const all3 = zoned.filter((x) => x.agents === 3), wideOnly = inZone("wide");
-  const realAt = ["tight", "normal", "wide", "outside"].map((z) => [z, zoned.filter((x) => x.by.real && x.zone === z).length]).filter(([, n]) => n);
-  const zoneWord = { tight: "in the tight zone", normal: "in the normal zone", wide: "in the wide zone", outside: "that no agent touched" };
   const cols = b.columns;
   const num = (n) => Number(n).toLocaleString("en");
+  const note = (html) => `<div class="cell-note">${html}</div>`;
+  const delta = (f) => (f ? `<span class="plus">+${num(f.added)}</span> <span class="minus">−${num(f.removed)}</span>` : `<span class="none">·</span>`);
+  const fileOf = (runId, file) => b.runs.find((r) => r.id === runId).files.find((f) => f.file === file);
+  const zoneName = { tight: "Tight", normal: "Normal", wide: "Wide", outside: "Outside" };
+  // ---- the main table: one row per file ----
+  const fileRows = sorted(files).map((x) => `<tr class="pick" data-blast="${esc(x.id)}">
+      <th><span class="zdot z-${x.zone}" title="${zoneName[x.zone]} zone"></span>${esc(x.label)}${x.kind === "test" ? ` <span class="btag">UNIT TEST</span>` : x.kind === "doc" ? ` <span class="btag">DOC</span>` : ""}</th>
+      ${cols.map((c) => `<td class="${c.id === "real" ? "real" : ""}">${delta(fileOf(c.id, x.key))}</td>`).join("")}</tr>`).join("");
+  const totalRow = `<tr class="total"><th>All files</th>${cols.map((c) => `<td class="${c.id === "real" ? "real" : ""}">${num(c.files)} file${c.files === 1 ? "" : "s"}${note(`<span class="plus">+${num(c.added)}</span> <span class="minus">−${num(c.removed)}</span>`)}</td>`).join("")}</tr>`;
+  // ---- the fold: numbers below file level ----
   const list = (arr) => (arr.length ? arr.map(esc).join(", ") : "none");
   const fnName = (id) => `<code>${esc(id.split("#")[1].split("~")[0])}()</code>`;
-  const note = (html) => `<div class="cell-note">${html}</div>`;
   const reachCell = (c) => {
     const r = c.reach;
     if (r.of && !r.known) return `<span class="muted">not known</span>`;
     return num(r.callers.length) + (r.callers.length ? note(r.callers.map((x) => `<code>${esc(x.name)}()</code>`).join(", ")) : "") + (r.unknown.length ? note(`not known for ${r.unknown.length} of ${r.of} edited functions`) : "");
   };
   const row = (label, fn, sub) => `<tr><th>${label}${sub ? note(sub) : ""}</th>${cols.map((c) => `<td class="${c.id === "real" ? "real" : ""}">${fn(c)}</td>`).join("")}</tr>`;
-  const section = (t) => `<tr class="sec"><th colspan="5">${t}</th></tr>`;
   const wideRow = (label, html) => `<tr><th>${label}</th><td colspan="4" class="text">${html}</td></tr>`;
   const o = b.overlap;
   const things = (arr) => (arr.length ? arr.map((t) => `<code>${esc(t.label)}</code>${t.kind === "doc" ? " (doc)" : t.kind === "test" ? " (unit test)" : ""}`).join(", ") : "nothing");
+  const head = `<thead><tr><th></th>${cols.map((c) => `<th class="${c.id === "real" ? "real" : ""}">${esc(c.label)}${c.id !== "real" && !c.ok ? note(`<span class="bad-text">the run failed</span>`) : c.noChange ? note("made no change") : ""}</th>`).join("")}</tr></thead>`;
   const secs = (r) => (r.startedAt && r.endedAt ? `${Math.max(1, Math.round((new Date(r.endedAt) - new Date(r.startedAt)) / 1000))} s` : "");
-  el.innerHTML = `<p class="blast-what">We gave the same task to 3 agents: one careful, one normal, one that changes too much. The coloured zones show what they touched. The thick outline is the real change.</p>
+  el.innerHTML = `<p class="blast-what">We gave the same task to 3 agents: one careful, one normal, one that changes too much. The coloured zones show the files they touched. The thick outline is the real change.</p>
     <div class="blast-label ${esc(b.label.tone)}"><span class="stamp-label">Trust label</span><strong>${esc(b.label.text)}</strong><span>${esc(b.label.how)}</span></div>
-    <div class="blast-facts">
-      <span><b>All 3 agents agree on:</b> ${all3.length ? names(sorted(all3)) : "nothing at this level"}</span>
-      <span><b>Only the agent that changes too much touched:</b> ${wideOnly.length ? names(wideOnly) : "nothing at this level"}</span>
-      <span><b>The real change touches:</b> ${realAt.length ? realAt.map(([z, n]) => `${plural(n)} ${zoneWord[z]}`).join(", ") : "nothing at this level"}</span>
-    </div>
     <div class="blast-zones">${zoneHtml(0)}
       <div class="bz bz-outside"><div class="bz-title">Outside every zone <span>No agent touched this. Only the real change did.</span></div>${boxesOr(inZone("outside"))}</div>
-      ${fresh.length ? `<div class="bz bz-new"><div class="bz-title">New functions <span>Each one was written by one run, so no other run can share it. They are not part of a zone.</span></div>${boxesOr(sorted(fresh))}</div>` : ""}
     </div>
     <div class="legend blast-legend">
-      <span><i class="pip pip-minimal on"></i> the careful agent touched it</span>
-      <span><i class="pip pip-normal on"></i> the normal agent touched it</span>
-      <span><i class="pip pip-wide on"></i> the agent that changes too much touched it</span>
-      <span><i class="pip"></i> that agent did not touch it</span>
-      <span><i class="sw sw-real"></i> thick outline: the real change touches it</span>
+      <span><i class="pip pip-minimal on"></i> careful agent</span>
+      <span><i class="pip pip-normal on"></i> normal agent</span>
+      <span><i class="pip pip-wide on"></i> agent that changes too much</span>
+      <span><i class="sw sw-real"></i> thick outline: the real change</span>
+      <span class="muted">Click a file to see what each one changed in it.</span>
     </div>
-    <div class="legend blast-legend"><span class="muted">"Touched" means at least one line was added or removed there. The real change is Tieto's AI-written branch, shown as a PR. Click a box to see what each one changed there.</span></div>
-    <div class="blast-warn">${esc(b.notBuilt)}</div>
-    <table class="blast-table"><thead><tr><th></th>${cols.map((c) => `<th class="${c.id === "real" ? "real" : ""}">${esc(c.label)}${c.id !== "real" && !c.ok ? note(`<span class="bad-text">the run failed</span>`) : c.noChange ? note("made no change") : ""}</th>`).join("")}</tr></thead><tbody>
-      ${section("Size of change")}
-      ${row("Files touched", (c) => num(c.files))}
-      ${row("Lines added", (c) => num(c.added))}
-      ${row("Lines removed", (c) => num(c.removed))}
+    <table class="blast-table files">${head}<tbody>${fileRows}${totalRow}</tbody></table>
+    <div class="blast-key muted"><span class="plus">+</span> lines added, <span class="minus">−</span> lines removed, · not touched. The real change is Tieto's AI-written branch, shown as a PR. ${esc(b.notBuilt)}</div>
+    <details class="blast-runs"><summary>More numbers: functions, reach and overlap</summary>
+      <table class="blast-table">${head}<tbody>
       ${row("Functions edited", (c) => num(c.functions) + (c.newFunctions ? note(`${c.newFunctions} of them new`) : ""), "in product code, not unit tests")}
       ${row("Unit test functions added or edited", (c) => num(c.testFunctions))}
-      ${section("Reach: code that was not edited but is affected")}
       ${row("Functions that call an edited function", reachCell, "not edited, but what they do can change")}
       ${row("Code areas edited", (c) => `<span class="text">${list(c.conceptsEdited)}</span>`)}
-      ${row("Code areas reached, not edited", (c) => `<span class="text">${list(c.conceptsReached)}</span>`)}
-      ${section("Overlap with the real change")}
       ${row("Files shared with the real change", (c) => (c.id === "real" ? num(o.realFiles) + note("files it touches") : `${num(c.sharedFiles.length)} of ${num(o.realFiles)}`))}
       ${row("Functions shared with the real change", (c) => (c.id === "real" ? num(o.realFunctions) + note("it edits, new ones not counted") : `${num(c.sharedFunctions.length)} of ${num(o.realFunctions)}${c.sharedFunctions.length ? note(c.sharedFunctions.map(fnName).join(", ")) : ""}`), "functions that already existed")}
       ${wideRow("The real change touched, no agent did", things(o.realOnly))}
       ${wideRow("Every agent touched, the real change did not", things(o.agentsNotReal))}
-      ${section("Trust")}
-      ${wideRow("Trust label", `<span class="tag ${esc(b.label.tone)}">${esc(b.label.text)}</span> ${esc(b.label.how)}`)}
-    </tbody></table>
+      </tbody></table>
+    </details>
     <details class="blast-runs"><summary>How the 3 runs were done, and the rule for the label</summary>
       <p>Run on ${esc(b.recordedAt.slice(0, 10))} with the model <code>${esc(b.model)}</code>, once per agent. Each agent worked alone in its own copy of the code from before the fix (commit <code>${esc(short(b.base))}</code>). The real fix was not in those copies. This tab replays the saved result. No agent runs now.</p>
-      <p><b>Rule for the trust label.</b> We look at product code only (not docs, not unit tests): the files the real change touches, and the functions it edits that already existed. If no agent touched one of them: "Touches code no agent touched". Else, if only the agent that changes too much touched one of them: "Touches more than needed". Else: "Inside the expected zone".</p>
+      <p><b>Rule for the trust label.</b> We look at the product code files the real change touches (not docs, not unit tests). If no agent touched one of them: "Touches code no agent touched". Else, if only the agent that changes too much touched one of them: "Touches more than needed". Else: "Inside the expected zone".</p>
       <p><b>What every agent got.</b> ${b.given.kept.map(esc).join("; ")}.</p>
       <p><b>What we left out of the AI PR text</b>, so the agents could not copy the real fix: ${b.given.leftOut.map(esc).join("; ")}. ${esc(b.given.note)}</p>
       ${b.runs.filter((r) => r.id !== "real").map((r) => `<div class="blast-run"><b>${esc(r.label)}</b> <span class="muted">${secs(r) ? `· took ${secs(r)}` : ""}</span><div>Told: ${esc(r.instruction ?? "")}</div>
@@ -1041,9 +1028,7 @@ async function init() {
   else if (q.get("doc")) select({ type: "doc", file: q.get("doc") });
   if (q.get("map") === "blast") {
     // ?map=blast opens the "Blast radius" tab. &box=<box id> also opens that box in the side panel.
-    const level = state.level;
     await setScope("blast");
-    if (h.level) state.level = level;
     await loadBlast();
     render();
     if (q.get("box")) selectBlast(q.get("box"));

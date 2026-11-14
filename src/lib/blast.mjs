@@ -5,12 +5,14 @@
 // This file only does the maths on that record. It never calls a model and never adds a link.
 //
 // THE TRUST LABEL RULE (keep it this simple; the README says the same):
+//   The tab works at file level, so the label does too.
 //   Look only at product code: code files that are not unit tests and not docs.
-//   Look at each file the real change touches, and each function it edits that already existed.
+//   Look at each such file the real change touches.
 //   1. If one of them was touched by NO agent        -> "Touches code no agent touched"
 //   2. Else if one was touched ONLY by the wide agent -> "Touches more than needed"
 //   3. Else                                           -> "Inside the expected zone"
-//   New functions are not scored: no other run can share a function that did not exist before.
+//   Docs and unit test files are listed but not scored.
+//   One level down (functions) is not scored either; it is added to the line as a note.
 import fs from "node:fs";
 import path from "node:path";
 import { conceptOf } from "./ledger.mjs";
@@ -231,19 +233,22 @@ export function buildBlast(prId) {
   const agentsNotReal = allAgents.filter((t) => !(t.isFile ? realFiles.has(t.id) : realFns.has(t.id))).map((t) => ({ ...t, label: nameOf(t.id) }));
 
   // ---- the trust label (rule at the top of this file) ----
-  const scored = things("real").filter((t) => t.kind === "code");
-  const outside = scored.filter((t) => touchedBy(t.id, t.isFile).length === 0);
-  const wideOnly = scored.filter((t) => touchedBy(t.id, t.isFile).join() === "wide");
+  const scored = things("real").filter((t) => t.kind === "code" && t.isFile);
+  const outside = scored.filter((t) => touchedBy(t.id, true).length === 0);
+  const wideOnly = scored.filter((t) => touchedBy(t.id, true).join() === "wide");
   const names = (list) => list.map((t) => nameOf(t.id)).join(", ");
-  const notScored = realOnly.filter((t) => t.kind !== "code");
-  const extra = notScored.length ? ` Not scored: ${notScored.length} doc or unit test file${notScored.length === 1 ? "" : "s"} that no agent touched (${names(notScored)}).` : "";
-  const nFiles = scored.filter((t) => t.isFile).length, nFns = scored.length - nFiles;
-  const what = `${nFiles} product code file${nFiles === 1 ? "" : "s"} and ${nFns} function${nFns === 1 ? "" : "s"} that already existed`;
+  const count = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+  const docs = realOnly.filter((t) => t.kind === "doc").length, tests = realOnly.filter((t) => t.kind === "test").length;
+  const fnsOutside = realOnly.filter((t) => !t.isFile);
+  const extra =
+    (docs + tests ? ` Not scored: ${[docs ? count(docs, "doc") : "", tests ? count(tests, "unit test file") : ""].filter(Boolean).join(" and ")} that no agent touched.` : "") +
+    (fnsOutside.length ? ` One level down, it edits ${count(fnsOutside.length, "function")} that no agent edited: ${names(fnsOutside)}.` : "");
+  const what = `The real change touches ${count(scored.length, "product code file")}`;
   let label;
   if (!ran.length) label = { key: "none", text: "No label", tone: "plain", how: "No agent made a change, so there is no zone to compare with." };
-  else if (outside.length) label = { key: "outside", text: LABELS.outside, tone: "bad", how: `The real change edits ${what}. No agent touched: ${names(outside)}.${extra}` };
-  else if (wideOnly.length) label = { key: "wide", text: LABELS.wide, tone: "warn", how: `The real change edits ${what}. Only the agent that changes too much also touched: ${names(wideOnly)}.${extra}` };
-  else label = { key: "inside", text: LABELS.inside, tone: "ok", how: `The real change edits ${what}. The careful agent or the normal agent touched every one of them.${extra}` };
+  else if (outside.length) label = { key: "outside", text: LABELS.outside, tone: "bad", how: `${what}. No agent touched: ${names(outside)}.${extra}` };
+  else if (wideOnly.length) label = { key: "wide", text: LABELS.wide, tone: "warn", how: `${what}. Only the agent that changes too much also touched: ${names(wideOnly)}.${extra}` };
+  else label = { key: "inside", text: LABELS.inside, tone: "ok", how: `${what}. The careful agent or the normal agent touched ${scored.length === 1 ? "it" : "all of them"} too.${extra}` };
 
   // ---- the boxes for the picture ----
   const zoneOf = (by) => (by.minimal ? "tight" : by.normal ? "normal" : by.wide ? "wide" : "outside");
