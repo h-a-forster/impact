@@ -58,7 +58,7 @@ function setEvalCase(prId, on) {
 }
 
 // Session mode (?session=1, used by timed review sessions): the routes serve the shop sample's
-// pull requests, whose right answers are known, in place of the demo's four.
+// pull requests, whose right answers are known, in place of the demo's list.
 const revisionsSource = (url) => (url.searchParams.get("session") === "1" ? loadRevisions : demoRevisions);
 
 function modelFor(prId, sha, revisions) {
@@ -101,7 +101,13 @@ const handler = async (req, res) => {
       const pr = demoRevisions().prs.find((p) => p.id === url.searchParams.get("pr"));
       return pr ? json(res, 200, buildSwarm(pr.id)) : json(res, 404, { error: `Unknown PR ${url.searchParams.get("pr")}` });
     }
-    if (url.pathname === "/api/fullmap") return json(res, 200, buildFullMap(demoRevisions()));
+    if (url.pathname === "/api/fullmap") {
+      // The Full map is drawn over a snapshot of the Tieto repo, so only that repo's PRs go on it.
+      // A session lists shop PRs only and keeps them all.
+      const revisions = demoRevisions();
+      const tieto = revisions.prs.filter((p) => p.source === "tieto");
+      return json(res, 200, buildFullMap(tieto.length ? { ...revisions, prs: tieto } : revisions));
+    }
     if (url.pathname === "/api/summary") {
       // Used by the GitHub replica: live state for the Impact review check, per commit.
       const revisions = demoRevisions();

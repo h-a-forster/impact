@@ -93,9 +93,11 @@ function selectNode(id) {
 
 // ---------- header ----------
 const GITHUB_URL = "http://localhost:3000"; // the GitHub replica
+const RAIL_GROUPS = { shop: "Shop sample", tieto: "From the challenge repo" };
 function renderHeader() {
-  // Left rail: one row per PR, like a list of chats.
-  $("prList").innerHTML = state.revisions.prs.filter((p) => !SESSION || p.id === state.prId).map((p) => `<button type="button" class="rail-pr ${p.id === state.prId ? "active" : ""}" data-pr="${esc(p.id)}" title="${esc(p.title)}"><span class="rail-num">#${p.number}</span><span class="rail-title">${esc(p.title)}</span></button>`).join("");
+  // Left rail: one row per PR, like a list of chats, grouped by where the PR comes from.
+  const shown = state.revisions.prs.filter((p) => !SESSION || p.id === state.prId);
+  $("prList").innerHTML = shown.map((p, i) => `${!SESSION && p.source !== shown[i - 1]?.source ? `<div class="rail-group">${esc(RAIL_GROUPS[p.source] ?? p.source)}</div>` : ""}<button type="button" class="rail-pr ${p.id === state.prId ? "active" : ""}" data-pr="${esc(p.id)}" title="${esc(p.title)}"><span class="rail-num">#${p.number}</span><span class="rail-title">${esc(p.title)}</span></button>`).join("");
   for (const b of $("prList").querySelectorAll("button")) b.onclick = () => {
     const next = state.revisions.prs.find((p) => p.id === b.dataset.pr);
     state.notice = null;
@@ -103,7 +105,8 @@ function renderHeader() {
     $("app").classList.remove("rail-open");
     load(next.id, next.commits[0].sha, { keepSelection: false });
   };
-  $("chatTitle").innerHTML = `<strong>PR #${currentPr().number}</strong><span>${esc(currentPr().title)}</span>`;
+  $("chatTitle").innerHTML = `<strong>PR #${currentPr().number}</strong>`;
+  $("chatTitle").title = currentPr().title;
   $("revPills").innerHTML = revList().map((r) => `<button type="button" class="pill ${r.sha === state.sha ? "active" : ""}" data-sha="${r.sha}" title="${esc(r.message)}">${esc(r.label)} <span class="mono">${r.short}</span></button>`).join("");
   for (const b of $("revPills").querySelectorAll("button")) b.onclick = () => load(state.prId, b.dataset.sha);
   $("backLink").href = `${GITHUB_URL}/${currentPr().repo}/pull/${currentPr().number}`;
@@ -1476,25 +1479,14 @@ function refreshIssues() {
   for (const el of $("thread").querySelectorAll(".issues-live")) el.innerHTML = issuesHtml();
 }
 
-// ----- the first message: the PR in short, the review in short -----
+// ----- the first message: the PR title and what it does in one line, then the advice -----
 function introHtml() {
-  const m = state.model, d = m.description, c2 = m.classifier2, r = m.review;
-  // Two chips only: how risky, and who decides. Unit test counts and the AI review sit behind "See the review steps".
-  const need = c2.route.startsWith("Waiting") ? ["Waiting for proof", "bad"] : c2.route.startsWith("Auto") ? ["Could merge by itself", "ok"] : ["A person must sign off", "info"];
-  const chips = [
-    `<span class="tag ${SEVERITY_TONE[c2.severity] ?? ""}" title="Set by fixed rules (rule ${esc(c2.rule)})">Risk: ${esc(c2.severity)}</span>`,
-    `<span class="tag ${need[1]}" title="Set by fixed rules after the AI review">${need[0]}</span>`,
-  ].join("");
+  const m = state.model, d = m.description;
   const prShort = d.ai?.tldr?.text ?? d.ai?.summary ?? d.author.text;
   return `<h1 class="pr-title">${esc(m.pr.title)}</h1>
-    <div class="pr-sub muted">PR #${m.pr.number} · ${SESSION ? "AI-written change, shown as a PR" : "Tieto's AI-written branch, shown as a PR"} · ${esc(stepText(m))}${m.selected.madeUp ? ` <span class="tag warn">made up</span>` : ""}</div>
-    <div class="advice-live"></div>
-    <div class="short ${esc(d.ai?.tldr?.tone ?? "plain")}"><span class="short-label">The PR in short</span><p>${rich(prShort)}</p>
-      <button type="button" class="link" data-act="page" data-page="pr">Read the full PR description</button></div>
-    <div class="short ${SEVERITY_TONE[c2.severity] ?? "plain"}"><span class="short-label">The review in short</span><p>${esc(r.summary)}</p>
-      <div class="tags">${chips}</div>
-      ${m.since ? `<details class="since-line"><summary><span class="tag warn">made up</span> What changed since commit ${m.since.from}</summary><p>${m.since.items.map(rich).join(" · ")} · <button type="button" class="link" data-act="since">Show the code change</button></p></details>` : ""}
-      <button type="button" class="link" data-act="page" data-page="review">See the review steps</button></div>`;
+    <p class="pr-sub muted">${rich(prShort)} <button type="button" class="link" data-act="page" data-page="pr">Full description</button></p>
+    ${m.since ? `<details class="since-line"><summary><span class="tag warn">made up</span> What changed since commit ${m.since.from}</summary><p>${m.since.items.map(rich).join(" · ")} · <button type="button" class="link" data-act="since">Show the code change</button></p></details>` : ""}
+    <div class="advice-live"></div>`;
 }
 // ----- tool scores: worked out up front, so the person can merge straight away or drill down -----
 // One row per tool: its name, its score, one line of why. A click opens the tool in the right panel.
@@ -1562,27 +1554,18 @@ function advice() {
   }
   const score = blocked ? 0 : Math.max(0, 100 - parts.reduce((a, p) => a + p[0], 0));
   const verdict = blocked ? ["Cannot merge yet", "bad"] : score >= 75 ? ["Fine to merge", "ok"] : score >= 45 ? ["Look closer first", "warn"] : ["Do not merge yet", "bad"];
-  const next = SESSION ? null : currentPr().commits.find((c) => c.index > m.selected.index); // a session shows one commit only
-  const look = blocked ? (next ? { act: "commit", sha: next.sha, name: `Commit ${next.index}${next.madeUp ? " (made up)" : ""}`, why: "It adds the missing proof." } : { act: "issues", name: "The open issues", why: "Proof is missing. The author must add it." })
+  // Blocked: name the areas that lack proof, at concept level when the graph has one.
+  const untested = [...new Set(c2.blockers.filter((x) => x.type === "evidence").map((x) => {
+    const concept = m.graph.nodes.find((n) => n.id === x.ref)?.concept;
+    return concept && m.graph.nodes.some((n) => n.id === concept) ? labelOf(concept) : labelOf(x.ref);
+  }))];
+  const look = blocked ? (untested.length ? { act: "tool", scope: "pr", name: "Impact Map", why: `${untested.join(" and ")} ${untested.length > 1 ? "have" : "has"} no passing test for this change.` } : { act: "issues", name: "The open points", why: "Proof is missing. The author must add it." })
     : red ? { act: "tool", scope: "pr", name: "Impact Map", why: "It shows where the unit test fails, and what else uses that code." }
     : blastFlag ? { act: "tool", scope: "blast", name: "Blast radius", why: "It shows what only this change does." }
     : swarmLow ? { act: "tool", scope: "swarm", name: "Monte Carlo swarm", why: "It shows where the other agents did it differently." }
     : m.review.findings.length ? { act: "issues", name: "The issues", why: important ? "Read the important ones, with their fix." : "Only small points are left." }
     : null;
   return { score, verdict, parts, blocked, look, waiting: !sc.blast || !sc.swarm };
-}
-/**
- * The rows behind the score, in one line. It counts what the first screen lists: the issues
- * (open = to look at, acknowledged = clear) and the tool rows (warn or bad = to look at, no runs = not run).
- */
-function tallyHtml() {
-  const issues = issueList(state.model), rows = scoreRows();
-  if (rows.some((r) => r.wait)) return "";
-  const notRun = rows.filter((r) => r.tone === "plain").length;
-  const look = issues.filter((x) => !acked(x.id)).length + rows.filter((r) => ["warn", "bad"].includes(r.tone)).length;
-  const clear = issues.length + rows.length - notRun - look;
-  const parts = [[clear, "clear"], [look, "to look at"], [notRun, "not run"]].filter(([n]) => n).map(([n, word]) => `${n} ${word}`);
-  return `<p class="advice-tally muted">${parts.join(" · ")}</p>`;
 }
 /** Code the change reaches but never edits, named at the broadest map level that has any. */
 function outsideHtml() {
@@ -1593,16 +1576,23 @@ function outsideHtml() {
   const more = names.length > 2 ? ` and ${names.length - 2} more` : "";
   return `<p class="advice-outside"><b>Outside the diff:</b> ${names.slice(0, 2).map(esc).join(", ")}${more}. <span class="muted">Not edited, but ${names.length > 1 ? "they use" : "it uses"} edited code.</span></p>`;
 }
+/** Who decides, and how risky, after the verdict word. Both come from the fixed rules. */
+function routeHtml() {
+  const m = state.model, c1 = m.classifier1, c2 = m.classifier2;
+  const route = (text) => `<span title="Set by fixed rules after the AI review (Classifier 2, rule ${esc(c2.rule)})">${text}</span>`;
+  if (c2.route.startsWith("Waiting")) return ` · ${route("proof missing")}`;
+  if (c2.route.startsWith("Auto")) return ` · ${route("could merge by itself")}`;
+  return ` · <span title="Set by fixed rules (Classifier 1, rule ${esc(c1.rule)})">risk ${esc(c2.severity)}</span> · ${route("you sign off")}`;
+}
 function adviceHtml() {
   const a = advice();
   const look = a.look
     ? `<p><b>Look at this first:</b> <button type="button" class="link" data-act="${a.look.act}" data-scope="${a.look.scope ?? ""}" data-sha="${a.look.sha ?? ""}">${esc(a.look.name)}</button>. ${esc(a.look.why)}</p>`
-    : `<p>Nothing needs a closer look.</p>`;
-  return `<div class="short advice ${a.verdict[1]}"><span class="short-label">My advice</span>
-    <div class="advice-main"><strong>${a.verdict[0]}</strong><span class="advice-score" title="Merge score. 100 = nothing found.">${a.waiting ? "…" : a.score}<small> / 100${a.blocked ? ": proof is missing" : ""}</small></span></div>
-    ${tallyHtml()}${outsideHtml()}
+    : "";
+  return `<div class="short advice ${a.verdict[1]}"><span class="short-label">My advice · fixed rules, no AI</span>
+    <div class="advice-main"><span><strong>${a.verdict[0]}</strong><span class="advice-route">${routeHtml()}</span></span><span class="advice-score" title="Merge score. 100 = nothing found.">${a.waiting ? "…" : a.score}<small> / 100</small></span></div>
     ${look}
-    <details class="since-line" data-more="advice" ${ui.openMore.has("advice") ? "open" : ""}><summary>How the score is worked out</summary>
+    <details class="since-line" data-more="advice" ${ui.openMore.has("advice") ? "open" : ""}><summary>How the score is worked out <button type="button" class="link advice-steps" data-act="page" data-page="review">Review steps</button></summary>
       <p>It starts at 100. A fixed rule takes points off. No AI is used.${a.blocked ? " Proof is missing, so the score is 0." : ""}</p>
       <ul class="advice-parts">${a.parts.map(([n, why]) => `<li><b>−${n}</b> ${esc(why)}</li>`).join("") || "<li>Nothing was taken off.</li>"}</ul>
       <p>75 or more: fine to merge. 45 to 74: look closer first. Under 45: do not merge yet.</p></details></div>`;
@@ -1918,6 +1908,11 @@ async function init() {
   const sha = pr.commits.some((c) => c.sha === h.rev) ? h.rev : pr.commits[0].sha;
   if (h.sel) state.sel = { type: "node", id: h.sel, label: h.sel.split("#").pop() };
   await load(pr.id, sha, { keepSelection: Boolean(h.sel) });
+  // A link to a PR this list does not have: say so, never fall back silently.
+  if (h.pr && h.pr !== pr.id) {
+    state.notice = `${h.pr} is not in this list. Showing ${pr.id}.`;
+    renderHeader();
+  }
   if (q.get("chat") === "1") agentIntro(); // ?chat=1 starts on "Ask the agent"
   if (q.get("since") === "1" && state.model.since) select({ type: "since" });
   if (q.get("doc") === "context") openContext();

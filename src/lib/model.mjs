@@ -21,18 +21,23 @@ export function loadRevisions() {
   return { ...revisions, prs: shop };
 }
 
+/** The shop PRs the demo leads with: the trap (Order Import untested) and a clean docs change. */
+const SHOWCASE = ["req-17", "docs-example"];
+
 /**
- * The pull requests the demo shows: the real Tieto example PRs, one step each.
- * Their facts come from recorded packs in data/tieto/. The shop sample is kept
- * for the evals only (loadRevisions).
+ * The pull requests the demo shows: the shop showcase first, then the Tieto
+ * example PRs (facts from recorded packs in data/tieto/). The other shop PRs
+ * are for the evals and sessions only (loadRevisions).
  */
 export function demoRevisions() {
-  const prs = ledgerPrs().map((p) => {
+  const revisions = loadRevisions();
+  const shop = SHOWCASE.map((id) => revisions.prs.find((p) => p.id === id));
+  const tieto = ledgerPrs().map((p) => {
     // Extra commits are made up for the demo, so the map can be stepped from commit to commit.
     const extra = (loadSemantic(p.id)?.commits ?? []).map((c, i) => ({ sha: c.sha, index: i + 2, label: `commit ${i + 2}`, message: c.message, madeUp: true }));
     return { ...p, source: "tieto", commits: [{ sha: p.commits[0].commitSha, index: 1, label: "commit 1", message: p.title }, ...extra] };
   });
-  return { ...loadRevisions(), prs };
+  return { ...revisions, prs: [...shop, ...tieto] };
 }
 
 function loadSemantic(prId) {

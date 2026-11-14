@@ -453,6 +453,8 @@ body { overflow: hidden; }
 .rail-new { text-align: left; border-radius: 10px; padding: 8px 10px; background: transparent; }
 .rail-label { padding: 10px 8px 2px; font-size: 12px; font-weight: 600; color: var(--muted); }
 .rail-list { display: flex; flex-direction: column; gap: 2px; }
+.rail-group { padding: 8px 10px 2px; font-size: 11.5px; color: var(--muted); }
+.rail-group:first-child { padding-top: 2px; }
 .rail-pr { display: flex; gap: 8px; align-items: baseline; text-align: left; border: 0; background: transparent; border-radius: 10px; padding: 8px 10px; line-height: 1.35; }
 .rail-pr:hover { background: var(--soft); }
 .rail-pr.active { background: var(--soft); font-weight: 600; }
@@ -467,12 +469,11 @@ body { overflow: hidden; }
 .chat-head { display: flex; align-items: center; gap: 12px; padding: 10px 18px; border-bottom: 1px solid var(--line); min-height: 52px; }
 .chat-title { display: flex; gap: 8px; align-items: baseline; min-width: 0; flex: 1; overflow: hidden; white-space: nowrap; }
 .chat-head .pills { flex: none; }
-/* With the panel open the chat is narrow: the pills drop the commit id, the title drops its text. */
-.app.canvas-open .pill .mono, .app.canvas-open .chat-title span { display: none; }
+/* With the panel open the chat is narrow: the pills drop the commit id. */
+.app.canvas-open .pill .mono { display: none; }
 .canvas .swarm-flow { grid-template-columns: 140px 1fr; }
 .canvas .swarm-agent { grid-template-columns: 120px minmax(40px, 120px) 1fr; }
 .chat-title strong { flex: none; }
-.chat-title span { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rail-btn { display: none; flex: none; padding: 4px 9px; }
 .thread { flex: 1; min-height: 0; overflow: auto; padding: 22px 18px 8px; scroll-padding: 16px; }
 .thread-inner { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; font-size: 15px; line-height: 1.6; }
@@ -496,7 +497,10 @@ body { overflow: hidden; }
 
 /* First message: the PR and the review, each in one or two lines */
 .pr-title { font-size: 20px; line-height: 1.3; margin: 0 0 4px; text-wrap: balance; }
-.pr-sub { font-size: 13px; margin-bottom: 14px; }
+.pr-sub { font-size: 14.5px; line-height: 1.45; margin: 0 0 12px; }
+.pr-sub + .since-line { font-size: 13.5px; margin: -6px 0 12px; }
+.pr-sub + .since-line summary { cursor: pointer; color: var(--accent); }
+.pr-sub + .since-line p { margin: 6px 0 0; }
 .short { border-left: 4px solid var(--muted); padding: 2px 0 2px 14px; margin: 0 0 16px; }
 .short:last-child { margin-bottom: 0; }
 .short > p { font-size: 16px; line-height: 1.5; margin: 2px 0 8px; }
@@ -558,8 +562,8 @@ body { overflow: hidden; }
 .advice-score small { font-size: 13px; font-weight: 500; color: var(--muted); }
 .advice.ok .advice-main { color: var(--ok); } .advice.warn .advice-main { color: var(--warn); } .advice.bad .advice-main { color: var(--bad); }
 .short.advice > p { font-size: 15px; }
-.short.advice > p.advice-tally { font-size: 13.5px; margin: -2px 0 6px; text-align: right; font-variant-numeric: tabular-nums; }
-.short.advice > p.advice-outside { font-size: 14px; }
+.advice-route { font-size: 14px; color: var(--muted); }
+.advice-steps { float: right; }
 .advice-parts { margin: 6px 0; padding-left: 0; list-style: none; font-size: 13.5px; }
 .advice-parts b { display: inline-block; min-width: 34px; font-variant-numeric: tabular-nums; }
 
@@ -656,7 +660,6 @@ body { overflow: hidden; }
   .rail { display: none; }
   .rail-btn { display: block; }
   .canvas { position: fixed; inset: 0; z-index: 9; }
-  .chat-title span { display: none; }
 }
 /* The ☰ button shows the rail over the chat. */
 .app.rail-open .rail { display: flex !important; position: fixed; left: 0; top: 0; bottom: 0; width: 264px; z-index: 10; box-shadow: 10px 0 30px rgba(0, 0, 0, .2); }
