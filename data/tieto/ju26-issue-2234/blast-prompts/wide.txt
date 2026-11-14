@@ -1,0 +1,27 @@
+You are working in a copy of the MessagePack-CSharp repository (C#), at the commit just before the fix. Solve the problem described below by editing files in this folder.
+
+Rules for this run:
+- This machine has no .NET SDK. You cannot build the code or run unit tests. Do not try. Reason from the code.
+- Work only inside this folder. Do not use the web. Do not use git.
+- When you are done, reply with a short list of the files you changed and why.
+
+How to work:
+You are free to go well beyond the smallest fix. While you solve the problem, also refactor, tidy up and harden the code around it wherever you think it helps: similar weak spots elsewhere, shared helpers, naming, docs, unit tests. Prefer a broad, thorough change over a narrow one. The requirements must still be met.
+
+## Requirements (from the pull request description)
+
+Requirement: Bug report #2234 in MessagePack-CSharp.
+
+Why: The report says the code checker "does not work" when code generation is turned off. It does not say what goes wrong.
+
+Before and after: Before: a repeated or mixed key made the tool crash.
+
+Must preserve: The code generator uses the same code. It must not quietly drop a member.
+
+## The bug report the Requirement row points to (issue #2234, word for word)
+
+# The analyzer does not work if SuppressSourceGeneration = true
+
+#### Bug description
+
+The analyzer does not work if SuppressSourceGeneration = true. This has happened since version 3.1.1. It still worked in 3.1.0.
