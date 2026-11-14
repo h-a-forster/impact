@@ -325,6 +325,7 @@ export function buildBlast(prId) {
   if (!ran.length) label = { key: "none", text: "No label", tone: "plain", how: "No agent made a change, so there is no zone to compare with." };
   else if (outside.length) label = { key: "outside", text: LABELS.outside, tone: "bad", how: `${what}. No agent touched: ${names(outside)}.${extra}` };
   else if (wideOnly.length) label = { key: "wide", text: LABELS.wide, tone: "warn", how: `${what}. Only the agent that changes too much also touched: ${names(wideOnly)}.${extra}` };
+  else if (!scored.length) label = { key: "inside", text: LABELS.inside, tone: "ok", how: `The real change touches no product code files, only docs or unit tests, so none of it can sit outside the agents' zone.${extra}` };
   else label = { key: "inside", text: LABELS.inside, tone: "ok", how: `${what}. The careful agent or the normal agent touched ${scored.length === 1 ? "it" : "all of them"} too.${extra}` };
 
   // ---- the boxes for the picture ----

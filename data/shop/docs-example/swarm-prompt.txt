@@ -1,0 +1,19 @@
+You are working in a copy of the shop-sample repository (TypeScript), at the commit just before the change. Solve the problem described below by editing files in this folder.
+
+Rules for this run:
+- You cannot run commands, so you cannot run the unit tests. Do not try. Reason from the code.
+- Work only inside this folder. Do not use the web. Do not use git.
+- When you are done, reply with a short list of the files you changed and why.
+
+How to work:
+Solve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.
+
+## Requirements (from the pull request description)
+
+Requirement: None linked.
+
+Why: The pricing notes had no worked example.
+
+Before and after: Before: docs/pricing.md explains the rule only. After: docs/pricing.md also shows a 200-cent example.
+
+Must preserve: No code or behaviour changes.
