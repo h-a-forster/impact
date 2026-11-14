@@ -568,6 +568,7 @@ const patchBlock = (file, from, to) => changeBlock(file.file, parseHunks(file.pa
 // ---------- blast radius: 3 agents did the same task; the real change is laid over what they touched ----------
 // Data: GET /api/blast?pr=<id> (recorded runs + the numbers, worked out in src/lib/blast.mjs).
 const BLAST_ZONES = [
+  ["outside", "Outside every zone", "No agent touched this. Only the real change did."],
   ["wide", "Wide zone", "Only the agent that changes too much touched this."],
   ["normal", "Normal zone", "The normal agent touched this. The careful agent did not."],
   ["tight", "Tight zone", "The careful agent touched this."],
@@ -747,11 +748,12 @@ function renderBlast() {
   const zoneRank = { tight: 0, normal: 1, wide: 2, outside: 3 };
   const sorted = (list) => [...list].sort((p, q) => zoneRank[p.zone] - zoneRank[q.zone] || (p.by.real ? 0 : 1) - (q.by.real ? 0 : 1) || p.label.localeCompare(q.label));
   const inZone = (z) => sorted(files.filter((x) => x.zone === z));
-  const boxesOr = (boxes) => (boxes.length ? `<div class="bz-boxes">${boxes.map(blastBox).join("")}</div>` : `<div class="bz-empty">Nothing here.</div>`);
+  // A target: outside every zone, then wide, normal and tight, each band inside the one before. Empty bands stay, thin.
   const zoneHtml = (i) => {
     if (i >= BLAST_ZONES.length) return "";
-    const [z, name, text] = BLAST_ZONES[i];
-    return `<div class="bz bz-${z}"><div class="bz-title">${name} <span>${text}</span></div>${boxesOr(inZone(z))}${zoneHtml(i + 1)}</div>`;
+    const [z, name, text] = BLAST_ZONES[i], boxes = inZone(z);
+    return `<div class="bz bz-${z}${boxes.length ? "" : " empty"}"><div class="bz-title" title="${esc(text)}">${name} <span>${boxes.length || "none"}</span></div>
+      ${boxes.length ? `<div class="bz-boxes">${boxes.map(blastBox).join("")}</div>` : ""}${zoneHtml(i + 1)}</div>`;
   };
   const cols = b.columns;
   const num = (n) => Number(n).toLocaleString("en");
@@ -778,30 +780,24 @@ function renderBlast() {
   const things = (arr) => (arr.length ? arr.map((t) => `<code>${esc(t.label)}</code>${t.kind === "doc" ? " (doc)" : t.kind === "test" ? " (unit test)" : ""}`).join(", ") : "nothing");
   const head = `<thead><tr><th></th>${cols.map((c) => `<th class="${c.id === "real" ? "real" : ""}">${esc(c.label)}${c.id !== "real" && !c.ok ? note(`<span class="bad-text">the run failed</span>`) : c.noChange ? note("made no change") : ""}</th>`).join("")}</tr></thead>`;
   const secs = (r) => (r.startedAt && r.endedAt ? `${Math.max(1, Math.round((new Date(r.endedAt) - new Date(r.startedAt)) / 1000))} s` : "");
-  // The picture and the table are always shown. The extras are small "show more" links.
-  const fold = (id, title, hint, body) => (id === "zones" || id === "files" ? body : `<details class="blast-runs"><summary>${title}: ${hint}</summary>${body}</details>`);
+  // The table is always shown inside the details. The extras are small "show more" links.
+  const fold = (id, title, hint, body) => (id === "files" ? body : `<details class="blast-runs"><summary>${title}: ${hint}</summary>${body}</details>`);
   const realCol = cols.find((c) => c.id === "real");
-  // The simple view: the trust score, why, and how many files each one changed. The rest sits in one fold.
-  const trust = blastScore(b), most = Math.max(1, ...cols.map((c) => c.files));
-  if (state.sel?.type === "blast") blastRun.details = true; // a picked file lives in the fold: keep it open
+  // The simple view: the trust score, why, and the zone picture. The rest sits in one fold.
+  const trust = blastScore(b);
   el.innerHTML = `<div class="blast-top">${trustHtml(trust, BLAST_WHAT)}<button type="button" id="blastAgain">↻ Run again</button></div>
     ${whyHtml(trust)}
-    <div class="bars"><div class="bars-title">Files each one changed</div>${cols.map((c) => `<div class="bar-row${c.id === "real" ? " real" : ""}"><span>${esc(BLAST_SHORT[c.id] ?? c.label)}${c.id === "real" ? "" : " agent"}</span><span class="bar"><i style="width:${Math.round((100 * c.files) / most)}%"></i></span><b>${c.files} file${c.files === 1 ? "" : "s"}</b></div>`).join("")}</div>
+    <div class="blast-zones">${zoneHtml(0)}</div>
+    <div class="legend blast-legend">
+      <span><i class="pip pip-minimal on"></i> careful</span>
+      <span><i class="pip pip-normal on"></i> normal</span>
+      <span><i class="pip pip-wide on"></i> changes too much</span>
+      <span><i class="sw sw-real"></i> the real change</span>
+      <span class="muted">Click a file to compare.</span>
+    </div>
     <details class="tool-details" id="blastDetails" ${blastRun.details ? "open" : ""}><summary>Show the details</summary>
-    <p class="blast-what">The coloured zones show the files the 3 agents touched. The thick outline is the real change.</p>
     <div class="blast-label ${esc(b.label.tone)}"><span class="stamp-label">Trust label</span><strong>${esc(b.label.text)}</strong><span>${esc(b.label.how)}</span></div>
     ${blastTestsHtml(b)}
-    ${fold("zones", "Zone picture", "Which files each agent touched, and where the real change sits", `
-    <div class="blast-zones">${zoneHtml(0)}
-      <div class="bz bz-outside"><div class="bz-title">Outside every zone <span>No agent touched this. Only the real change did.</span></div>${boxesOr(inZone("outside"))}</div>
-    </div>
-    <div class="legend blast-legend">
-      <span><i class="pip pip-minimal on"></i> careful agent</span>
-      <span><i class="pip pip-normal on"></i> normal agent</span>
-      <span><i class="pip pip-wide on"></i> agent that changes too much</span>
-      <span><i class="sw sw-real"></i> thick outline: the real change</span>
-      <span class="muted">Click a file to see what each one changed in it.</span>
-    </div>`)}
     ${fold("files", "Lines changed per file", `Real change: ${num(realCol.files)} files, +${num(realCol.added)} −${num(realCol.removed)}`, `
     <table class="blast-table files">${head}<tbody>${fileRows}${totalRow}</tbody></table>
     <div class="blast-key muted"><span class="plus">+</span> lines added, <span class="minus">−</span> lines removed, · not touched. The real change is ${SESSION ? "the pull request under review" : "Tieto's AI-written branch, shown as a PR"}. ${esc(b.tests ? "The agents could not build the code; the unit tests were run afterwards on another machine (see above)." : b.notBuilt)}</div>`)}

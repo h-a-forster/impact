@@ -36,6 +36,13 @@
   --req: #B4B8C0;
   --req-bg: #131418;
   --mark-bg: color-mix(in srgb, #E8A33D 16%, #0B0C0E);
+  /* Blast radius zones: risk-neutral hues; the tints stack, so the centre of the target is the brightest */
+  --zone-tight: #5CCFE6;
+  --zone-tight-bg: color-mix(in srgb, #5CCFE6 11%, transparent);
+  --zone-normal: #A48CF0;
+  --zone-normal-bg: color-mix(in srgb, #A48CF0 9%, transparent);
+  --zone-wide: #8E97AD;
+  --zone-wide-bg: color-mix(in srgb, #8E97AD 9%, transparent);
   --mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
   --ui: "Segoe UI Variable Small", "Segoe UI", system-ui, sans-serif;
   --prose: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
@@ -114,7 +121,7 @@ button.primary, .choice.main, .send { background: var(--ink); border-color: var(
 
 /* Eyebrow labels that only add reading are hidden; the blocks speak for themselves */
 .short-label, .tldr-tag { display: none; }
-.stamp-label, .bars-title, .trust-num span { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 12px; color: var(--muted); }
+.stamp-label, .trust-num span { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 12px; color: var(--muted); }
 
 /* PR and review in short: plain text under a hairline, no colour bars, capped line length.
    The only colour bar on the first screen belongs to the verdict. */
@@ -187,6 +194,13 @@ button.primary, .choice.main, .send { background: var(--ink); border-color: var(
 .trust { border-radius: var(--r); border-left-width: 2px; }
 .trust-num b { font-family: var(--mono); font-size: 32px; font-weight: 500; }
 .trust-num small { font-family: var(--mono); }
+.bz-title { font: 600 11.5px/1.6 var(--ui); background: var(--card); }
+.bz-title span { font-family: var(--mono); font-size: 11px; }
+.bbox { border: 1px solid var(--line); background: var(--card); }
+.bbox:hover:not(:disabled) { border-color: var(--muted); }
+.bbox.real, .bbox.real:hover:not(:disabled) { border: 3px solid var(--ink); padding: 4px 7px; }
+.bbox-label { font: 500 12.5px/1.4 var(--mono); }
+.bbox.selected { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--focus); }
 
 /* Composer */
 .composer { padding: 8px 16px 12px; }
@@ -209,7 +223,7 @@ button.primary, .choice.main, .send { background: var(--ink); border-color: var(
 .tabs button:first-child { border-left: 0; }
 .tabs button:hover:not(:disabled) { color: var(--ink); }
 .tabs button.active { background: var(--ink); color: var(--bg); }
-.stamp, .history li, .list li, .bbox, .blast-label, .blast-tests, .blast-run, .bars, .swarm-stage, .swarm-req, .code, pre.raw { border-radius: var(--r); }
+.stamp, .history li, .list li, .bbox, .blast-label, .blast-tests, .blast-run, .swarm-stage, .swarm-req, .code, pre.raw { border-radius: var(--r); }
 .stamp { border-left-width: 2px; }
 .stamp-value { font-family: var(--mono); font-size: 15px; font-weight: 500; }
 .code-head { font-family: var(--ui); }
