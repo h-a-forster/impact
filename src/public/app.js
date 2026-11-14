@@ -25,7 +25,8 @@ async function getSource(sha, file) {
   return sourceCache.get(key);
 }
 const currentPr = () => state.revisions.prs.find((p) => p.id === state.prId);
-const revList = () => currentPr().commits.map((c) => ({ sha: c.sha, label: `Commit ${c.index}${c.madeUp ? " · made up" : ""}`, message: c.message, short: short(c.sha) }));
+// In a session a person reviews one commit: later commits do not exist yet, and no other pull request is open.
+const revList = () => currentPr().commits.filter((c) => !SESSION || c.sha === state.sha || c.index < currentPr().commits.find((x) => x.sha === state.sha)?.index).map((c) => ({ sha: c.sha, label: `Commit ${c.index}${c.madeUp ? " · made up" : ""}`, message: c.message, short: short(c.sha) }));
 const stepText = (m) => `commit ${m.selected.index} · ${m.selected.short}`;
 /** Escape, then turn `code` into a code span. */
 const rich = (s) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>');
@@ -94,7 +95,7 @@ function selectNode(id) {
 const GITHUB_URL = "http://localhost:3000"; // the GitHub replica
 function renderHeader() {
   // Left rail: one row per PR, like a list of chats.
-  $("prList").innerHTML = state.revisions.prs.map((p) => `<button type="button" class="rail-pr ${p.id === state.prId ? "active" : ""}" data-pr="${esc(p.id)}" title="${esc(p.title)}"><span class="rail-num">#${p.number}</span><span class="rail-title">${esc(p.title)}</span></button>`).join("");
+  $("prList").innerHTML = state.revisions.prs.filter((p) => !SESSION || p.id === state.prId).map((p) => `<button type="button" class="rail-pr ${p.id === state.prId ? "active" : ""}" data-pr="${esc(p.id)}" title="${esc(p.title)}"><span class="rail-num">#${p.number}</span><span class="rail-title">${esc(p.title)}</span></button>`).join("");
   for (const b of $("prList").querySelectorAll("button")) b.onclick = () => {
     const next = state.revisions.prs.find((p) => p.id === b.dataset.pr);
     state.notice = null;
@@ -1480,7 +1481,7 @@ function introHtml() {
   ].join("");
   const prShort = d.ai?.tldr?.text ?? d.ai?.summary ?? d.author.text;
   return `<h1 class="pr-title">${esc(m.pr.title)}</h1>
-    <div class="pr-sub muted">PR #${m.pr.number} · Tieto's AI-written branch, shown as a PR · ${esc(stepText(m))}${m.selected.madeUp ? ` <span class="tag warn">made up</span>` : ""}</div>
+    <div class="pr-sub muted">PR #${m.pr.number} · ${SESSION ? "AI-written change, shown as a PR" : "Tieto's AI-written branch, shown as a PR"} · ${esc(stepText(m))}${m.selected.madeUp ? ` <span class="tag warn">made up</span>` : ""}</div>
     <div class="advice-live"></div>
     <div class="short ${esc(d.ai?.tldr?.tone ?? "plain")}"><span class="short-label">The PR in short</span><p>${rich(prShort)}</p>
       <button type="button" class="link" data-act="page" data-page="pr">Read the full PR description</button></div>
@@ -1681,6 +1682,7 @@ const nameForm = (lead) => `${lead}<p>Type your name to sign off. It is saved wi
   <form class="name-form" data-form="merge"><input name="name" type="text" placeholder="Your name" aria-label="Your name" autocomplete="name" /><button class="primary" type="submit">Sign off and merge</button><div class="error" role="alert"></div></form>`;
 function startMerge(said) {
   me(said ?? "Merge this PR");
+  if (SESSION) return bot(`<p>In this test you give your decision with the buttons below this screen.</p>`);
   const m = state.model, all = issueList(m), open = all.filter((x) => !acked(x.id)), hard = open.filter((x) => x.level === "block");
   if (m.decisions.signedOff) return bot(`<p><b>Already merged.</b> ${esc(m.decisions.signOff.name)} signed off ${esc(stepText(m))}.</p>`);
   if (hard.length) {
@@ -1742,7 +1744,7 @@ function askAgent(q) {
 /** Free text: a tool name or "merge" does that. Anything else is a question for the agent. */
 function handleText(q) {
   const s = q.toLowerCase();
-  if (!SESSION && /\b(merge|sign.?off|approve|ship it)\b/.test(s)) return startMerge(q); // in a session the runner records the decision
+  if (/\b(merge|sign.?off|approve|ship it)\b/.test(s)) return startMerge(q);
   if (/blast/.test(s)) return useTool("blast", q);
   if (/swarm|monte/.test(s)) return useTool("swarm", q);
   if (/whole repo|full map/.test(s)) return useTool("full", q);
@@ -1854,7 +1856,7 @@ async function init() {
   const h = readHash();
   // Link form used by the GitHub replica: /?repo=<owner/name>&pr=<number>&sha=<sha>&embed=1
   const q = new URLSearchParams(location.search);
-  if (q.get("embed") === "1") document.body.classList.add("embed");
+  if (q.get("embed") === "1" && !SESSION) document.body.classList.add("embed"); // a session shows the whole app
   if (SESSION) document.body.classList.add("session");
   initChat();
   // The right panel starts closed. ?map=<pr|full|blast|swarm> opens it on the Impact map card.
