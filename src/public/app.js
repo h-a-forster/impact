@@ -1083,7 +1083,7 @@ function swarmSideHtml(sel) {
 // ---------- AI review (advice only) ----------
 function renderReview() {
   const m = state.model, el = $("reviewCard"), r = m.review;
-  const cite = (c) => (c.valid ? `<button type="button" class="link mono" data-src="${esc(c.file)}" data-line="${c.line}" title="${esc(c.file)}">${esc(c.file.split("/").pop())}:${c.line}</button>` : `<span class="mono bad-text" title="${esc(c.problem)}">${esc(c.file)}:${esc(c.line)} (invalid)</span>`);
+  const cite = (c) => (c.valid ? `<button type="button" class="link mono" data-src="${esc(c.file)}" data-line="${esc(c.line)}" title="${esc(c.file)}">${esc(c.file.split("/").pop())}:${esc(c.line)}</button>` : `<span class="mono bad-text" title="${esc(c.problem)}">${esc(c.file)}:${esc(c.line)} (invalid)</span>`);
   const c1 = m.classifier1, c2 = m.classifier2;
   const sev = (s) => `<span class="tag ${SEVERITY_TONE[s] ?? ""}">${esc(s)}</span>`;
   el.innerHTML = `<div class="card-head"><div class="head-left"><h2>Review steps</h2><span class="muted">Rules: <button type="button" class="link" data-doc="REVIEW.md">REVIEW.md</button> · <button type="button" class="link" data-doc="review-policy.yml">review-policy.yml</button></span></div>${cardToggle("reviewCard")}</div>
@@ -1183,7 +1183,7 @@ async function sideHtml() {
   if (sel.type === "source") {
     const src = await getSource(sha, sel.file);
     if (src.error) return `<h2>Source</h2><div class="callout bad">${esc(src.error)}</div>`;
-    return `<h2>${esc(sel.file)}:${sel.line}</h2><div class="where">Cited by the reviewer</div>${codeBlock(src, { marks: [{ line: sel.line, label: "cited line" }], title: "source" })}`;
+    return `<h2>${esc(sel.file)}:${esc(sel.line)}</h2><div class="where">Cited by the reviewer</div>${codeBlock(src, { marks: [{ line: sel.line, label: "cited line" }], title: "source" })}`;
   }
   if (sel.type === "edge") {
     const e = m.graph.edges.find((x) => x.id === sel.id && x.level === state.level);
@@ -1416,7 +1416,7 @@ const openIssues = () => issueList(state.model).filter((x) => !acked(x.id));
 
 function issueHtml(x) {
   const done = acked(x.id), merged = state.model.decisions.signedOff;
-  const cites = (x.citations ?? []).filter((c) => c.valid).slice(0, 3).map((c) => `<button type="button" class="link mono" data-act="src" data-src="${esc(c.file)}" data-line="${c.line}" title="${esc(c.file)}">${esc(c.file.split("/").pop())}:${c.line}</button>`).join(", ");
+  const cites = (x.citations ?? []).filter((c) => c.valid).slice(0, 3).map((c) => `<button type="button" class="link mono" data-act="src" data-src="${esc(c.file)}" data-line="${esc(c.line)}" title="${esc(c.file)}">${esc(c.file.split("/").pop())}:${esc(c.line)}</button>`).join(", ");
   const btn = x.level === "block" ? `<span class="tag bad">Must be fixed</span>`
     : merged ? ""
     : done ? `<button type="button" data-act="unack" data-id="${esc(x.id)}">Undo</button>`

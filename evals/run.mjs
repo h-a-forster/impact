@@ -111,10 +111,12 @@ group = "Evidence integrity";
   briefC.revisions["1"].claims.find((c) => c.id === "c1").cite = { file: "src/pricing/discount.ts", line: 999 };
   briefC.revisions["1"].claims.find((c) => c.id === "c3").cite = { file: "src/import/doesNotExist.ts", line: 3 };
   briefC.revisions["1"].claims.find((c) => c.id === "c2").test = "test:tests/orderImport.test.ts#REQ-17 import: 105 cents at 10% totals 94 cents";
+  briefC.revisions["1"].claims.find((c) => c.id === "c5").cite = { file: "src/pricing/discount.ts", line: "<img src=x>" };
   const c = buildModel(revisions, "req-17", c1, { brief: briefC });
   check("invalid citation (line out of range): not shown as Verified", claimOf(c, "c1"), e.invalidCitation.claimLabel);
   check("invalid citation (missing file): not shown as Verified", claimOf(c, "c3"), e.invalidCitation.claimLabel);
   check("invalid citation (test exists only at a later commit): not shown as Verified", claimOf(c, "c2"), e.invalidCitation.claimLabel);
+  check("invalid citation (line is not a number): not shown as Verified", claimOf(c, "c5"), e.invalidCitation.claimLabel);
 
   // (d) A failed required check stays a blocker, even with full evidence otherwise.
   const failedRun = clone(loadRun(c2));
