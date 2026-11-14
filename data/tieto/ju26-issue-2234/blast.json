@@ -1,0 +1,544 @@
+{
+ "schema": "impact-map/blast/v1",
+ "pr": "ju26-issue-2234",
+ "recordedAt": "2026-11-14T19:32:28.925Z",
+ "model": "claude-fable-5-2",
+ "base": "32258fdbee4bcd653c79f51b4376b5103c6f4d27",
+ "how": {
+  "command": "claude -p --model claude-fable-5-2 --setting-sources user --permission-mode acceptEdits --disallowedTools Bash PowerShell WebFetch WebSearch Agent Skill --strict-mcp-config --output-format stream-json --verbose < blast-prompts/<run>.txt",
+  "folders": "3 folders, each with only the base commit fetched (git fetch --depth 1 <repo> <base sha>). The branch with the real fix was never fetched.",
+  "same": "Same model and same requirements for all three. Only the 'How to work' lines differ.",
+  "settings": "The agents ran with this machine's own Claude Code user settings only (--setting-sources user: a global CLAUDE.md and a plain-words output style; no project settings). They could read, search and edit files in their folder. They had no shell, no git and no web.",
+  "functions": "Functions are found by a simple reader of the C# text (scanFunctions in src/lib/blast.mjs), the same way for all 4 changes. A function counts as edited when a changed line sits inside it."
+ },
+ "notBuilt": "This machine has no .NET SDK. Nobody built the code or ran the unit tests. We do not know if any agent's fix works.",
+ "given": {
+  "file": "data/tieto/ju26-issue-2234/blast-prompts/requirements.md",
+  "text": "## Requirements (from the pull request description)\n\nRequirement: Bug report #2234 in MessagePack-CSharp.\n\nWhy: The report says the code checker \"does not work\" when code generation is turned off. It does not say what goes wrong.\n\nBefore and after: Before: a repeated or mixed key made the tool crash.\n\nMust preserve: The code generator uses the same code. It must not quietly drop a member.\n\n## The bug report the Requirement row points to (issue #2234, word for word)\n\n# The analyzer does not work if SuppressSourceGeneration = true\n\n#### Bug description\n\nThe analyzer does not work if SuppressSourceGeneration = true. This has happened since version 3.1.1. It still worked in 3.1.0.\n",
+  "kept": [
+   "Requirement",
+   "Why",
+   "Before and after (first part only: 'Before: a repeated or mixed key made the tool crash.')",
+   "Must preserve",
+   "The bug report #2234 that the Requirement row points to, word for word"
+  ],
+  "leftOut": [
+   "Summary and tags (they describe the real fix)",
+   "Second half of 'Before → after' (it says what the real fix does: keep the first member with a key and skip the later one)",
+   "Approach (it names the function the real fix changes and how)",
+   "Alternatives",
+   "Checks run",
+   "Open gaps",
+   "Rollback"
+  ],
+  "note": "The bug report is one line: no repro, no diagnostic IDs, no error text. The 'Before' line comes from the pull request, not the report: the author of the real change worked it out. The base commit is older than 3.1.1, the version the report names."
+ },
+ "real": {
+  "id": "real",
+  "head": "9007cee1163c4a274fd60c3cc20c21ae63622786",
+  "source": "data/tieto/ju26-issue-2234/pack.json (branch ju26-issue-2234, recorded)",
+  "files": [
+   {
+    "file": "README.md",
+    "status": "M",
+    "kind": "doc",
+    "added": 14,
+    "removed": 0,
+    "patch": "@@ -1617,6 +1617,20 @@\n > Note: When using Unity, dynamic code generation only works when targeting .NET Framework 4.x + mono runtime.\n For all other Unity targets, AOT is required.\n \n+### Opting out of source generation\n+\n+A `[MessagePackObject]` type can opt out of source generation with `[MessagePackObject(SuppressSourceGeneration = true)]`.\n+No formatter is generated for that type. It is serialized at run time by the dynamic resolvers, which use reflection, so such a type is not AOT-safe.\n+\n+The analyzer still validates these types, because they are serialized at run time and must still have a valid contract:\n+- Members have a `[Key]` or `[IgnoreMember]` attribute ([MsgPack004](doc/analyzers/MsgPack004.md)).\n+- Keys are unique and all of the same kind ([MsgPack005](doc/analyzers/MsgPack005.md)).\n+- Non-public members require `AllowPrivate` ([MsgPack015](doc/analyzers/MsgPack015.md)).\n+- Members have types that are themselves serializable ([MsgPack003](doc/analyzers/MsgPack003.md)).\n+- Types are accessible to the resolver ([MsgPack012](doc/analyzers/MsgPack012.md)).\n+\n+The analyzer does not report the partial-class requirement ([MsgPack011](doc/analyzers/MsgPack011.md)) or the AOT-only checks ([MsgPack016](doc/analyzers/MsgPack016.md) and [MsgPack017](doc/analyzers/MsgPack017.md)) for these types, because they only apply when a formatter is generated.\n+\n ### Customizations\n \n You can customize the generated source through properties on the `GeneratedMessagePackResolverAttribute`.",
+    "functions": []
+   },
+   {
+    "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "status": "M",
+    "kind": "code",
+    "added": 18,
+    "removed": 4,
+    "patch": "@@ -1005,6 +1005,7 @@\n                         if ((isIntKey && intKey == null) || (!isIntKey && stringKey == null))\n                         {\n                             this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.DoNotMixStringAndIntKeys, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n+                            continue; // The key kind does not match the other members; the diagnostic is reported, so skip this member.\n                         }\n                     }\n \n@@ -1019,7 +1020,10 @@\n                         {\n                             DeclaringType = GetDeclaringTypeIfColliding(item),\n                         };\n-                        intMembers.Add(member.IntKey, (member, item.Type));\n+                        if (!intMembers.ContainsKey(member.IntKey))\n+                        {\n+                            intMembers.Add(member.IntKey, (member, item.Type));\n+                        }\n                     }\n                     else if (stringKey is not null)\n                     {\n@@ -1032,7 +1036,10 @@\n                         {\n                             DeclaringType = GetDeclaringTypeIfColliding(item),\n                         };\n-                        stringMembers.Add(member.StringKey, (member, item.Type));\n+                        if (!stringMembers.ContainsKey(member.StringKey))\n+                        {\n+                            stringMembers.Add(member.StringKey, (member, item.Type));\n+                        }\n                     }\n \n                     var messagePackFormatter = item.GetAttributes().FirstOrDefault(x => x.AttributeClass.ApproximatelyEqual(this.typeReferences.FormatterAttribute))?.ConstructorArguments[0];\n@@ -1138,6 +1145,7 @@\n                         if ((isIntKey && intKey == null) || (!isIntKey && stringKey == null))\n                         {\n                             this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.DoNotMixStringAndIntKeys, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n+                            continue; // The key kind does not match the other members; the diagnostic is reported, so skip this member.\n                         }\n                     }\n \n@@ -1152,7 +1160,10 @@\n                         {\n                             DeclaringType = GetDeclaringTypeIfColliding(item),\n                         };\n-                        intMembers.Add(member.IntKey, (member, item.Type));\n+                        if (!intMembers.ContainsKey(member.IntKey))\n+                        {\n+                            intMembers.Add(member.IntKey, (member, item.Type));\n+                        }\n                     }\n                     else\n                     {\n@@ -1165,7 +1176,10 @@\n                         {\n                             DeclaringType = GetDeclaringTypeIfColliding(item),\n                         };\n-                        stringMembers.Add(member.StringKey, (member, item.Type));\n+                        if (!stringMembers.ContainsKey(member.StringKey))\n+                        {\n+                            stringMembers.Add(member.StringKey, (member, item.Type));\n+                        }\n                     }\n \n                     var messagePackFormatter = item.GetAttributes().FirstOrDefault(x => x.AttributeClass.ApproximatelyEqual(this.typeReferences.FormatterAttribute))?.ConstructorArguments[0];",
+    "functions": [
+     {
+      "key": "GetObjectInfo",
+      "name": "GetObjectInfo",
+      "line": 700,
+      "endLine": 1432,
+      "isNew": false,
+      "added": 18,
+      "removed": 4
+     }
+    ],
+    "linesOutsideFunctions": 0
+   },
+   {
+    "file": "tests/MessagePack.SourceGenerator.ExecutionTests/SuppressedSourceGenerationTests.cs",
+    "status": "A",
+    "kind": "test",
+    "added": 37,
+    "removed": 0,
+    "patch": "@@ -0,0 +1,37 @@\n+// Copyright (c) All contributors. All rights reserved.\n+// Licensed under the MIT license. See LICENSE file in the project root for full license information.\n+\n+/// <summary>\n+/// A type that opts out of source generation (https://github.com/MessagePack-CSharp/MessagePack-CSharp/issues/2234).\n+/// It must still serialize correctly through the run-time (dynamic) resolver.\n+/// </summary>\n+[MessagePackObject(SuppressSourceGeneration = true)]\n+public class SuppressedSourceGenerationType\n+{\n+    [Key(0)]\n+    public int Id { get; set; }\n+\n+    [Key(1)]\n+    public string Name { get; set; } = string.Empty;\n+}\n+\n+public class SuppressedSourceGenerationTests\n+{\n+    [Fact]\n+    public void NoFormatterIsGeneratedForSuppressedType()\n+    {\n+        Assert.Null(GeneratedMessagePackResolver.Instance.GetFormatter<SuppressedSourceGenerationType>());\n+    }\n+\n+    [Fact]\n+    public void SuppressedTypeRoundTripsThroughDynamicResolver()\n+    {\n+        var value = new SuppressedSourceGenerationType { Id = 7, Name = \"seven\" };\n+\n+        byte[] bytes = MessagePackSerializer.Serialize(value, MessagePackSerializerOptions.Standard);\n+        SuppressedSourceGenerationType result = MessagePackSerializer.Deserialize<SuppressedSourceGenerationType>(bytes, MessagePackSerializerOptions.Standard);\n+\n+        Assert.Equal(7, result.Id);\n+        Assert.Equal(\"seven\", result.Name);\n+    }\n+}",
+    "functions": [
+     {
+      "key": "NoFormatterIsGeneratedForSuppressedType",
+      "name": "NoFormatterIsGeneratedForSuppressedType",
+      "line": 21,
+      "endLine": 24,
+      "isNew": true,
+      "added": 4,
+      "removed": 0
+     },
+     {
+      "key": "SuppressedTypeRoundTripsThroughDynamicResolver",
+      "name": "SuppressedTypeRoundTripsThroughDynamicResolver",
+      "line": 27,
+      "endLine": 36,
+      "isNew": true,
+      "added": 10,
+      "removed": 0
+     }
+    ],
+    "linesOutsideFunctions": 23
+   },
+   {
+    "file": "tests/MessagePack.SourceGenerator.Tests/SuppressSourceGenerationAnalyzerTests.cs",
+    "status": "A",
+    "kind": "test",
+    "added": 193,
+    "removed": 0,
+    "patch": "@@ -0,0 +1,193 @@\n+// Copyright (c) All contributors. All rights reserved.\n+// Licensed under the MIT license. See LICENSE file in the project root for full license information.\n+\n+using MessagePack.Analyzers.CodeFixes;\n+using Microsoft.CodeAnalysis.CSharp;\n+using Microsoft.CodeAnalysis.Testing;\n+using VerifyCS = CSharpCodeFixVerifier<MessagePack.SourceGenerator.Analyzers.MsgPack00xMessagePackAnalyzer, MessagePack.Analyzers.CodeFixes.MessagePackCodeFixProvider>;\n+\n+/// <summary>\n+/// Verifies that the analyzer keeps validating <c>[MessagePackObject(SuppressSourceGeneration = true)]</c> types\n+/// (https://github.com/MessagePack-CSharp/MessagePack-CSharp/issues/2234).\n+/// Opting out of source generation only skips generation; the type is still serialized at run time, so its contract must still be checked.\n+/// </summary>\n+public class SuppressSourceGenerationAnalyzerTests\n+{\n+    private const string Preamble = @\"\n+using MessagePack;\n+\";\n+\n+    [Fact]\n+    public async Task MemberWithoutKeyIsReported()\n+    {\n+        string input = Preamble + @\"\n+[MessagePackObject(SuppressSourceGeneration = true)]\n+public class Foo\n+{\n+    public string {|MsgPack004:Member|} { get; set; }\n+}\n+\";\n+\n+        await new VerifyCS.Test\n+        {\n+            TestCode = input,\n+            MarkupOptions = MarkupOptions.UseFirstDescriptor,\n+        }.RunAsync();\n+    }\n+\n+    [Fact]\n+    public async Task AllowPrivateRequiredIsReported()\n+    {\n+        string input = Preamble + @\"\n+[{|MsgPack015:MessagePackObject(SuppressSourceGeneration = true)|}]\n+public class Foo\n+{\n+    [Key(0)]\n+    private string member;\n+}\n+\";\n+\n+        await new VerifyCS.Test\n+        {\n+            TestCode = input,\n+            MarkupOptions = MarkupOptions.UseFirstDescriptor,\n+        }.RunAsync();\n+    }\n+\n+    [Fact]\n+    public async Task MemberTypeMustBeMessagePackObjectIsReported()\n+    {\n+        string input = Preamble + @\"\n+public class Other\n+{\n+}\n+\n+[MessagePackObject(SuppressSourceGeneration = true)]\n+public class Foo\n+{\n+    [Key(0)]\n+    public Other {|MsgPack003:Member|} { get; set; }\n+}\n+\";\n+\n+        await new VerifyCS.Test\n+        {\n+            TestCode = input,\n+            MarkupOptions = MarkupOptions.UseFirstDescriptor,\n+        }.RunAsync();\n+    }\n+\n+    [Fact]\n+    public async Task DuplicateIntKeysAreReportedWithoutAnalyzerFailure()\n+    {\n+        string input = Preamble + @\"\n+[MessagePackObject(SuppressSourceGeneration = true)]\n+public class Foo\n+{\n+    [Key(0)]\n+    public string Member1 { get; set; }\n+\n+    {|MsgPack005:[Key(0)]\n+    public string Member2 { get; set; }|}\n+}\n+\";\n+\n+        await new VerifyCS.Test\n+        {\n+            TestCode = input,\n+            MarkupOptions = MarkupOptions.UseFirstDescriptor,\n+        }.RunAsync();\n+    }\n+\n+    [Fact]\n+    public async Task DuplicateStringKeysAreReportedWithoutAnalyzerFailure()\n+    {\n+        string input = Preamble + @\"\n+[MessagePackObject(SuppressSourceGeneration = true)]\n+public class Foo\n+{\n+    [Key(\"\"a\"\")]\n+    public string Member1 { get; set; }\n+\n+    {|MsgPack005:[Key(\"\"a\"\")]\n+    public string Member2 { get; set; }|}\n+}\n+\";\n+\n+        await new VerifyCS.Test\n+        {\n+            TestCode = input,\n+            MarkupOptions = MarkupOptions.UseFirstDescriptor,\n+        }.RunAsync();\n+    }\n+\n+    [Fact]\n+    public async Task MixedKeyKindsAreReportedWithoutAnalyzerFailure()\n+    {\n+        string input = Preamble + @\"\n+[MessagePackObject(SuppressSourceGeneration = true)]\n+public class Foo\n+{\n+    [Key(0)]\n+    public string Member1 { get; set; }\n+\n+    {|MsgPack005:[Key(\"\"Member2\"\")]\n+    public string Member2 { get; set; }|}\n+}\n+\";\n+\n+        await new VerifyCS.Test\n+        {\n+            TestCode = input,\n+            MarkupOptions = MarkupOptions.UseFirstDescriptor,\n+        }.RunAsync();\n+    }\n+\n+    [Fact]\n+    public async Task DuplicateKeysAreReportedWithoutAnalyzerFailureForGeneratedTypes()\n+    {\n+        string input = Preamble + @\"\n+[MessagePackObject]\n+public class Foo\n+{\n+    [Key(0)]\n+    public string Member1 { get; set; }\n+\n+    {|MsgPack005:[Key(0)]\n+    public string Member2 { get; set; }|}\n+}\n+\";\n+\n+        await new VerifyCS.Test\n+        {\n+            TestCode = input,\n+            MarkupOptions = MarkupOptions.UseFirstDescriptor,\n+        }.RunAsync();\n+    }\n+\n+    [Fact]\n+    public async Task SourceGenerationOnlyDiagnosticsAreNotReportedWhenSuppressed()\n+    {\n+        // The partial-class requirement (MsgPack011) and the AOT-only checks (MsgPack016, MsgPack017)\n+        // only matter when a formatter is generated, so they are not reported for a suppressed type.\n+        string input = Preamble + @\"\n+[MessagePackObject(AllowPrivate = true, SuppressSourceGeneration = true)]\n+public class Foo\n+{\n+    [Key(0)]\n+    private string member;\n+\n+    [Key(1)]\n+    public string Prop1 { get; init; } = \"\"some default\"\";\n+\n+    [Key(2)]\n+    public string Prop2 { get; set; }\n+}\n+\";\n+\n+        await new VerifyCS.Test\n+        {\n+            TestCode = input,\n+        }.RunAsync();\n+    }\n+}",
+    "functions": [
+     {
+      "key": "MemberWithoutKeyIsReported",
+      "name": "MemberWithoutKeyIsReported",
+      "line": 21,
+      "endLine": 36,
+      "isNew": true,
+      "added": 16,
+      "removed": 0
+     },
+     {
+      "key": "AllowPrivateRequiredIsReported",
+      "name": "AllowPrivateRequiredIsReported",
+      "line": 39,
+      "endLine": 55,
+      "isNew": true,
+      "added": 17,
+      "removed": 0
+     },
+     {
+      "key": "MemberTypeMustBeMessagePackObjectIsReported",
+      "name": "MemberTypeMustBeMessagePackObjectIsReported",
+      "line": 58,
+      "endLine": 78,
+      "isNew": true,
+      "added": 21,
+      "removed": 0
+     },
+     {
+      "key": "DuplicateIntKeysAreReportedWithoutAnalyzerFailure",
+      "name": "DuplicateIntKeysAreReportedWithoutAnalyzerFailure",
+      "line": 81,
+      "endLine": 100,
+      "isNew": true,
+      "added": 20,
+      "removed": 0
+     },
+     {
+      "key": "DuplicateStringKeysAreReportedWithoutAnalyzerFailure",
+      "name": "DuplicateStringKeysAreReportedWithoutAnalyzerFailure",
+      "line": 103,
+      "endLine": 122,
+      "isNew": true,
+      "added": 20,
+      "removed": 0
+     },
+     {
+      "key": "MixedKeyKindsAreReportedWithoutAnalyzerFailure",
+      "name": "MixedKeyKindsAreReportedWithoutAnalyzerFailure",
+      "line": 125,
+      "endLine": 144,
+      "isNew": true,
+      "added": 20,
+      "removed": 0
+     },
+     {
+      "key": "DuplicateKeysAreReportedWithoutAnalyzerFailureForGeneratedTypes",
+      "name": "DuplicateKeysAreReportedWithoutAnalyzerFailureForGeneratedTypes",
+      "line": 147,
+      "endLine": 166,
+      "isNew": true,
+      "added": 20,
+      "removed": 0
+     },
+     {
+      "key": "SourceGenerationOnlyDiagnosticsAreNotReportedWhenSuppressed",
+      "name": "SourceGenerationOnlyDiagnosticsAreNotReportedWhenSuppressed",
+      "line": 169,
+      "endLine": 192,
+      "isNew": true,
+      "added": 24,
+      "removed": 0
+     }
+    ],
+    "linesOutsideFunctions": 35
+   }
+  ]
+ },
+ "runs": [
+  {
+   "id": "minimal",
+   "prompt": "You are working in a copy of the MessagePack-CSharp repository (C#), at the commit just before the fix. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- This machine has no .NET SDK. You cannot build the code or run unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nMake the smallest change that meets the requirements. Touch as few files, as few functions and as few lines as you can. No refactoring, no tidy-ups, no renames and no doc changes. Add no unit tests unless the requirements cannot be met without them.\n\n## Requirements (from the pull request description)\n\nRequirement: Bug report #2234 in MessagePack-CSharp.\n\nWhy: The report says the code checker \"does not work\" when code generation is turned off. It does not say what goes wrong.\n\nBefore and after: Before: a repeated or mixed key made the tool crash.\n\nMust preserve: The code generator uses the same code. It must not quietly drop a member.\n\n## The bug report the Requirement row points to (issue #2234, word for word)\n\n# The analyzer does not work if SuppressSourceGeneration = true\n\n#### Bug description\n\nThe analyzer does not work if SuppressSourceGeneration = true. This has happened since version 3.1.1. It still worked in 3.1.0.\n",
+   "instruction": "Make the smallest change that meets the requirements. Touch as few files, as few functions and as few lines as you can. No refactoring, no tidy-ups, no renames and no doc changes. Add no unit tests unless the requirements cannot be met without them.",
+   "startedAt": "2026-11-14T19:15:49.102Z",
+   "endedAt": "2026-11-14T19:18:16.903Z",
+   "exitCode": 0,
+   "modelInLog": "claude-fable-5-2",
+   "turns": 15,
+   "reply": "Changed one file; nothing was built or run (no .NET SDK here), so this is reasoned from the code only.\n\n- [TypeCollector.cs](src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs) — in `GetObjectInfo`, the explicit-key paths for properties ([line 1014](src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs:1014)) and fields ([line 1158](src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs:1158)):\n  - **Crash fix:** a repeated key threw on `Dictionary.Add`, and a mixed or null key threw on `intKey!.Value` or a null string key. Such a member is now skipped after its existing diagnostic (`KeysMustBeUnique`, `DoNotMixStringAndIntKeys`, `BothStringAndIntKeyAreNull`) is reported, so the analyzer keeps going.\n  - **No quiet drop in the generator:** a new `hasInvalidKeys` flag is set whenever a member is skipped, and `GetObjectInfo` returns `null` for that type ([line 1389](src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs:1389)), so no formatter is generated for it rather than one missing a member.\n\nTwo behaviours you might not expect:\n- The generator previously threw on these types; it now emits no formatter for them and relies on the analyzer's error to tell the user.\n- A property with an int key in a string-keyed type used to be skipped silently and a formatter generated without it; that case now also yields no formatter.",
+   "toolCalls": {
+    "Grep": 4,
+    "Glob": 1,
+    "Read": 5,
+    "Edit": 4
+   },
+   "pathsOutsideFolder": [],
+   "files": [
+    {
+     "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+     "status": "M",
+     "kind": "code",
+     "added": 54,
+     "removed": 23,
+     "patch": "@@ -716,6 +716,9 @@ public class TypeCollector\n         }\n \n         bool isIntKey = true;\n+\n+        // Set when a member's key is missing, repeated or of the wrong kind, so that member cannot be recorded.\n+        bool hasInvalidKeys = false;\n         Dictionary<int, (MemberSerializationInfo Info, ITypeSymbol TypeSymbol)> intMembers = new();\n         Dictionary<string, (MemberSerializationInfo Info, ITypeSymbol TypeSymbol)> stringMembers = new();\n \n@@ -1008,31 +1011,42 @@ public class TypeCollector\n                         }\n                     }\n \n-                    if (isIntKey)\n+                    if (isIntKey ? intKey is null : stringKey is null)\n+                    {\n+                        // The diagnostic for this was already reported above.\n+                        hasInvalidKeys = true;\n+                    }\n+                    else if (isIntKey)\n                     {\n                         if (intMembers.ContainsKey(intKey!.Value))\n                         {\n                             this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n+                            hasInvalidKeys = true;\n                         }\n-\n-                        var member = new MemberSerializationInfo(true, isWritable, isReadable, isInitOnly, item.IsRequired, intKey!.Value, item.Name, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n+                        else\n                         {\n-                            DeclaringType = GetDeclaringTypeIfColliding(item),\n-                        };\n-                        intMembers.Add(member.IntKey, (member, item.Type));\n+                            var member = new MemberSerializationInfo(true, isWritable, isReadable, isInitOnly, item.IsRequired, intKey!.Value, item.Name, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n+                            {\n+                                DeclaringType = GetDeclaringTypeIfColliding(item),\n+                            };\n+                            intMembers.Add(member.IntKey, (member, item.Type));\n+                        }\n                     }\n-                    else if (stringKey is not null)\n+                    else\n                     {\n                         if (stringMembers.ContainsKey(stringKey!))\n                         {\n                             this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n+                            hasInvalidKeys = true;\n                         }\n-\n-                        var member = new MemberSerializationInfo(true, isWritable, isReadable, isInitOnly, item.IsRequired, hiddenIntKey++, stringKey!, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n+                        else\n                         {\n-                            DeclaringType = GetDeclaringTypeIfColliding(item),\n-                        };\n-                        stringMembers.Add(member.StringKey, (member, item.Type));\n+                            var member = new MemberSerializationInfo(true, isWritable, isReadable, isInitOnly, item.IsRequired, hiddenIntKey++, stringKey!, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n+                            {\n+                                DeclaringType = GetDeclaringTypeIfColliding(item),\n+                            };\n+                            stringMembers.Add(member.StringKey, (member, item.Type));\n+                        }\n                     }\n \n                     var messagePackFormatter = item.GetAttributes().FirstOrDefault(x => x.AttributeClass.ApproximatelyEqual(this.typeReferences.FormatterAttribute))?.ConstructorArguments[0];\n@@ -1141,31 +1155,42 @@ public class TypeCollector\n                         }\n                     }\n \n-                    if (isIntKey)\n+                    if (isIntKey ? intKey is null : stringKey is null)\n+                    {\n+                        // The diagnostic for this was already reported above.\n+                        hasInvalidKeys = true;\n+                    }\n+                    else if (isIntKey)\n                     {\n                         if (intMembers.ContainsKey(intKey!.Value))\n                         {\n                             this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n+                            hasInvalidKeys = true;\n                         }\n-\n-                        var member = new MemberSerializationInfo(true, IsWritable: !item.IsReadOnly, IsReadable: true, IsInitOnly: false, item.IsRequired, intKey!.Value, item.Name, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n+                        else\n                         {\n-                            DeclaringType = GetDeclaringTypeIfColliding(item),\n-                        };\n-                        intMembers.Add(member.IntKey, (member, item.Type));\n+                            var member = new MemberSerializationInfo(true, IsWritable: !item.IsReadOnly, IsReadable: true, IsInitOnly: false, item.IsRequired, intKey!.Value, item.Name, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n+                            {\n+                                DeclaringType = GetDeclaringTypeIfColliding(item),\n+                            };\n+                            intMembers.Add(member.IntKey, (member, item.Type));\n+                        }\n                     }\n                     else\n                     {\n                         if (stringMembers.ContainsKey(stringKey!))\n                         {\n                             this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n+                            hasInvalidKeys = true;\n                         }\n-\n-                        var member = new MemberSerializationInfo(true, IsWritable: !item.IsReadOnly, IsReadable: true, IsInitOnly: false, item.IsRequired, hiddenIntKey++, stringKey!, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n+                        else\n                         {\n-                            DeclaringType = GetDeclaringTypeIfColliding(item),\n-                        };\n-                        stringMembers.Add(member.StringKey, (member, item.Type));\n+                            var member = new MemberSerializationInfo(true, IsWritable: !item.IsReadOnly, IsReadable: true, IsInitOnly: false, item.IsRequired, hiddenIntKey++, stringKey!, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n+                            {\n+                                DeclaringType = GetDeclaringTypeIfColliding(item),\n+                            };\n+                            stringMembers.Add(member.StringKey, (member, item.Type));\n+                        }\n                     }\n \n                     var messagePackFormatter = item.GetAttributes().FirstOrDefault(x => x.AttributeClass.ApproximatelyEqual(this.typeReferences.FormatterAttribute))?.ConstructorArguments[0];\n@@ -1372,6 +1397,12 @@ public class TypeCollector\n             return null;\n         }\n \n+        // Do not source generate a formatter that would silently omit the members whose keys were invalid.\n+        if (hasInvalidKeys)\n+        {\n+            return null;\n+        }\n+\n         // If any property had a private setter and does not appear in the deserializing constructor signature,\n         // we'll need a nested formatter.\n         foreach (IPropertySymbol property in nestedFormatterRequiredIfPropertyIsNotSetByDeserializingCtor)",
+     "functions": [
+      {
+       "key": "GetObjectInfo",
+       "name": "GetObjectInfo",
+       "line": 700,
+       "endLine": 1449,
+       "isNew": false,
+       "added": 54,
+       "removed": 23
+      }
+     ],
+     "linesOutsideFunctions": 0
+    }
+   ]
+  },
+  {
+   "id": "normal",
+   "prompt": "You are working in a copy of the MessagePack-CSharp repository (C#), at the commit just before the fix. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- This machine has no .NET SDK. You cannot build the code or run unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nSolve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.\n\n## Requirements (from the pull request description)\n\nRequirement: Bug report #2234 in MessagePack-CSharp.\n\nWhy: The report says the code checker \"does not work\" when code generation is turned off. It does not say what goes wrong.\n\nBefore and after: Before: a repeated or mixed key made the tool crash.\n\nMust preserve: The code generator uses the same code. It must not quietly drop a member.\n\n## The bug report the Requirement row points to (issue #2234, word for word)\n\n# The analyzer does not work if SuppressSourceGeneration = true\n\n#### Bug description\n\nThe analyzer does not work if SuppressSourceGeneration = true. This has happened since version 3.1.1. It still worked in 3.1.0.\n",
+   "instruction": "Solve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.",
+   "startedAt": "2026-11-14T19:15:49.138Z",
+   "endedAt": "2026-11-14T19:21:34.439Z",
+   "exitCode": 0,
+   "modelInLog": "claude-fable-5-2",
+   "turns": 42,
+   "reply": "Nothing was built or run (no .NET SDK here), so both the fix and the new tests are reasoned from the code only.\n\nThe crash was in the explicit-`[Key]` path of the type collector: a repeated key, or a key of the other kind (int vs. string), was reported and then still used, which threw. `SuppressSourceGeneration` turned out not to matter; the same crash happens with or without it.\n\nFiles changed:\n\n- [TypeCollector.cs:722](src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs:722) — the fix:\n  - **Analyzer:** a member with a repeated, mixed or null key now gets its `MsgPack005` error and is left out of the member tables, in both the property and the field loop.\n  - **Generator:** a type with any such key gets no formatter at all, rather than one missing the offending member.\n  - **Constructor matching:** skipped for such a type, since it would only produce misleading `MsgPack007` errors against an incomplete member list.\n  - **Null key on a field:** `[Key(null)]` on a field crashed the same way and is fixed too; its message now names the type and member.\n- [MsgPack00xAnalyzerTests.cs:95](tests/MessagePack.SourceGenerator.Tests/MsgPack00xAnalyzerTests.cs:95) — new `NullStringKey_Field`, `DuplicateKeys` and `MixedKeys` tests; the last two run with and without `SuppressSourceGeneration = true`.\n- [GenerationTests.cs:711](tests/MessagePack.SourceGenerator.Tests/GenerationTests.cs:711) — new `InvalidKeys_NoFormatterGenerated` test: a duplicate or mixed key yields `MsgPack005` and no generated source.\n\nTwo things I left alone:\n\n- **Map mode:** it still drops the second of two same-named members from the generated formatter (the analyzer reports `MsgPack018`). That is existing behaviour outside this bug, but it is the same \"quietly drop a member\" pattern, so say if you want it changed too.\n- **`[Key(null)]` on a record's primary-constructor property:** this still hits an unguarded cast in the null-key diagnostic. It is a separate cause from the repeated/mixed-key crash.",
+   "toolCalls": {
+    "Grep": 14,
+    "Glob": 4,
+    "Read": 15,
+    "Edit": 8
+   },
+   "pathsOutsideFolder": [],
+   "files": [
+    {
+     "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+     "status": "M",
+     "kind": "code",
+     "added": 61,
+     "removed": 30,
+     "patch": "@@ -716,6 +716,10 @@ public class TypeCollector\n         }\n \n         bool isIntKey = true;\n+\n+        // Set when a member's key is missing, of the wrong kind or already taken.\n+        // Such a member is reported and left out of the member tables below, so those tables are incomplete.\n+        bool hasInvalidKeys = false;\n         Dictionary<int, (MemberSerializationInfo Info, ITypeSymbol TypeSymbol)> intMembers = new();\n         Dictionary<string, (MemberSerializationInfo Info, ITypeSymbol TypeSymbol)> stringMembers = new();\n \n@@ -982,6 +986,7 @@ public class TypeCollector\n                     var stringKey = key is { Value: string stringKeyValue } ? stringKeyValue : default;\n                     if (intKey == null && stringKey == null)\n                     {\n+                        hasInvalidKeys = true;\n                         this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, ((PropertyDeclarationSyntax)item.DeclaringSyntaxReferences[0].GetSyntax()).Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n                     }\n \n@@ -1004,35 +1009,43 @@ public class TypeCollector\n                     {\n                         if ((isIntKey && intKey == null) || (!isIntKey && stringKey == null))\n                         {\n+                            hasInvalidKeys = true;\n                             this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.DoNotMixStringAndIntKeys, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n                         }\n                     }\n \n-                    if (isIntKey)\n+                    // A member whose key is missing or of the wrong kind was reported above and has no place in either table.\n+                    if (isIntKey && intKey is not null)\n                     {\n-                        if (intMembers.ContainsKey(intKey!.Value))\n+                        if (intMembers.ContainsKey(intKey.Value))\n                         {\n+                            hasInvalidKeys = true;\n                             this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n                         }\n-\n-                        var member = new MemberSerializationInfo(true, isWritable, isReadable, isInitOnly, item.IsRequired, intKey!.Value, item.Name, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n+                        else\n                         {\n-                            DeclaringType = GetDeclaringTypeIfColliding(item),\n-                        };\n-                        intMembers.Add(member.IntKey, (member, item.Type));\n+                            var member = new MemberSerializationInfo(true, isWritable, isReadable, isInitOnly, item.IsRequired, intKey.Value, item.Name, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n+                            {\n+                                DeclaringType = GetDeclaringTypeIfColliding(item),\n+                            };\n+                            intMembers.Add(member.IntKey, (member, item.Type));\n+                        }\n                     }\n-                    else if (stringKey is not null)\n+                    else if (!isIntKey && stringKey is not null)\n                     {\n-                        if (stringMembers.ContainsKey(stringKey!))\n+                        if (stringMembers.ContainsKey(stringKey))\n                         {\n+                            hasInvalidKeys = true;\n                             this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n                         }\n-\n-                        var member = new MemberSerializationInfo(true, isWritable, isReadable, isInitOnly, item.IsRequired, hiddenIntKey++, stringKey!, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n+                        else\n                         {\n-                            DeclaringType = GetDeclaringTypeIfColliding(item),\n-                        };\n-                        stringMembers.Add(member.StringKey, (member, item.Type));\n+                            var member = new MemberSerializationInfo(true, isWritable, isReadable, isInitOnly, item.IsRequired, hiddenIntKey++, stringKey, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n+                            {\n+                                DeclaringType = GetDeclaringTypeIfColliding(item),\n+                            };\n+                            stringMembers.Add(member.StringKey, (member, item.Type));\n+                        }\n                     }\n \n                     var messagePackFormatter = item.GetAttributes().FirstOrDefault(x => x.AttributeClass.ApproximatelyEqual(this.typeReferences.FormatterAttribute))?.ConstructorArguments[0];\n@@ -1125,7 +1138,8 @@ public class TypeCollector\n                     var stringKey = key is { Value: string stringKeyValue } ? stringKeyValue : default;\n                     if (intKey == null && stringKey == null)\n                     {\n-                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n+                        hasInvalidKeys = true;\n+                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n                     }\n \n                     if (searchFirst)\n@@ -1137,35 +1151,43 @@ public class TypeCollector\n                     {\n                         if ((isIntKey && intKey == null) || (!isIntKey && stringKey == null))\n                         {\n+                            hasInvalidKeys = true;\n                             this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.DoNotMixStringAndIntKeys, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n                         }\n                     }\n \n-                    if (isIntKey)\n+                    // A member whose key is missing or of the wrong kind was reported above and has no place in either table.\n+                    if (isIntKey && intKey is not null)\n                     {\n-                        if (intMembers.ContainsKey(intKey!.Value))\n+                        if (intMembers.ContainsKey(intKey.Value))\n                         {\n+                            hasInvalidKeys = true;\n                             this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n                         }\n-\n-                        var member = new MemberSerializationInfo(true, IsWritable: !item.IsReadOnly, IsReadable: true, IsInitOnly: false, item.IsRequired, intKey!.Value, item.Name, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n+                        else\n                         {\n-                            DeclaringType = GetDeclaringTypeIfColliding(item),\n-                        };\n-                        intMembers.Add(member.IntKey, (member, item.Type));\n+                            var member = new MemberSerializationInfo(true, IsWritable: !item.IsReadOnly, IsReadable: true, IsInitOnly: false, item.IsRequired, intKey.Value, item.Name, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n+                            {\n+                                DeclaringType = GetDeclaringTypeIfColliding(item),\n+                            };\n+                            intMembers.Add(member.IntKey, (member, item.Type));\n+                        }\n                     }\n-                    else\n+                    else if (!isIntKey && stringKey is not null)\n                     {\n-                        if (stringMembers.ContainsKey(stringKey!))\n+                        if (stringMembers.ContainsKey(stringKey))\n                         {\n+                            hasInvalidKeys = true;\n                             this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n                         }\n-\n-                        var member = new MemberSerializationInfo(true, IsWritable: !item.IsReadOnly, IsReadable: true, IsInitOnly: false, item.IsRequired, hiddenIntKey++, stringKey!, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n+                        else\n                         {\n-                            DeclaringType = GetDeclaringTypeIfColliding(item),\n-                        };\n-                        stringMembers.Add(member.StringKey, (member, item.Type));\n+                            var member = new MemberSerializationInfo(true, IsWritable: !item.IsReadOnly, IsReadable: true, IsInitOnly: false, item.IsRequired, hiddenIntKey++, stringKey, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n+                            {\n+                                DeclaringType = GetDeclaringTypeIfColliding(item),\n+                            };\n+                            stringMembers.Add(member.StringKey, (member, item.Type));\n+                        }\n                     }\n \n                     var messagePackFormatter = item.GetAttributes().FirstOrDefault(x => x.AttributeClass.ApproximatelyEqual(this.typeReferences.FormatterAttribute))?.ConstructorArguments[0];\n@@ -1212,8 +1234,10 @@ public class TypeCollector\n             return null;\n         }\n \n+        // Constructor parameters are matched against the member tables,\n+        // so when those are incomplete the match would only produce misleading diagnostics.\n         var constructorParameters = new List<MemberSerializationInfo>();\n-        if (ctor is not null)\n+        if (ctor is not null && !hasInvalidKeys)\n         {\n             nestedFormatterRequired |= IsPartialTypeRequired(ctor.DeclaredAccessibility);\n \n@@ -1372,6 +1396,13 @@ public class TypeCollector\n             return null;\n         }\n \n+        // The analyzer reports each invalid key as an error.\n+        // Emit no formatter for the type rather than one that silently omits the members with those keys.\n+        if (hasInvalidKeys)\n+        {\n+            return null;\n+        }\n+\n         // If any property had a private setter and does not appear in the deserializing constructor signature,\n         // we'll need a nested formatter.\n         foreach (IPropertySymbol property in nestedFormatterRequiredIfPropertyIsNotSetByDeserializingCtor)",
+     "functions": [
+      {
+       "key": "GetObjectInfo",
+       "name": "GetObjectInfo",
+       "line": 700,
+       "endLine": 1449,
+       "isNew": false,
+       "added": 61,
+       "removed": 30
+      }
+     ],
+     "linesOutsideFunctions": 0
+    },
+    {
+     "file": "tests/MessagePack.SourceGenerator.Tests/GenerationTests.cs",
+     "status": "M",
+     "kind": "test",
+     "added": 30,
+     "removed": 0,
+     "patch": "@@ -708,6 +708,36 @@ public class MyGenericType<T>\n         }.RunDefaultAsync(this.testOutputHelper);\n     }\n \n+    /// <summary>\n+    /// Verifies that a type with an invalid key gets no formatter at all, rather than one that omits a member.\n+    /// </summary>\n+    [Theory]\n+    [InlineData(\"0\")]\n+    [InlineData(\"\\\"a\\\"\")]\n+    public async Task InvalidKeys_NoFormatterGenerated(string secondKey)\n+    {\n+        string testSource = $$\"\"\"\n+            using MessagePack;\n+            [MessagePackObject]\n+            public class A {\n+                [Key(0)]\n+                public string Prop1 { get; set; }\n+\n+                {|#0:[Key({{secondKey}})]\n+                public string Prop2 { get; set; }|}\n+            }\n+            \"\"\";\n+\n+        await new VerifyCS.Test\n+        {\n+            TestState =\n+            {\n+                Sources = { testSource },\n+            },\n+            ExpectedDiagnostics = { DiagnosticResult.CompilerError(\"MsgPack005\").WithLocation(0) },\n+        }.RunDefaultAsync(this.testOutputHelper);\n+    }\n+\n     [Fact]\n     public async Task NoPrivateAccessNeeded()\n     {",
+     "functions": [
+      {
+       "key": "InvalidKeys_NoFormatterGenerated",
+       "name": "InvalidKeys_NoFormatterGenerated",
+       "line": 717,
+       "endLine": 739,
+       "isNew": true,
+       "added": 23,
+       "removed": 0
+      }
+     ],
+     "linesOutsideFunctions": 7
+    },
+    {
+     "file": "tests/MessagePack.SourceGenerator.Tests/MsgPack00xAnalyzerTests.cs",
+     "status": "M",
+     "kind": "test",
+     "added": 115,
+     "removed": 0,
+     "patch": "@@ -92,6 +92,121 @@ public class Foo\n         }.RunAsync();\n     }\n \n+    [Fact]\n+    public async Task NullStringKey_Field()\n+    {\n+        string input = Preamble + @\"\n+[MessagePackObject]\n+public class Foo\n+{\n+    [Key(null)]\n+    public string {|MsgPack005:Member|};\n+}\n+\";\n+\n+        await new VerifyCS.Test\n+        {\n+            TestCode = input,\n+            MarkupOptions = MarkupOptions.UseFirstDescriptor,\n+        }.RunAsync();\n+    }\n+\n+    [Theory]\n+    [InlineData(\"MessagePackObject\")]\n+    [InlineData(\"MessagePackObject(SuppressSourceGeneration = true)\")]\n+    public async Task DuplicateKeys(string attribute)\n+    {\n+        string input = /* lang=c#-test */ $$\"\"\"\n+            using MessagePack;\n+\n+            [{{attribute}}]\n+            public class IntKeys\n+            {\n+                [Key(0)]\n+                public string Prop1 { get; set; }\n+\n+                {|MsgPack005:[Key(0)]\n+                public string Prop2 { get; set; }|}\n+\n+                [Key(1)]\n+                public string Field1;\n+\n+                [Key(1)]\n+                public string {|MsgPack005:Field2|};\n+\n+                [Key(0)]\n+                public string {|MsgPack005:Field3|};\n+            }\n+\n+            [{{attribute}}]\n+            public class StringKeys\n+            {\n+                [Key(\"a\")]\n+                public string Prop1 { get; set; }\n+\n+                {|MsgPack005:[Key(\"a\")]\n+                public string Prop2 { get; set; }|}\n+\n+                [Key(\"b\")]\n+                public string Field1;\n+\n+                [Key(\"b\")]\n+                public string {|MsgPack005:Field2|};\n+\n+                [Key(\"a\")]\n+                public string {|MsgPack005:Field3|};\n+            }\n+            \"\"\";\n+\n+        await new VerifyCS.Test\n+        {\n+            TestCode = input,\n+            MarkupOptions = MarkupOptions.UseFirstDescriptor,\n+        }.RunAsync();\n+    }\n+\n+    [Theory]\n+    [InlineData(\"MessagePackObject\")]\n+    [InlineData(\"MessagePackObject(SuppressSourceGeneration = true)\")]\n+    public async Task MixedKeys(string attribute)\n+    {\n+        string input = /* lang=c#-test */ $$\"\"\"\n+            using MessagePack;\n+\n+            [{{attribute}}]\n+            public class IntThenString\n+            {\n+                [Key(0)]\n+                public string Prop1 { get; set; }\n+\n+                {|MsgPack005:[Key(\"b\")]\n+                public string Prop2 { get; set; }|}\n+\n+                [Key(\"c\")]\n+                public string {|MsgPack005:Field1|};\n+            }\n+\n+            [{{attribute}}]\n+            public class StringThenInt\n+            {\n+                [Key(\"a\")]\n+                public string Prop1 { get; set; }\n+\n+                {|MsgPack005:[Key(1)]\n+                public string Prop2 { get; set; }|}\n+\n+                [Key(2)]\n+                public string {|MsgPack005:Field1|};\n+            }\n+            \"\"\";\n+\n+        await new VerifyCS.Test\n+        {\n+            TestCode = input,\n+            MarkupOptions = MarkupOptions.UseFirstDescriptor,\n+        }.RunAsync();\n+    }\n+\n     [Fact]\n     public async Task AddAttributesToMembers()\n     {",
+     "functions": [
+      {
+       "key": "NullStringKey_Field",
+       "name": "NullStringKey_Field",
+       "line": 96,
+       "endLine": 112,
+       "isNew": true,
+       "added": 17,
+       "removed": 0
+      },
+      {
+       "key": "DuplicateKeys",
+       "name": "DuplicateKeys",
+       "line": 117,
+       "endLine": 166,
+       "isNew": true,
+       "added": 50,
+       "removed": 0
+      },
+      {
+       "key": "MixedKeys",
+       "name": "MixedKeys",
+       "line": 171,
+       "endLine": 208,
+       "isNew": true,
+       "added": 38,
+       "removed": 0
+      }
+     ],
+     "linesOutsideFunctions": 10
+    }
+   ]
+  },
+  {
+   "id": "wide",
+   "prompt": "You are working in a copy of the MessagePack-CSharp repository (C#), at the commit just before the fix. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- This machine has no .NET SDK. You cannot build the code or run unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nYou are free to go well beyond the smallest fix. While you solve the problem, also refactor, tidy up and harden the code around it wherever you think it helps: similar weak spots elsewhere, shared helpers, naming, docs, unit tests. Prefer a broad, thorough change over a narrow one. The requirements must still be met.\n\n## Requirements (from the pull request description)\n\nRequirement: Bug report #2234 in MessagePack-CSharp.\n\nWhy: The report says the code checker \"does not work\" when code generation is turned off. It does not say what goes wrong.\n\nBefore and after: Before: a repeated or mixed key made the tool crash.\n\nMust preserve: The code generator uses the same code. It must not quietly drop a member.\n\n## The bug report the Requirement row points to (issue #2234, word for word)\n\n# The analyzer does not work if SuppressSourceGeneration = true\n\n#### Bug description\n\nThe analyzer does not work if SuppressSourceGeneration = true. This has happened since version 3.1.1. It still worked in 3.1.0.\n",
+   "instruction": "You are free to go well beyond the smallest fix. While you solve the problem, also refactor, tidy up and harden the code around it wherever you think it helps: similar weak spots elsewhere, shared helpers, naming, docs, unit tests. Prefer a broad, thorough change over a narrow one. The requirements must still be met.",
+   "startedAt": "2026-11-14T19:18:16.906Z",
+   "endedAt": "2026-11-14T19:31:41.366Z",
+   "exitCode": 0,
+   "modelInLog": "claude-fable-5-2",
+   "turns": 77,
+   "reply": "The analyzer no longer crashes on a repeated or mixed key; it reports MsgPack005 on the offending member and carries on. Nothing was built or run (no .NET SDK here), so the code and the new tests are checked by reading only.\n\nThe generator, which shares this code, now emits no formatter at all for a type with an unusable key, rather than one that silently skips the member. That also applies to two cases that did not crash before (`[Key(null)]` on a property, and an int key on a property after a string key), which used to get a formatter minus that member.\n\nFiles changed:\n\n- [TypeCollector.cs](src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs) — the fix.\n  - Properties and fields now share one key-handling helper (`AddKeyedMember`), replacing two diverging copies; it reports duplicate, mixed and null keys instead of throwing.\n  - A type with such a key returns no model, checked last so every other diagnostic is still reported.\n  - `[Key(null)]` on a record primary-constructor property no longer hits a bad cast.\n  - The null-key message on fields now carries the type and member name.\n  - Attribute arguments are read through a length-checked helper, so a half-typed `[Key]`, `[MessagePackFormatter]`, `[MessagePackObject(...)]` or `[Union]` cannot throw.\n- [AnalyzerUtilities.cs](src/MessagePack.SourceGenerator/Utils/AnalyzerUtilities.cs) — same length guard for the assembly-level `MessagePackKnownFormatter` and `MessagePackAssumedFormattable` attributes.\n- [MessagePackCodeFixProvider.cs](src/MessagePack.Analyzers.CodeFixes/CodeFixes/MessagePackCodeFixProvider.cs) — same guard where the code fix reads existing `[Key]` values.\n- [MsgPack00xAnalyzerTests.cs](tests/MessagePack.SourceGenerator.Tests/MsgPack00xAnalyzerTests.cs) — new tests for duplicate int keys, duplicate string keys, mixed keys and a null key on a field, each with and without `SuppressSourceGeneration = true`, plus a null key on a record primary constructor.\n- [GenerationTests.cs](tests/MessagePack.SourceGenerator.Tests/GenerationTests.cs) — one generator test asserting that duplicate and mixed keys produce the diagnostics and no generated formatter.\n- [MsgPack005.md](doc/analyzers/MsgPack005.md) — documents the three key conditions and that no formatter is generated for such a type.\n\nTwo things I left as they were:\n\n- **Map-mode name collisions (MsgPack018):** the generator still emits a formatter without the hidden base member. Changing that would alter existing generator output for anyone who suppressed that error.\n- **Constructor checks:** they still run against the members that remain, so a type with a bad key can also get MsgPack007. The record test expects exactly that.",
+   "toolCalls": {
+    "Grep": 13,
+    "Glob": 5,
+    "Read": 33,
+    "Edit": 24,
+    "Write": 1
+   },
+   "pathsOutsideFolder": [],
+   "files": [
+    {
+     "file": "doc/analyzers/MsgPack005.md",
+     "status": "M",
+     "kind": "doc",
+     "added": 32,
+     "removed": 0,
+     "patch": "@@ -4,3 +4,35 @@ Invalid MessagePackObject definition.\n \n There are a variety of conditions that can produce this diagnostic.\n Examine the specific message to understand what is wrong and how to correct it.\n+\n+## Conditions that concern `[Key]` attributes\n+\n+Message | Cause | Correction\n+--|--|--\n+Both int and string keys are null | A member is attributed with `[Key(null)]`. | Give the member an integer or a (non-null) string key.\n+All KeyAttribute arguments must be of the same type (either string or int) | A type uses integer keys on some members and string keys on others. The first attributed member (properties are considered before fields) decides which kind the type uses. | Use one kind of key for all the members of the type.\n+All KeyAttribute arguments must be unique | Two members of a type, or of a type and its base types, have the same key. | Give each member its own key.\n+\n+These are reported whether or not a formatter is source generated for the type,\n+since they are just as invalid for a type declared with `[MessagePackObject(SuppressSourceGeneration = true)]`,\n+for which the dynamic resolver would otherwise throw at runtime.\n+\n+For example:\n+\n+```cs\n+[MessagePackObject]\n+public class A\n+{\n+    [Key(0)]\n+    public int First { get; set; }\n+\n+    [Key(0)] // MsgPack005: this key is already taken by First\n+    public int Second { get; set; }\n+\n+    [Key(\"third\")] // MsgPack005: the other keys of this type are integers\n+    public int Third { get; set; }\n+}\n+```\n+\n+No formatter is source generated for a type that has any of these problems:\n+a formatter that silently skipped the offending members would be worse than none.",
+     "functions": []
+    },
+    {
+     "file": "src/MessagePack.Analyzers.CodeFixes/CodeFixes/MessagePackCodeFixProvider.cs",
+     "status": "M",
+     "kind": "code",
+     "added": 1,
+     "removed": 1,
+     "patch": "@@ -173,7 +173,7 @@ public class MessagePackCodeFixProvider : CodeFixProvider\n \n         var startOrder = targets\n             .Select(x => x.GetAttributes().FindAttributeShortName(MsgPack00xMessagePackAnalyzer.KeyAttributeShortName))\n-            .Where(x => x != null)\n+            .Where(x => x != null && x.ConstructorArguments.Length > 0) // a [Key] that failed to bind may have no arguments\n             .Select(x => x!.ConstructorArguments[0])\n             .Where(x => !x.IsNull)\n             .Where(x => x.Value is int)",
+     "functions": [
+      {
+       "key": "AddKeyAttributeAsync",
+       "name": "AddKeyAttributeAsync",
+       "line": 168,
+       "endLine": 224,
+       "isNew": false,
+       "added": 1,
+       "removed": 1
+      }
+     ],
+     "linesOutsideFunctions": 0
+    },
+    {
+     "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+     "status": "M",
+     "kind": "code",
+     "added": 148,
+     "removed": 107,
+     "patch": "@@ -400,7 +400,8 @@ public class TypeCollector\n         // 0, Int  1, SubType\n         UnionSubTypeInfo? UnionSubTypeInfoSelector(ImmutableArray<TypedConstant> x)\n         {\n-            if (!(x[0] is { Value: int key }) || !(x[1] is { Value: ITypeSymbol typeSymbol }))\n+            // An attribute whose arguments failed to bind (e.g. while it is still being typed) may carry fewer arguments than its constructor declares.\n+            if (x.Length < 2 || !(x[0] is { Value: int key }) || !(x[1] is { Value: ITypeSymbol typeSymbol }))\n             {\n                 this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.AotUnionAttributeRequiresTypeArg, GetIdentifierLocation(type)));\n                 return null;\n@@ -432,7 +433,7 @@ public class TypeCollector\n         do\n         {\n             var x = enumerator.Current;\n-            if (x[1] is { Value: INamedTypeSymbol unionType } && !this.alreadyCollected.Contains(unionType))\n+            if (x.Length > 1 && x[1] is { Value: INamedTypeSymbol unionType } && !this.alreadyCollected.Contains(unionType))\n             {\n                 this.CollectCore(unionType);\n             }\n@@ -684,7 +685,7 @@ public class TypeCollector\n \n     private void CheckValidMessagePackFormatterAttribute(AttributeData formatterAttribute)\n     {\n-        if (formatterAttribute.ConstructorArguments[0].Value is ITypeSymbol formatterType)\n+        if (GetFirstConstructorArgument(formatterAttribute)?.Value is ITypeSymbol formatterType)\n         {\n             // Validate that the typed formatter is actually of `IMessagePackFormatter`\n             bool isMessagePackFormatter = formatterType.AllInterfaces.Any(x => SymbolEqualityComparer.Default.Equals(x, this.typeReferences.MessagePackFormatter));\n@@ -719,6 +720,12 @@ public class TypeCollector\n         Dictionary<int, (MemberSerializationInfo Info, ITypeSymbol TypeSymbol)> intMembers = new();\n         Dictionary<string, (MemberSerializationInfo Info, ITypeSymbol TypeSymbol)> stringMembers = new();\n \n+        // Set when a member carries a [Key] attribute but could not be recorded in the tables above\n+        // because that key is unusable (null, of the wrong kind, or already claimed by another member).\n+        // Analysis carries on without that member so that every problem in the type gets reported,\n+        // but no formatter may be generated from the incomplete member list: see the check at the end of this method.\n+        bool hasUnusableKeys = false;\n+\n         // We default to not requiring non-public members to be attributed,\n         // but as soon as the first non-public member *is* attributed,\n         // we'll require all non-public members to be attributed.\n@@ -731,7 +738,7 @@ public class TypeCollector\n \n         FormatterDescriptor? GetSpecialFormatter(ISymbol member)\n         {\n-            INamedTypeSymbol? name = member.GetAttributes().FirstOrDefault(x => x.AttributeClass.ApproximatelyEqual(this.typeReferences.FormatterAttribute))?.ConstructorArguments[0].Value as INamedTypeSymbol;\n+            INamedTypeSymbol? name = GetFirstConstructorArgument(member.GetAttributes().FirstOrDefault(x => x.AttributeClass.ApproximatelyEqual(this.typeReferences.FormatterAttribute)))?.Value as INamedTypeSymbol;\n             if (name is not null)\n             {\n                 if (FormatterDescriptor.TryCreate(name, out FormatterDescriptor? descriptor))\n@@ -770,7 +777,7 @@ public class TypeCollector\n \n         QualifiedNamedTypeName? GetDeclaringTypeIfColliding(ISymbol symbol) => collidingMemberNames.Contains(symbol.Name) && !SymbolEqualityComparer.Default.Equals(symbol.ContainingType, formattedType) ? new(symbol.ContainingType) : null;\n \n-        if (this.options.Generator.Formatters.UsesMapMode || (contractAttr?.ConstructorArguments[0] is { Value: true }))\n+        if (this.options.Generator.Formatters.UsesMapMode || (GetFirstConstructorArgument(contractAttr) is { Value: true }))\n         {\n             Dictionary<string, ISymbol> claimedKeys = new(StringComparer.Ordinal);\n             void ReportNonUniqueNameIfApplicable(ISymbol item, string stringKey)\n@@ -883,6 +890,67 @@ public class TypeCollector\n             var searchFirst = true;\n             var hiddenIntKey = 0;\n \n+            // Records a member that carries a [Key] attribute, or reports why its key cannot be used.\n+            // The first keyed member decides whether the type uses int or string keys.\n+            // unkeyedMember describes the member with placeholder keys; the real ones are filled in here.\n+            // This must never throw on a bad key: the analyzer runs it over code that is still being written.\n+            void AddKeyedMember(ISymbol item, ITypeSymbol memberType, TypedConstant key, MemberSerializationInfo unkeyedMember, Location? nullKeyLocation)\n+            {\n+                int? intKey = key.Value as int?;\n+                string? stringKey = key.Value as string;\n+                Location? memberLocation = item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax(this.cancellationToken).GetLocation();\n+\n+                if (intKey is null && stringKey is null)\n+                {\n+                    this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, nullKeyLocation, formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n+                }\n+\n+                if (searchFirst)\n+                {\n+                    searchFirst = false;\n+                    isIntKey = intKey is not null;\n+                }\n+                else if ((isIntKey && intKey is null) || (!isIntKey && stringKey is null))\n+                {\n+                    this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.DoNotMixStringAndIntKeys, memberLocation));\n+                }\n+\n+                if (isIntKey)\n+                {\n+                    if (intKey is null)\n+                    {\n+                        // Already reported above, as a null key or as a mix of key kinds.\n+                        hasUnusableKeys = true;\n+                    }\n+                    else if (intMembers.ContainsKey(intKey.Value))\n+                    {\n+                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, memberLocation));\n+                        hasUnusableKeys = true;\n+                    }\n+                    else\n+                    {\n+                        intMembers.Add(intKey.Value, (unkeyedMember with { IntKey = intKey.Value }, memberType));\n+                    }\n+                }\n+                else\n+                {\n+                    if (stringKey is null)\n+                    {\n+                        // Already reported above, as a null key or as a mix of key kinds.\n+                        hasUnusableKeys = true;\n+                    }\n+                    else if (stringMembers.ContainsKey(stringKey))\n+                    {\n+                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, memberLocation));\n+                        hasUnusableKeys = true;\n+                    }\n+                    else\n+                    {\n+                        stringMembers.Add(stringKey, (unkeyedMember with { IntKey = hiddenIntKey++, StringKey = stringKey }, memberType));\n+                    }\n+                }\n+            }\n+\n             foreach (IPropertySymbol item in instanceMembers.OfType<IPropertySymbol>())\n             {\n                 if (item.IsIndexer)\n@@ -909,7 +977,16 @@ public class TypeCollector\n                 }\n \n                 FormatterDescriptor? specialFormatter = GetSpecialFormatter(item);\n-                TypedConstant? key = item.GetAttributes().FirstOrDefault(x => x.AttributeClass.ApproximatelyEqual(this.typeReferences.KeyAttribute))?.ConstructorArguments[0];\n+                AttributeData? keyAttribute = item.GetAttributes().FirstOrDefault(x => x.AttributeClass.ApproximatelyEqual(this.typeReferences.KeyAttribute));\n+                TypedConstant? key = GetFirstConstructorArgument(keyAttribute);\n+                if (keyAttribute is not null && key is null)\n+                {\n+                    // [Key] was applied without an argument we can read. The compiler reports that by itself,\n+                    // so all that is left for us to do is to remember that this member's key is unknown.\n+                    hasUnusableKeys = true;\n+                    continue;\n+                }\n+\n                 if (key is null)\n                 {\n                     if (contractAttr is not null)\n@@ -922,12 +999,9 @@ public class TypeCollector\n                         {\n                             if (SymbolEqualityComparer.Default.Equals(item.ContainingType, formattedType))\n                             {\n-                                var syntax = item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax();\n-                                var identifier = (syntax as PropertyDeclarationSyntax)?.Identifier ?? (syntax as ParameterSyntax)?.Identifier;\n-\n                                 Diagnostic diagnostic = derivedKeyAttribute is not null && suppressSourceGeneration is not true\n                                     ? Diagnostic.Create(MsgPack00xMessagePackAnalyzer.AOTDerivedKeyAttribute, derivedKeyAttribute.GetSyntax(this.cancellationToken).GetLocation())\n-                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, identifier?.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n+                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, GetPropertyIdentifierLocation(item), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n                                 if (nonPublicMembersAreSerialized || (item.DeclaredAccessibility & Accessibility.Public) == Accessibility.Public)\n                                 {\n                                     this.reportDiagnostic?.Invoke(diagnostic);\n@@ -978,13 +1052,6 @@ public class TypeCollector\n                         nestedFormatterRequiredIfPropertyIsNotSetByDeserializingCtor.Add(item);\n                     }\n \n-                    var intKey = key is { Value: int intKeyValue } ? intKeyValue : default(int?);\n-                    var stringKey = key is { Value: string stringKeyValue } ? stringKeyValue : default;\n-                    if (intKey == null && stringKey == null)\n-                    {\n-                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, ((PropertyDeclarationSyntax)item.DeclaringSyntaxReferences[0].GetSyntax()).Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n-                    }\n-\n                     // A property with an init accessor and an initializer has a default that will be discarded by the deserializer.\n                     if (suppressSourceGeneration is not true && isInitOnly)\n                     {\n@@ -995,49 +1062,13 @@ public class TypeCollector\n                         }\n                     }\n \n-                    if (searchFirst)\n-                    {\n-                        searchFirst = false;\n-                        isIntKey = intKey != null;\n-                    }\n-                    else\n-                    {\n-                        if ((isIntKey && intKey == null) || (!isIntKey && stringKey == null))\n-                        {\n-                            this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.DoNotMixStringAndIntKeys, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n-                        }\n-                    }\n-\n-                    if (isIntKey)\n-                    {\n-                        if (intMembers.ContainsKey(intKey!.Value))\n-                        {\n-                            this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n-                        }\n-\n-                        var member = new MemberSerializationInfo(true, isWritable, isReadable, isInitOnly, item.IsRequired, intKey!.Value, item.Name, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n-                        {\n-                            DeclaringType = GetDeclaringTypeIfColliding(item),\n-                        };\n-                        intMembers.Add(member.IntKey, (member, item.Type));\n-                    }\n-                    else if (stringKey is not null)\n+                    var member = new MemberSerializationInfo(true, isWritable, isReadable, isInitOnly, item.IsRequired, IntKey: 0, StringKey: item.Name, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n                     {\n-                        if (stringMembers.ContainsKey(stringKey!))\n-                        {\n-                            this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n-                        }\n-\n-                        var member = new MemberSerializationInfo(true, isWritable, isReadable, isInitOnly, item.IsRequired, hiddenIntKey++, stringKey!, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n-                        {\n-                            DeclaringType = GetDeclaringTypeIfColliding(item),\n-                        };\n-                        stringMembers.Add(member.StringKey, (member, item.Type));\n-                    }\n-\n-                    var messagePackFormatter = item.GetAttributes().FirstOrDefault(x => x.AttributeClass.ApproximatelyEqual(this.typeReferences.FormatterAttribute))?.ConstructorArguments[0];\n+                        DeclaringType = GetDeclaringTypeIfColliding(item),\n+                    };\n+                    AddKeyedMember(item, item.Type, key.Value, member, GetPropertyIdentifierLocation(item));\n \n-                    if (messagePackFormatter == null)\n+                    if (!item.GetAttributes().Any(x => x.AttributeClass.ApproximatelyEqual(this.typeReferences.FormatterAttribute)))\n                     {\n                         // recursive collect\n                         this.CollectCore(item.Type, item);\n@@ -1059,7 +1090,15 @@ public class TypeCollector\n                 }\n \n                 FormatterDescriptor? specialFormatter = GetSpecialFormatter(item);\n-                TypedConstant? key = item.GetAttributes().FirstOrDefault(x => x.AttributeClass.ApproximatelyEqual(this.typeReferences.KeyAttribute))?.ConstructorArguments[0];\n+                AttributeData? keyAttribute = item.GetAttributes().FirstOrDefault(x => x.AttributeClass.ApproximatelyEqual(this.typeReferences.KeyAttribute));\n+                TypedConstant? key = GetFirstConstructorArgument(keyAttribute);\n+                if (keyAttribute is not null && key is null)\n+                {\n+                    // As for properties above: the compiler reports a [Key] whose argument we cannot read.\n+                    hasUnusableKeys = true;\n+                    continue;\n+                }\n+\n                 if (key is null)\n                 {\n                     if (contractAttr is not null)\n@@ -1121,56 +1160,13 @@ public class TypeCollector\n \n                     nestedFormatterRequired |= IsPartialTypeRequired(item.DeclaredAccessibility);\n \n-                    var intKey = key is { Value: int intKeyValue } ? intKeyValue : default(int?);\n-                    var stringKey = key is { Value: string stringKeyValue } ? stringKeyValue : default;\n-                    if (intKey == null && stringKey == null)\n-                    {\n-                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n-                    }\n-\n-                    if (searchFirst)\n+                    var member = new MemberSerializationInfo(true, IsWritable: !item.IsReadOnly, IsReadable: true, IsInitOnly: false, item.IsRequired, IntKey: 0, StringKey: item.Name, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n                     {\n-                        searchFirst = false;\n-                        isIntKey = intKey != null;\n-                    }\n-                    else\n-                    {\n-                        if ((isIntKey && intKey == null) || (!isIntKey && stringKey == null))\n-                        {\n-                            this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.DoNotMixStringAndIntKeys, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n-                        }\n-                    }\n-\n-                    if (isIntKey)\n-                    {\n-                        if (intMembers.ContainsKey(intKey!.Value))\n-                        {\n-                            this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n-                        }\n-\n-                        var member = new MemberSerializationInfo(true, IsWritable: !item.IsReadOnly, IsReadable: true, IsInitOnly: false, item.IsRequired, intKey!.Value, item.Name, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n-                        {\n-                            DeclaringType = GetDeclaringTypeIfColliding(item),\n-                        };\n-                        intMembers.Add(member.IntKey, (member, item.Type));\n-                    }\n-                    else\n-                    {\n-                        if (stringMembers.ContainsKey(stringKey!))\n-                        {\n-                            this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n-                        }\n-\n-                        var member = new MemberSerializationInfo(true, IsWritable: !item.IsReadOnly, IsReadable: true, IsInitOnly: false, item.IsRequired, hiddenIntKey++, stringKey!, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n-                        {\n-                            DeclaringType = GetDeclaringTypeIfColliding(item),\n-                        };\n-                        stringMembers.Add(member.StringKey, (member, item.Type));\n-                    }\n-\n-                    var messagePackFormatter = item.GetAttributes().FirstOrDefault(x => x.AttributeClass.ApproximatelyEqual(this.typeReferences.FormatterAttribute))?.ConstructorArguments[0];\n+                        DeclaringType = GetDeclaringTypeIfColliding(item),\n+                    };\n+                    AddKeyedMember(item, item.Type, key.Value, member, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax(this.cancellationToken).GetLocation());\n \n-                    if (messagePackFormatter == null)\n+                    if (!item.GetAttributes().Any(x => x.AttributeClass.ApproximatelyEqual(this.typeReferences.FormatterAttribute)))\n                     {\n                         // recursive collect\n                         this.CollectCore(item.Type, item);\n@@ -1400,6 +1396,17 @@ public class TypeCollector\n             }\n         }\n \n+        // The source generator shares this code with the analyzer, but only the analyzer reports diagnostics.\n+        // A formatter generated from the members we did manage to record would compile, and then leave the members\n+        // with unusable keys out of every payload without a word. Generating no formatter at all for the type is the safe outcome:\n+        // an error is raised for each such member (by the analyzer, or by the compiler for a [Key] it could not bind),\n+        // and should that error be suppressed, the type is simply absent from the generated resolver rather than serialized incompletely.\n+        // This check comes last so that every diagnostic above is still reported for such a type.\n+        if (hasUnusableKeys)\n+        {\n+            return null;\n+        }\n+\n         INamedTypeSymbol? formattedTypeDefinition = formattedType.IsGenericType ? formattedType.ConstructUnboundGenericType() : null;\n         ObjectSerializationInfo info = ObjectSerializationInfo.Create(\n             formattedType,\n@@ -1426,8 +1433,42 @@ public class TypeCollector\n \n     private static Location? GetIdentifierLocation(INamedTypeSymbol type) => ((BaseTypeDeclarationSyntax?)type.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax())?.Identifier.GetLocation();\n \n+    /// <summary>\n+    /// Gets the location of the identifier in a property's declaration.\n+    /// </summary>\n+    /// <param name=\"property\">The property, which may be declared in the usual way or as a parameter of a record's primary constructor.</param>\n+    /// <returns>The location, or <see langword=\"null\" /> if the property is not declared in source in one of those two ways.</returns>\n+    private static Location? GetPropertyIdentifierLocation(IPropertySymbol property) => property.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() switch\n+    {\n+        PropertyDeclarationSyntax declaration => declaration.Identifier.GetLocation(),\n+        ParameterSyntax parameter => parameter.Identifier.GetLocation(),\n+        _ => null,\n+    };\n+\n     private static Location? GetLocation(IParameterSymbol parameter) => parameter.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation();\n \n+    /// <summary>\n+    /// Gets the first constructor argument of an attribute, if it has one that carries a single value.\n+    /// </summary>\n+    /// <param name=\"attribute\">The attribute to read. May be <see langword=\"null\" />.</param>\n+    /// <returns>The argument, or <see langword=\"null\" /> if there is no attribute, it has no constructor arguments, or the first one is an array.</returns>\n+    /// <remarks>\n+    /// An attribute whose arguments do not match any of its constructors still shows up on the symbol,\n+    /// carrying whatever arguments were written. That is routine for code that is still being typed,\n+    /// so <see cref=\"AttributeData.ConstructorArguments\"/> must not be indexed without checking its length,\n+    /// and <see cref=\"TypedConstant.Value\"/> must not be read from an array, for which it throws.\n+    /// </remarks>\n+    private static TypedConstant? GetFirstConstructorArgument(AttributeData? attribute)\n+    {\n+        if (attribute is null || attribute.ConstructorArguments.Length == 0)\n+        {\n+            return null;\n+        }\n+\n+        TypedConstant argument = attribute.ConstructorArguments[0];\n+        return argument.Kind == TypedConstantKind.Array ? null : (TypedConstant?)argument;\n+    }\n+\n     private static Location? GetParameterListLocation(IMethodSymbol? method) => ((BaseMethodDeclarationSyntax?)method?.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax())?.ParameterList.GetLocation();\n \n     private static string GetGenericFormatterClassName(INamedTypeSymbol type)",
+     "functions": [
+      {
+       "key": "CollectUnion",
+       "name": "CollectUnion",
+       "line": 386,
+       "endLine": 422,
+       "isNew": false,
+       "added": 2,
+       "removed": 1
+      },
+      {
+       "key": "CollectGenericUnion",
+       "name": "CollectGenericUnion",
+       "line": 424,
+       "endLine": 442,
+       "isNew": false,
+       "added": 1,
+       "removed": 1
+      },
+      {
+       "key": "CheckValidMessagePackFormatterAttribute",
+       "name": "CheckValidMessagePackFormatterAttribute",
+       "line": 686,
+       "endLine": 699,
+       "isNew": false,
+       "added": 1,
+       "removed": 1
+      },
+      {
+       "key": "GetObjectInfo",
+       "name": "GetObjectInfo",
+       "line": 701,
+       "endLine": 1425,
+       "isNew": false,
+       "added": 110,
+       "removed": 104
+      },
+      {
+       "key": "GetPropertyIdentifierLocation",
+       "name": "GetPropertyIdentifierLocation",
+       "line": 1441,
+       "endLine": 1446,
+       "isNew": true,
+       "added": 6,
+       "removed": 0
+      },
+      {
+       "key": "GetFirstConstructorArgument",
+       "name": "GetFirstConstructorArgument",
+       "line": 1461,
+       "endLine": 1470,
+       "isNew": true,
+       "added": 10,
+       "removed": 0
+      }
+     ],
+     "linesOutsideFunctions": 18
+    },
+    {
+     "file": "src/MessagePack.SourceGenerator/Utils/AnalyzerUtilities.cs",
+     "status": "M",
+     "kind": "code",
+     "added": 3,
+     "removed": 1,
+     "patch": "@@ -92,7 +92,8 @@ public static class AnalyzerUtilities\n             cancellationToken.ThrowIfCancellationRequested();\n             if (ad.AttributeClass?.Name == MessagePackKnownFormatterAttributeName && ad.AttributeClass?.ContainingNamespace.Name == AttributeNamespace)\n             {\n-                if (ad.ConstructorArguments[0].Value is INamedTypeSymbol formatterType && FormatterDescriptor.TryCreate(formatterType, out FormatterDescriptor? formatter))\n+                // An attribute whose arguments failed to bind may have none at all.\n+                if (ad.ConstructorArguments.Length > 0 && ad.ConstructorArguments[0].Value is INamedTypeSymbol formatterType && FormatterDescriptor.TryCreate(formatterType, out FormatterDescriptor? formatter))\n                 {\n                     builder.Add(formatter);\n                 }\n@@ -107,6 +108,7 @@ public static class AnalyzerUtilities\n         return ImmutableArray.CreateRange(\n             from ad in attributes\n             where ad.AttributeClass?.Name == MessagePackAssumedFormattableAttributeName && ad.AttributeClass?.ContainingNamespace.Name == AttributeNamespace\n+            where ad.ConstructorArguments.Length > 0 // an attribute whose arguments failed to bind may have none at all\n             let type = (INamedTypeSymbol?)ad.ConstructorArguments[0].Value\n             where type is not null\n             select new FormattableType(type, null));",
+     "functions": [
+      {
+       "key": "ParseKnownFormatterAttribute",
+       "name": "ParseKnownFormatterAttribute",
+       "line": 87,
+       "endLine": 104,
+       "isNew": false,
+       "added": 2,
+       "removed": 1
+      },
+      {
+       "key": "ParseAssumedFormattableAttribute",
+       "name": "ParseAssumedFormattableAttribute",
+       "line": 106,
+       "endLine": 115,
+       "isNew": false,
+       "added": 1,
+       "removed": 0
+      }
+     ],
+     "linesOutsideFunctions": 0
+    },
+    {
+     "file": "tests/MessagePack.SourceGenerator.Tests/GenerationTests.cs",
+     "status": "M",
+     "kind": "test",
+     "added": 46,
+     "removed": 0,
+     "patch": "@@ -708,6 +708,52 @@ public class MyGenericType<T>\n         }.RunDefaultAsync(this.testOutputHelper);\n     }\n \n+    /// <summary>\n+    /// Verifies that the generator neither fails on a type with a duplicate or mismatched key,\n+    /// nor emits a formatter for it that would leave the offending member out without notice.\n+    /// The absence of expected files for this test is what asserts that nothing is generated.\n+    /// </summary>\n+    [Fact]\n+    public async Task UnusableKeys_NoFormatterGenerated()\n+    {\n+        string testSource = \"\"\"\n+            using MessagePack;\n+\n+            [MessagePackObject]\n+            public class DuplicateKeys\n+            {\n+                [Key(0)]\n+                public int X { get; set; }\n+\n+                {|#0:[Key(0)]\n+                public int Y { get; set; }|}\n+            }\n+\n+            [MessagePackObject]\n+            public class MixedKeys\n+            {\n+                [Key(0)]\n+                public int X { get; set; }\n+\n+                {|#1:[Key(\"y\")]\n+                public int Y { get; set; }|}\n+            }\n+            \"\"\";\n+\n+        await new VerifyCS.Test\n+        {\n+            TestState =\n+            {\n+                Sources = { testSource },\n+            },\n+            ExpectedDiagnostics =\n+            {\n+                DiagnosticResult.CompilerError(\"MsgPack005\").WithLocation(0),\n+                DiagnosticResult.CompilerError(\"MsgPack005\").WithLocation(1),\n+            },\n+        }.RunDefaultAsync(this.testOutputHelper);\n+    }\n+\n     [Fact]\n     public async Task NoPrivateAccessNeeded()\n     {",
+     "functions": [
+      {
+       "key": "UnusableKeys_NoFormatterGenerated",
+       "name": "UnusableKeys_NoFormatterGenerated",
+       "line": 717,
+       "endLine": 755,
+       "isNew": true,
+       "added": 39,
+       "removed": 0
+      }
+     ],
+     "linesOutsideFunctions": 7
+    },
+    {
+     "file": "tests/MessagePack.SourceGenerator.Tests/MsgPack00xAnalyzerTests.cs",
+     "status": "M",
+     "kind": "test",
+     "added": 190,
+     "removed": 0,
+     "patch": "@@ -92,6 +92,196 @@ public class Foo\n         }.RunAsync();\n     }\n \n+    /// <summary>\n+    /// Verifies that a null key on a field is reported.\n+    /// It used to crash the analyzer, though the same key on a property did not.\n+    /// </summary>\n+    [Theory]\n+    [InlineData(\"MessagePackObject\")]\n+    [InlineData(\"MessagePackObject(SuppressSourceGeneration = true)\")]\n+    public async Task NullStringKey_Field(string attribute)\n+    {\n+        string input = /* lang=c#-test */ $$\"\"\"\n+            using MessagePack;\n+\n+            [{{attribute}}]\n+            public class Foo\n+            {\n+                [Key(null)]\n+                public string {|MsgPack005:Member|};\n+            }\n+            \"\"\";\n+\n+        await new VerifyCS.Test\n+        {\n+            TestCode = input,\n+            MarkupOptions = MarkupOptions.UseFirstDescriptor,\n+        }.RunAsync();\n+    }\n+\n+    /// <summary>\n+    /// Verifies that a null key on a property declared by a record's primary constructor is reported.\n+    /// It used to crash the analyzer, which assumed that every property has a declaration of its own.\n+    /// </summary>\n+    [Fact]\n+    public async Task NullStringKey_RecordPrimaryConstructor()\n+    {\n+        // With its only member left out, the primary constructor no longer matches the serialized members: hence MsgPack007.\n+        string input = /* lang=c#-test */ \"\"\"\n+            using MessagePack;\n+\n+            [MessagePackObject]\n+            public record {|MsgPack007:Foo|}([property: Key(null)] string {|MsgPack005:Member|});\n+            \"\"\";\n+\n+        await new VerifyCS.Test\n+        {\n+            ReferenceAssemblies = ReferenceAssemblies.Net.Net60,\n+            CompilerDiagnostics = CompilerDiagnostics.Errors,\n+            MarkupOptions = MarkupOptions.UseFirstDescriptor,\n+            SolutionTransforms =\n+            {\n+                static (solution, projectId) =>\n+                {\n+                    return solution.WithProjectParseOptions(projectId, new CSharpParseOptions(languageVersion: LanguageVersion.CSharp11));\n+                },\n+            },\n+            TestCode = input,\n+        }.RunAsync();\n+    }\n+\n+    /// <summary>\n+    /// Verifies that members that reuse an integer key are reported, whether or not a formatter is source generated for the type.\n+    /// This used to crash the analyzer (https://github.com/MessagePack-CSharp/MessagePack-CSharp/issues/2234).\n+    /// </summary>\n+    [Theory]\n+    [InlineData(\"MessagePackObject\")]\n+    [InlineData(\"MessagePackObject(SuppressSourceGeneration = true)\")]\n+    public async Task DuplicateIntKeys(string attribute)\n+    {\n+        string input = /* lang=c#-test */ $$\"\"\"\n+            using MessagePack;\n+\n+            [{{attribute}}]\n+            public class Foo\n+            {\n+                [Key(0)]\n+                public string Member1 { get; set; }\n+\n+                {|MsgPack005:[Key(0)]\n+                public string Member2 { get; set; }|}\n+\n+                [Key(1)]\n+                public string Field1;\n+\n+                [Key(1)]\n+                public string {|MsgPack005:Field2|};\n+\n+                [Key(0)]\n+                public string {|MsgPack005:Field3|};\n+            }\n+            \"\"\";\n+\n+        await new VerifyCS.Test\n+        {\n+            TestCode = input,\n+            MarkupOptions = MarkupOptions.UseFirstDescriptor,\n+        }.RunAsync();\n+    }\n+\n+    /// <summary>\n+    /// Verifies that members that reuse a string key are reported, whether or not a formatter is source generated for the type.\n+    /// This used to crash the analyzer (https://github.com/MessagePack-CSharp/MessagePack-CSharp/issues/2234).\n+    /// </summary>\n+    [Theory]\n+    [InlineData(\"MessagePackObject\")]\n+    [InlineData(\"MessagePackObject(SuppressSourceGeneration = true)\")]\n+    public async Task DuplicateStringKeys(string attribute)\n+    {\n+        string input = /* lang=c#-test */ $$\"\"\"\n+            using MessagePack;\n+\n+            [{{attribute}}]\n+            public class Foo\n+            {\n+                [Key(\"a\")]\n+                public string Member1 { get; set; }\n+\n+                {|MsgPack005:[Key(\"a\")]\n+                public string Member2 { get; set; }|}\n+\n+                [Key(\"b\")]\n+                public string Field1;\n+\n+                [Key(\"b\")]\n+                public string {|MsgPack005:Field2|};\n+\n+                [Key(\"a\")]\n+                public string {|MsgPack005:Field3|};\n+            }\n+            \"\"\";\n+\n+        await new VerifyCS.Test\n+        {\n+            TestCode = input,\n+            MarkupOptions = MarkupOptions.UseFirstDescriptor,\n+        }.RunAsync();\n+    }\n+\n+    /// <summary>\n+    /// Verifies that members whose kind of key differs from that of the first keyed member are reported,\n+    /// whether or not a formatter is source generated for the type.\n+    /// This used to crash the analyzer, except for a property with an integer key that followed a string key\n+    /// (https://github.com/MessagePack-CSharp/MessagePack-CSharp/issues/2234).\n+    /// </summary>\n+    [Theory]\n+    [InlineData(\"MessagePackObject\")]\n+    [InlineData(\"MessagePackObject(SuppressSourceGeneration = true)\")]\n+    public async Task MixedIntAndStringKeys(string attribute)\n+    {\n+        string input = /* lang=c#-test */ $$\"\"\"\n+            using MessagePack;\n+\n+            [{{attribute}}]\n+            public class IntThenString\n+            {\n+                [Key(0)]\n+                public string Member1 { get; set; }\n+\n+                {|MsgPack005:[Key(\"b\")]\n+                public string Member2 { get; set; }|}\n+\n+                [Key(\"c\")]\n+                public string {|MsgPack005:Field1|};\n+\n+                [Key(1)]\n+                public string Field2;\n+            }\n+\n+            [{{attribute}}]\n+            public class StringThenInt\n+            {\n+                [Key(\"a\")]\n+                public string Member1 { get; set; }\n+\n+                {|MsgPack005:[Key(1)]\n+                public string Member2 { get; set; }|}\n+\n+                [Key(2)]\n+                public string {|MsgPack005:Field1|};\n+\n+                [Key(\"d\")]\n+                public string Field2;\n+            }\n+            \"\"\";\n+\n+        await new VerifyCS.Test\n+        {\n+            TestCode = input,\n+            MarkupOptions = MarkupOptions.UseFirstDescriptor,\n+        }.RunAsync();\n+    }\n+\n     [Fact]\n     public async Task AddAttributesToMembers()\n     {",
+     "functions": [
+      {
+       "key": "NullStringKey_Field",
+       "name": "NullStringKey_Field",
+       "line": 102,
+       "endLine": 120,
+       "isNew": true,
+       "added": 19,
+       "removed": 0
+      },
+      {
+       "key": "NullStringKey_RecordPrimaryConstructor",
+       "name": "NullStringKey_RecordPrimaryConstructor",
+       "line": 127,
+       "endLine": 151,
+       "isNew": true,
+       "added": 25,
+       "removed": 0
+      },
+      {
+       "key": "DuplicateIntKeys",
+       "name": "DuplicateIntKeys",
+       "line": 160,
+       "endLine": 190,
+       "isNew": true,
+       "added": 31,
+       "removed": 0
+      },
+      {
+       "key": "DuplicateStringKeys",
+       "name": "DuplicateStringKeys",
+       "line": 199,
+       "endLine": 229,
+       "isNew": true,
+       "added": 31,
+       "removed": 0
+      },
+      {
+       "key": "MixedIntAndStringKeys",
+       "name": "MixedIntAndStringKeys",
+       "line": 240,
+       "endLine": 283,
+       "isNew": true,
+       "added": 44,
+       "removed": 0
+      }
+     ],
+     "linesOutsideFunctions": 40
+    }
+   ]
+  }
+ ]
+}

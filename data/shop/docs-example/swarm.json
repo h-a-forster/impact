@@ -1,0 +1,142 @@
+{
+ "schema": "impact-map/swarm/v1",
+ "pr": "docs-example",
+ "recordedAt": "2026-11-14T19:08:17.857Z",
+ "base": "2e22bc2b2fe422595d6030cac407032205406315",
+ "realFrom": {
+  "commit": "9f5f23307b28f0057e6b9bb3c8d9646f4b6e31d0",
+  "note": "The real change: the first commit of docs-example in the shop sample, against its base."
+ },
+ "real": {
+  "files": [
+   {
+    "file": "docs/pricing.md",
+    "status": "M",
+    "kind": "doc",
+    "added": 2,
+    "removed": 0,
+    "patch": "@@ -3,3 +3,5 @@\n All money is handled as whole cents.\n \n Discounts are a whole-number percent of the order subtotal.\n+\n+Example: a 200-cent order with a 10% discount totals 180 cents.",
+    "functions": []
+   }
+  ]
+ },
+ "prompt": {
+  "file": "data/shop/docs-example/swarm-prompt.txt",
+  "text": "You are working in a copy of the shop-sample repository (TypeScript), at the commit just before the change. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- You cannot run commands, so you cannot run the unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nSolve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.\n\n## Requirements (from the pull request description)\n\nRequirement: None linked.\n\nWhy: The pricing notes had no worked example.\n\nBefore and after: Before: docs/pricing.md explains the rule only. After: docs/pricing.md also shows a 200-cent example.\n\nMust preserve: No code or behaviour changes.\n",
+  "note": "Every agent got this prompt, word for word: the normal agent's brief (own judgement, as for a normal pull request)."
+ },
+ "how": "Runs on the shop sample (pull request docs-example), 2026-11-14. Each of 5 agents ran once with `claude -p --model claude-sonnet-5-5`, alone, in its own copy of the shop sample at the commit before docs-example. Every agent got the same normal prompt (swarm-prompt.txt). No shell, no git, no web. All 5 ran at the same time.",
+ "notBuilt": "The agents had no shell. Nobody ran the unit tests on their changes. We do not know if any agent's change passes them.",
+ "models": {
+  "claude-sonnet-5-5": {
+   "label": "Sonnet 5.5",
+   "runs": [
+    {
+     "n": 1,
+     "startedAt": "2026-11-14T19:07:56.867Z",
+     "endedAt": "2026-11-14T19:08:15.892Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 5,
+     "reply": "I changed one file, `docs/pricing.md`. It now has an \"Example\" section with a 200-cent subtotal at 10% off. The discount is 20 cents and the total is 180 cents. It also says the discount rounds down to whole cents, which matches `applyDiscount` in `src/pricing/discount.ts`.\n\nI didn't touch any code, and I haven't run anything.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "docs/pricing.md",
+       "status": "M",
+       "kind": "doc",
+       "added": 9,
+       "removed": 0,
+       "patch": "@@ -3,3 +3,12 @@\n All money is handled as whole cents.\n \n Discounts are a whole-number percent of the order subtotal.\n+\n+## Example\n+\n+A subtotal of 200 cents with a 10% discount:\n+\n+- Discount: 200 × 10 / 100 = 20 cents\n+- Total: 200 − 20 = 180 cents\n+\n+The discount is rounded down to whole cents (`Math.floor`), so any fraction of a cent stays in the total.",
+       "functions": []
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "startedAt": "2026-11-14T19:07:57.381Z",
+     "endedAt": "2026-11-14T19:08:13.454Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 4,
+     "reply": "I changed one file, `docs/pricing.md`. I added an \"Example\" section with a 200-cent subtotal and a 15% discount: the discount is 30 cents and the total is 170 cents. It matches what `applyDiscount` in `src/pricing/discount.ts` does. I made no code changes, and I didn't run anything.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "docs/pricing.md",
+       "status": "M",
+       "kind": "doc",
+       "added": 7,
+       "removed": 0,
+       "patch": "@@ -3,3 +3,10 @@\n All money is handled as whole cents.\n \n Discounts are a whole-number percent of the order subtotal.\n+\n+## Example\n+\n+An order with a subtotal of 200 cents and a 15% discount:\n+\n+- Discount: 200 × 15 / 100 = 30 cents\n+- Total: 200 − 30 = 170 cents",
+       "functions": []
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "startedAt": "2026-11-14T19:07:57.943Z",
+     "endedAt": "2026-11-14T19:08:15.754Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 5,
+     "reply": "I changed one file: `docs/pricing.md`.\n\n- **Example:** I added a worked example. A 200-cent subtotal with a 15% discount gives a 30-cent discount and a 170-cent total.\n- **Rounding sentence:** I also added one sentence saying the discount is rounded down to a whole cent. This matches the `Math.floor` in `applyDiscount` in `src/pricing/discount.ts`.\n\nI didn't touch any code, and I couldn't run any tests.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "docs/pricing.md",
+       "status": "M",
+       "kind": "doc",
+       "added": 8,
+       "removed": 1,
+       "patch": "@@ -2,4 +2,11 @@\n \n All money is handled as whole cents.\n \n-Discounts are a whole-number percent of the order subtotal.\n+Discounts are a whole-number percent of the order subtotal. The discount amount is rounded down to a whole cent.\n+\n+## Example\n+\n+A 200-cent subtotal with a 15% discount:\n+\n+- Discount: 200 × 15 / 100 = 30 cents\n+- Total: 200 − 30 = 170 cents",
+       "functions": []
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "startedAt": "2026-11-14T19:07:58.515Z",
+     "endedAt": "2026-11-14T19:08:16.864Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 5,
+     "reply": "I changed one file, [docs/pricing.md](docs/pricing.md). I added a worked example: a 200-cent subtotal with a 15% discount gives a 30-cent discount and a 170-cent total. I also added a sentence saying the discount is rounded down to a whole cent. That sentence comes from `applyDiscount` in [discount.ts](src/pricing/discount.ts), which the sentence links to.\n\nNo code changed. I couldn't run anything, so the example's numbers come from reading the code.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "docs/pricing.md",
+       "status": "M",
+       "kind": "doc",
+       "added": 10,
+       "removed": 1,
+       "patch": "@@ -2,4 +2,13 @@\n \n All money is handled as whole cents.\n \n-Discounts are a whole-number percent of the order subtotal.\n+Discounts are a whole-number percent of the order subtotal. The discount amount is rounded down to a whole cent, and the\n+result is the subtotal minus that amount (see `applyDiscount` in\n+`src/pricing/discount.ts`).\n+\n+## Example\n+\n+A 200-cent subtotal with a 15% discount:\n+\n+- Discount: floor(200 × 15 / 100) = 30 cents\n+- Total: 200 − 30 = 170 cents",
+       "functions": []
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "startedAt": "2026-11-14T19:07:59.197Z",
+     "endedAt": "2026-11-14T19:08:15.787Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 5,
+     "reply": "I changed one file, `docs/pricing.md`. I didn't run anything, and no code changed.\n\n- **Example:** I added a worked example for a 200-cent subtotal with a 15% discount. The discount is 30 cents, so the total is 170 cents.\n- **Rounding note:** I added one sentence saying the discount amount is rounded down to a whole cent. This comes from the `Math.floor` in `applyDiscount` in `src/pricing/discount.ts`. You didn't ask for it, so drop it if you want the change to be the example only.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "docs/pricing.md",
+       "status": "M",
+       "kind": "doc",
+       "added": 8,
+       "removed": 1,
+       "patch": "@@ -2,4 +2,11 @@\n \n All money is handled as whole cents.\n \n-Discounts are a whole-number percent of the order subtotal.\n+Discounts are a whole-number percent of the order subtotal. The discount amount is rounded down to a whole cent.\n+\n+## Example\n+\n+A subtotal of 200 cents with a 15% discount:\n+\n+- Discount: 200 × 15 / 100 = 30 cents\n+- Total: 200 − 30 = 170 cents",
+       "functions": []
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

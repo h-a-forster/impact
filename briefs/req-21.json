@@ -1,0 +1,27 @@
+{
+  "pr": "req-21",
+  "requirement": "REQ-21",
+  "author": "Coding agent (authoring pass)",
+  "authorKind": "agent",
+  "why": "REQ-21: operations enter -5 in the promo field to mean no promotion. applyDiscount() threw a RangeError on it, so checkout showed an error page and Order Import rejected the row.",
+  "before": "A 200-cent cart at -5% throws RangeError. Checkout fails.",
+  "after": "A 200-cent cart at -5% totals 200 cents. A bad promo percent no longer fails checkout.",
+  "preserve": "Percents from 0 to 100 give the same totals as before.",
+  "approach": "In applyDiscount(), replace the range check that threw with a floor at 0, so a negative percent means no discount. Whole-cent integer maths unchanged.",
+  "alternatives": "Validate the promo field in the admin screen instead. Rejected: Order Import files come from partners and would still fail.",
+  "rollback": "Revert the PR commit. No data migration.",
+  "revisions": {
+    "1": {
+      "checksRun": [{ "label": "npm test, run locally before push", "check": "unit-tests" }],
+      "openGaps": [],
+      "claims": [
+        { "id": "c1", "text": "applyDiscount() treats a negative percent as no discount instead of throwing.", "kind": "symbol-changed", "symbol": "fn:src/pricing/discount.ts#applyDiscount", "cite": { "file": "src/pricing/discount.ts", "line": 7 } },
+        { "id": "c2", "text": "Checkout totals 200 cents for a 200-cent cart at -5%.", "kind": "test-passed", "test": "test:tests/checkout.test.ts#REQ-21 checkout: a negative promo percent counts as no discount", "supports": "fn:src/checkout/checkout.ts#checkoutTotal" },
+        { "id": "c3", "text": "Order Import totals 105 cents for a 105-cent row at -5%.", "kind": "test-passed", "test": "test:tests/orderImport.test.ts#REQ-21 import: a row with a negative percent imports at full price", "supports": "fn:src/import/orderImport.ts#importOrder" },
+        { "id": "c4", "text": "Percents from 0 to 100 keep their Checkout totals.", "kind": "test-passed", "test": "test:tests/checkout.test.ts#REQ-21 checkout: percents from 0 to 100 keep their totals", "supports": "fn:src/checkout/checkout.ts#checkoutTotal" },
+        { "id": "c5", "text": "All tests pass.", "kind": "suite-green" },
+        { "id": "c6", "text": "applyDiscount() has no callers other than Checkout and Order Import.", "kind": "callers-complete", "symbol": "fn:src/pricing/discount.ts#applyDiscount" }
+      ]
+    }
+  }
+}

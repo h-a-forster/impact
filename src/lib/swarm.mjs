@@ -1,5 +1,6 @@
 // Monte Carlo swarm: N agents of one model got the same task. How often did they end up close to the real change?
 // Recorded by scripts/record-swarm.mjs into data/tieto/<pr>/swarm.json. This file only does the maths.
+// The shop sample's runs live in data/shop/<pr>/swarm.json (scripts/record-shop-swarm.mjs), which carries its own real change.
 //
 // THE SIMILARITY RULE (the README says the same):
 //   Each change is a set of "things": the product code files it touches, plus the functions
@@ -18,7 +19,9 @@ import path from "node:path";
 import { DATA } from "./paths.mjs";
 
 export const SIMILAR_AT = 0.5;
+const DEFAULT_MODEL = "claude-sonnet-5-5";
 const file = (prId, name) => path.join(DATA, "tieto", prId, name);
+const shopFile = (prId) => path.join(DATA, "shop", prId, "swarm.json");
 
 /** The set of things a change touches. Keys: file path, or "file#function". */
 export function thingsOf(files) {
@@ -55,10 +58,11 @@ export function similarity(a, b) {
 }
 
 export function buildSwarm(prId) {
-  if (!fs.existsSync(file(prId, "swarm.json")) || !fs.existsSync(file(prId, "blast.json"))) return { pr: prId, recorded: false, message: "No swarm runs recorded for this PR yet." };
-  const rec = JSON.parse(fs.readFileSync(file(prId, "swarm.json"), "utf8"));
-  const blast = JSON.parse(fs.readFileSync(file(prId, "blast.json"), "utf8"));
-  const realFiles = blast.real.files;
+  const demoRecorded = fs.existsSync(file(prId, "swarm.json")) && fs.existsSync(file(prId, "blast.json"));
+  if (!demoRecorded && !fs.existsSync(shopFile(prId))) return { pr: prId, recorded: false, message: "No swarm runs recorded for this PR yet." };
+  const rec = JSON.parse(fs.readFileSync(demoRecorded ? file(prId, "swarm.json") : shopFile(prId), "utf8"));
+  const blast = demoRecorded ? JSON.parse(fs.readFileSync(file(prId, "blast.json"), "utf8")) : { runs: [] };
+  const realFiles = demoRecorded ? blast.real.files : rec.real.files;
   const real = thingsOf(realFiles);
   const realLines = linesOf(realFiles);
   const pct = (x) => Math.round(x * 100);
@@ -66,7 +70,9 @@ export function buildSwarm(prId) {
   /** One agent's run, scored against the real change. */
   const makeRun = ({ key, model, n, files, ok, seconds, reply, madeUp = false, from = null }) => {
     const mine = thingsOf(files);
-    const score = similarity(mine, real);
+    // A failed run, or one that changed nothing, agrees with nothing (two empty sets would score 100%).
+    const counts = ok && files.length > 0;
+    const score = counts ? similarity(mine, real) : 0;
     return {
       key,
       model,
@@ -76,7 +82,7 @@ export function buildSwarm(prId) {
       from,
       things: [...mine.keys()],
       lines: [...linesOf(files).keys()],
-      lineScore: pct(similarity(linesOf(files), realLines)),
+      lineScore: counts ? pct(similarity(linesOf(files), realLines)) : 0,
       ok,
       noChange: files.length === 0,
       score: pct(score),
@@ -132,6 +138,10 @@ export function buildSwarm(prId) {
     const parts = [...new Set(demo.map((r) => r.modelLabel))].map((l) => [l, demo.filter((r) => r.modelLabel === l).length]);
     sets.unshift({ id: "demo", madeUp: true, note: rec.demo.note, label: `Demo mix, made up: ${parts.map(([l, k]) => `${k} ${l}`).join(", ")}`, runs: demo.map((r) => r.key) });
   }
+  // The default plays real runs whenever there are any: the default model's, else the first real set.
+  // The made-up set stays in the menu.
+  const realSets = sets.filter((x) => !x.madeUp && x.runs.length);
+  const defaultSet = (realSets.find((x) => x.id === DEFAULT_MODEL) ?? realSets[0] ?? sets[0]).id;
   return {
     pr: prId,
     recorded: true,
@@ -144,8 +154,7 @@ export function buildSwarm(prId) {
     // The real change as sets, so the page can build the matrix (real change + agents, every pair).
     realThings: [...real.keys()],
     realLines: [...realLines.keys()],
-    // The demo default: the first set (the mix when there is one), all of its runs.
-    defaultSet: sets[0].id,
+    defaultSet,
     // Shown in the model list even when nothing is recorded for them.
     choices: ["demo", "mix", "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-2"],
     choiceLabels: { "claude-opus-5-5": "Opus 5.5", "claude-sonnet-5-5": "Sonnet 5.5", "claude-haiku-5-5": "Haiku 5.5", "claude-fable-5-2": "Fable 5.2" },

@@ -99,6 +99,22 @@
           "index": 1
         }
       ]
+    },
+    {
+      "id": "req-21",
+      "number": 5,
+      "title": "REQ-21: a negative promo percent means no discount",
+      "requirement": "REQ-21",
+      "kind": "eval",
+      "branch": "pr/req-21",
+      "commits": [
+        {
+          "sha": "977be6ed6999a61ba6da17444181688842068a80",
+          "message": "REQ-21: treat a negative promo percent as no discount",
+          "date": "2026-11-05T09:00:00Z",
+          "index": 1
+        }
+      ]
     }
   ]
 }

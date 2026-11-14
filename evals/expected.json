@@ -72,6 +72,16 @@
       "finalSeverity": "High",
       "route": "Human review required",
       "policyFrom": "base"
+    },
+    "req-21": {
+      "note": "Green tests and full evidence, but percents above 100 now give totals below zero. Written before the AI reviewer was run.",
+      "finalSeverity": "Medium",
+      "route": "Human review required",
+      "downstream": [
+        "fn:src/checkout/checkout.ts#checkoutTotal",
+        "fn:src/import/orderImport.ts#importOrder"
+      ],
+      "reviewerFlagsUncappedPercent": true
     }
   },
   "decisionIntegrity": {

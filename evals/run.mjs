@@ -5,10 +5,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { readFileAt } from "../src/lib/git.mjs";
-import { buildModel, loadBrief, loadRevisions } from "../src/lib/model.mjs";
+import { buildModel, demoRevisions, loadBrief, loadRevisions } from "../src/lib/model.mjs";
 import { loadRun } from "../src/lib/runner.mjs";
 import { decisionView, recordDecision } from "../src/lib/decisions.mjs";
 import { findPr, prSummary } from "../src/lib/github.mjs";
+import { buildSwarm } from "../src/lib/swarm.mjs";
 import { DATA } from "../src/lib/paths.mjs";
 import { ROOT } from "../src/lib/paths.mjs";
 
@@ -111,10 +112,12 @@ group = "Evidence integrity";
   briefC.revisions["1"].claims.find((c) => c.id === "c1").cite = { file: "src/pricing/discount.ts", line: 999 };
   briefC.revisions["1"].claims.find((c) => c.id === "c3").cite = { file: "src/import/doesNotExist.ts", line: 3 };
   briefC.revisions["1"].claims.find((c) => c.id === "c2").test = "test:tests/orderImport.test.ts#REQ-17 import: 105 cents at 10% totals 94 cents";
+  briefC.revisions["1"].claims.find((c) => c.id === "c5").cite = { file: "src/pricing/discount.ts", line: "<img src=x>" };
   const c = buildModel(revisions, "req-17", c1, { brief: briefC });
   check("invalid citation (line out of range): not shown as Verified", claimOf(c, "c1"), e.invalidCitation.claimLabel);
   check("invalid citation (missing file): not shown as Verified", claimOf(c, "c3"), e.invalidCitation.claimLabel);
   check("invalid citation (test exists only at a later commit): not shown as Verified", claimOf(c, "c2"), e.invalidCitation.claimLabel);
+  check("invalid citation (line is not a number): not shown as Verified", claimOf(c, "c5"), e.invalidCitation.claimLabel);
 
   // (d) A failed required check stays a blocker, even with full evidence otherwise.
   const failedRun = clone(loadRun(c2));
@@ -148,6 +151,16 @@ group = "Policy integrity";
   check("policy self-patch: severity and route", [self.classifier2.severity, self.classifier2.route], [p["policy-self-patch"].finalSeverity, p["policy-self-patch"].route]);
   check("policy self-patch: rules come from the base commit", [self.policy.revision, self.policy.rules.critical_paths], [baseSha, ["src/payments/**"]]);
   check("policy self-patch: the PR's own policy edit is detected and not applied", [self.policy.changedInThisPr, self.classifier2.autoMergeDryRun], [true, false]);
+
+  // Green tests and full evidence, but percents above 100 now give totals below zero.
+  const uncapped = buildModel(revisions, "req-21", sha("req-21"));
+  check("uncapped discount: severity and route", [uncapped.classifier2.severity, uncapped.classifier2.route], [p["req-21"].finalSeverity, p["req-21"].route]);
+  check("uncapped discount: Checkout and Order Import shown as affected", uncapped.impact.downstream.map((e) => e.id).sort(), p["req-21"].downstream);
+  check(
+    "uncapped discount: the AI reviewer reports the missing upper limit, citing the pricing code",
+    uncapped.review.available && uncapped.review.findings.some((f) => f.category === "Action required" && f.citationsValid && f.citations.some((c) => c.file === "src/pricing/discount.ts")),
+    p["req-21"].reviewerFlagsUncappedPercent,
+  );
 }
 
 // ---- 5. Decision integrity ------------------------------------------------
@@ -201,6 +214,33 @@ group = "Planted faults (measurement)";
   check("commit 2: nothing escapes where the map said Unverified", p2.summary.escapedWhereMapSaidUnverified, e.commit2.escapedWhereMapSaidUnverified);
   check("known miss is reported, not hidden: a fault escapes where the map said Supported", [p1.summary.escapedWhereMapSaidSupported, p2.summary.escapedWhereMapSaidSupported], [e.commit1.escapedWhereMapSaidSupported, e.commit2.escapedWhereMapSaidSupported]);
   check("the planted-fault record is for the commits under review", [p1.sha, p2.sha], [c1, c2]);
+}
+
+// ---- 8. Demo PRs -----------------------------------------------------------
+group = "Demo PRs";
+{
+  const demo = demoRevisions();
+  const pr = demo.prs.find((p) => p.id === "ju26-issue-2283");
+  const files = buildModel(demo, pr.id, pr.commits[1].sha).diff.files.map((f) => f.file);
+  check("made-up commit 2 lists each edited file once", [files.length, new Set(files).size], [4, 4]);
+}
+
+// ---- 9. Swarm agreement -----------------------------------------------------
+group = "Swarm agreement";
+{
+  const similar = (prId) => buildSwarm(prId).runs.map((r) => r.similar);
+  check("docs-only change: agents that edit the same doc agree", similar("docs-example"), [true, true, true, true, true]);
+  // A docs-only real change, against a run that failed and one that changed nothing.
+  const doc = { file: "docs/pricing.md", kind: "doc", added: 1, removed: 0, patch: "@@ -1 +1 @@\n+x", functions: [] };
+  const run = (n, exitCode, files) => ({ n, exitCode, files, reply: "" });
+  const dir = path.join(DATA, "shop", `eval-swarm-${process.pid}`);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "swarm.json"), JSON.stringify({ real: { files: [doc] }, models: { m: { label: "M", runs: [run(1, 1, []), run(2, 0, []), run(3, 0, [doc])] } } }));
+  try {
+    check("a failed run or one that changed nothing does not agree", similar(path.basename(dir)), [false, false, true]);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 // ---- Report ---------------------------------------------------------------

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { readFileAt, revisionExists } from "./lib/git.mjs";
-import { buildFullMap, buildModel, demoRevisions } from "./lib/model.mjs";
+import { buildFullMap, buildModel, demoRevisions, loadRevisions } from "./lib/model.mjs";
 import { ledgerSource } from "./lib/ledger.mjs";
 import { loadTietoSlice } from "./lib/graphify-tieto.mjs";
 import { buildBlast } from "./lib/blast.mjs";
@@ -21,7 +21,7 @@ if (!fs.existsSync(REVISIONS_FILE) || !fs.existsSync(SAMPLE_REPO)) {
 }
 
 const json = (res, status, body) => {
-  res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "access-control-allow-origin": "*" });
+  res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
   res.end(JSON.stringify(body));
 };
 const readBody = (req) =>
@@ -34,6 +34,15 @@ const readBody = (req) =>
     req.on("end", () => resolve(data));
     req.on("error", reject);
   });
+
+// Writes come only from this app's own pages (or a local script, which sends no Origin):
+// a JSON content type cannot be sent cross-site without a preflight, and a foreign Origin is refused.
+function refuseWrite(req) {
+  if (!/^application\/json\b/i.test(req.headers["content-type"] ?? "")) return "POST bodies must be application/json";
+  const origin = req.headers.origin;
+  if (!origin || (URL.canParse(origin) && new URL(origin).host === req.headers.host)) return null;
+  return `Cross-site request from ${origin} refused`;
+}
 
 // Eval test cases: PRs a person marked as "merged, then broke the system".
 // They become test cases for the AI review agent. Saved per PR.
@@ -48,15 +57,23 @@ function setEvalCase(prId, on) {
   return cases[prId] ?? null;
 }
 
-function modelFor(prId, sha) {
-  const revisions = demoRevisions();
+// Session mode (?session=1, used by timed review sessions): the routes serve the shop sample's
+// pull requests, whose right answers are known, in place of the demo's four.
+const revisionsSource = (url) => (url.searchParams.get("session") === "1" ? loadRevisions : demoRevisions);
+
+function modelFor(prId, sha, revisions) {
   const model = buildModel(revisions, prId, sha);
   return { ...model, decisions: decisionView(model), evalCase: loadEvalCases()[prId] ?? null };
 }
 
 const handler = async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
+  const demoRevisions = revisionsSource(url); // shadows the import, so every route below follows the session switch
   try {
+    if (req.method === "POST") {
+      const refused = refuseWrite(req);
+      if (refused) return json(res, 403, { error: refused });
+    }
     if (url.pathname === "/api/revisions") {
       return json(res, 200, demoRevisions());
     }
@@ -66,7 +83,7 @@ const handler = async (req, res) => {
       return json(res, 200, { ok: true, evalCase: setEvalCase(input.pr, Boolean(input.on)) });
     }
     if (url.pathname === "/api/model") {
-      return json(res, 200, modelFor(url.searchParams.get("pr"), url.searchParams.get("sha")));
+      return json(res, 200, modelFor(url.searchParams.get("pr"), url.searchParams.get("sha"), demoRevisions()));
     }
     if (url.pathname === "/api/graphify") {
       // The saved Graphify export for a PR (a slice of graph.json), as a file to read.

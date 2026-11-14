@@ -11,7 +11,10 @@ export function checkFileCitation(sha, cite) {
   const text = readFileAt(sha, cite.file);
   if (text === null) return { ok: false, reason: `Citation invalid: ${cite.file} does not exist at commit ${short(sha)}.` };
   const lineCount = text.split("\n").length;
-  if (cite.line && (cite.line < 1 || cite.line > lineCount)) {
+  if (cite.line != null && !(Number.isInteger(cite.line) && cite.line >= 1)) {
+    return { ok: false, reason: `Citation invalid: line ${JSON.stringify(cite.line)} is not a line number.` };
+  }
+  if (cite.line > lineCount) {
     return { ok: false, reason: `Citation invalid: ${cite.file} has no line ${cite.line} at commit ${short(sha)}.` };
   }
   return { ok: true };

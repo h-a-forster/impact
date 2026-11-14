@@ -1,0 +1,134 @@
+{
+ "schema": "impact-map/blast/v1",
+ "pr": "docs-example",
+ "recordedAt": "2026-11-14T19:10:29.286Z",
+ "model": "claude-sonnet-5-5",
+ "base": "2e22bc2b2fe422595d6030cac407032205406315",
+ "how": {
+  "source": "Three agents run on the shop sample (pull request docs-example), 2026-11-14: minimal = the 'careful' brief, normal = the 'normal' brief, wide = the 'greedy' brief. Each ran once, alone, at the same time as the others. None saw the pull request.",
+  "command": "claude -p --model claude-sonnet-5-5 --setting-sources user --permission-mode acceptEdits --disallowedTools Bash PowerShell WebFetch WebSearch Agent Skill --strict-mcp-config --output-format stream-json --verbose < the run's prompt (saved under runs[].prompt)",
+  "folders": "Each agent worked in its own clean copy of the base commit (git fetch --depth 1 of the base only), so the real change was never there. No shell, no git, no web. Files an agent saved with Windows line endings were turned back to the shop's own, so a line counts only when its text changed (listed per run under lineEndingsNormalised).",
+  "same": "Same model, same requirements and same code for all three. Only the 'How to work' lines differ.",
+  "functions": "Functions are found by a simple reader of the TypeScript text (scanFunctions in src/lib/blast.mjs: `function` declarations, ended by brace matching), the same way for all 4 changes. A function counts as edited when a changed line sits inside it. Callers come from the shop's saved Graphify code index at the base commit."
+ },
+ "notBuilt": "The agents had no shell. Nobody ran the unit tests on their changes.",
+ "given": {
+  "file": null,
+  "text": null,
+  "kept": [
+   "The pull request description's Why, Before and after, and Must preserve",
+   "The shop's code and tests from before the change"
+  ],
+  "leftOut": [
+   "The pull request: its title, approach, commits and code"
+  ],
+  "note": "No requirement is linked to this pull request."
+ },
+ "real": {
+  "id": "real",
+  "head": "9f5f23307b28f0057e6b9bb3c8d9646f4b6e31d0",
+  "source": "the shop sample's docs-example commit 1 (9f5f233) against its base (2e22bc2)",
+  "files": [
+   {
+    "file": "docs/pricing.md",
+    "status": "M",
+    "kind": "doc",
+    "added": 2,
+    "removed": 0,
+    "patch": "@@ -3,3 +3,5 @@\n All money is handled as whole cents.\n \n Discounts are a whole-number percent of the order subtotal.\n+\n+Example: a 200-cent order with a 10% discount totals 180 cents.",
+    "functions": []
+   }
+  ]
+ },
+ "runs": [
+  {
+   "id": "minimal",
+   "brief": "careful",
+   "prompt": "You are working in a copy of the shop-sample repository (TypeScript), at the commit just before the change. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- You cannot run commands, so you cannot run the unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nMake the smallest change that meets the requirements. Touch as few files, as few functions and as few lines as you can. No refactoring, no tidy-ups, no renames and no doc changes. Add no unit tests unless the requirements cannot be met without them.\n\n## Requirements (from the pull request description)\n\nRequirement: None linked.\n\nWhy: The pricing notes had no worked example.\n\nBefore and after: Before: docs/pricing.md explains the rule only. After: docs/pricing.md also shows a 200-cent example.\n\nMust preserve: No code or behaviour changes.\n",
+   "instruction": "Make the smallest change that meets the requirements. Touch as few files, as few functions and as few lines as you can. No refactoring, no tidy-ups, no renames and no doc changes. Add no unit tests unless the requirements cannot be met without them.",
+   "startedAt": "2026-11-14T19:10:12.198Z",
+   "endedAt": "2026-11-14T19:10:26.068Z",
+   "exitCode": 0,
+   "modelInLog": "claude-sonnet-5-5",
+   "turns": 3,
+   "reply": "I changed one file: [docs/pricing.md](docs/pricing.md:7). It now has a worked example: a 200-cent subtotal with a 10% discount takes off 20 cents, so the total is 180 cents. No code changed. I didn't run anything, and I didn't read the pricing code. The example follows the doc's own rule, and 10% of 200 is a whole number, so rounding doesn't come into it.",
+   "toolCalls": {
+    "Read": 1,
+    "Edit": 1
+   },
+   "pathsOutsideFolder": [],
+   "lineEndingsNormalised": [],
+   "files": [
+    {
+     "file": "docs/pricing.md",
+     "status": "M",
+     "kind": "doc",
+     "added": 2,
+     "removed": 0,
+     "patch": "@@ -3,3 +3,5 @@\n All money is handled as whole cents.\n \n Discounts are a whole-number percent of the order subtotal.\n+\n+Example: a 200-cent subtotal with a 10% discount takes off 20 cents, so the total is 180 cents.",
+     "functions": []
+    }
+   ]
+  },
+  {
+   "id": "normal",
+   "brief": "normal",
+   "prompt": "You are working in a copy of the shop-sample repository (TypeScript), at the commit just before the change. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- You cannot run commands, so you cannot run the unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nSolve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.\n\n## Requirements (from the pull request description)\n\nRequirement: None linked.\n\nWhy: The pricing notes had no worked example.\n\nBefore and after: Before: docs/pricing.md explains the rule only. After: docs/pricing.md also shows a 200-cent example.\n\nMust preserve: No code or behaviour changes.\n",
+   "instruction": "Solve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.",
+   "startedAt": "2026-11-14T19:10:12.826Z",
+   "endedAt": "2026-11-14T19:10:26.400Z",
+   "exitCode": 0,
+   "modelInLog": "claude-sonnet-5-5",
+   "turns": 4,
+   "reply": "I changed one file, `docs/pricing.md`. I added an \"Example\" section with a worked case: a 200-cent subtotal at 10% gives a 20-cent discount and a 180-cent total. It matches `applyDiscount` in `src/pricing/discount.ts`, which takes the discount as `Math.floor(subtotal × percent / 100)`. I made no code changes, and I didn't run anything.",
+   "toolCalls": {
+    "Read": 1,
+    "Grep": 1,
+    "Edit": 1
+   },
+   "pathsOutsideFolder": [],
+   "lineEndingsNormalised": [],
+   "files": [
+    {
+     "file": "docs/pricing.md",
+     "status": "M",
+     "kind": "doc",
+     "added": 7,
+     "removed": 0,
+     "patch": "@@ -3,3 +3,10 @@\n All money is handled as whole cents.\n \n Discounts are a whole-number percent of the order subtotal.\n+\n+## Example\n+\n+A 200-cent subtotal with a 10% discount:\n+\n+- Discount: 200 × 10 / 100 = 20 cents\n+- Total: 200 − 20 = 180 cents",
+     "functions": []
+    }
+   ]
+  },
+  {
+   "id": "wide",
+   "brief": "greedy",
+   "prompt": "You are working in a copy of the shop-sample repository (TypeScript), at the commit just before the change. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- You cannot run commands, so you cannot run the unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nYou are free to go well beyond the smallest fix. While you solve the problem, also refactor, tidy up and harden the code around it wherever you think it helps: similar weak spots elsewhere, shared helpers, naming, docs, unit tests. Prefer a broad, thorough change over a narrow one. The requirements must still be met.\n\n## Requirements (from the pull request description)\n\nRequirement: None linked.\n\nWhy: The pricing notes had no worked example.\n\nBefore and after: Before: docs/pricing.md explains the rule only. After: docs/pricing.md also shows a 200-cent example.\n\nMust preserve: No code or behaviour changes.\n",
+   "instruction": "You are free to go well beyond the smallest fix. While you solve the problem, also refactor, tidy up and harden the code around it wherever you think it helps: similar weak spots elsewhere, shared helpers, naming, docs, unit tests. Prefer a broad, thorough change over a narrow one. The requirements must still be met.",
+   "startedAt": "2026-11-14T19:10:13.435Z",
+   "endedAt": "2026-11-14T19:10:28.242Z",
+   "exitCode": 0,
+   "modelInLog": "claude-sonnet-5-5",
+   "turns": 5,
+   "reply": "I changed one file, `docs/pricing.md`. It now has an \"Example\" section with a 200-cent subtotal at a 10% discount: the discount is 20 cents and the total is 180 cents. I also added a line saying the discount is rounded down to a whole cent, which matches `applyDiscount` in `src/pricing/discount.ts`.\n\nI didn't touch any code, tests or other files, because the requirement says no code or behaviour changes. I didn't run anything.",
+   "toolCalls": {
+    "Read": 2,
+    "Glob": 1,
+    "Edit": 1
+   },
+   "pathsOutsideFolder": [],
+   "lineEndingsNormalised": [],
+   "files": [
+    {
+     "file": "docs/pricing.md",
+     "status": "M",
+     "kind": "doc",
+     "added": 9,
+     "removed": 0,
+     "patch": "@@ -3,3 +3,12 @@\n All money is handled as whole cents.\n \n Discounts are a whole-number percent of the order subtotal.\n+\n+## Example\n+\n+A 200-cent subtotal with a 10% discount:\n+\n+- Discount: 200 × 10 / 100 = 20 cents\n+- Total: 200 − 20 = 180 cents\n+\n+The discount is rounded down to a whole cent (`Math.floor`), so any fraction of a cent stays in the total.",
+     "functions": []
+    }
+   ]
+  }
+ ]
+}

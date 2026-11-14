@@ -76,7 +76,8 @@ function buildTietoModel(pr, sha) {
     impact: { ...m.impact, unverified: [] },
     policy: m.policy,
     requirementText: m.requirementText,
-    diff: { files: [...m.diff.files, ...(o?.files ?? [])] },
+    // One entry per path: a file the made-up commit edits again keeps its real diff; its made-up change is in `since`.
+    diff: { files: [...m.diff.files, ...(o?.files ?? []).filter((f) => !m.diff.files.some((x) => x.file === f.file)).map((f) => ({ ...f, madeUp: true }))] },
     since: o ? { from: commit.index - 1, items: o.since ?? [], files: o.files ?? [] } : null,
     evidence: o?.fixed ? [] : m.evidence.filter((e) => e.status === "contradicted").map(({ rowIds, ...e }) => ({ ...e, statusLabel: "A targeted unit test fails here", missing: null })),
     brief: null,
@@ -270,6 +271,14 @@ function loadDescription(pr, brief, commit) {
 export function loadBrief(prId) {
   const file = path.join(BRIEFS, `${prId}.json`);
   return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : null;
+}
+
+/** The coding agent's saved answers for the chat, for the one commit they were written for (shop sample). */
+function loadChat(prId, sha) {
+  const file = path.join(BRIEFS, "chat", `${prId}.json`);
+  if (!fs.existsSync(file)) return null;
+  const chat = JSON.parse(fs.readFileSync(file, "utf8"));
+  return chat.commit === sha ? chat : null;
 }
 
 /** Concept mapper (rule-based): folder group, with a behaviour label when the team config has one. */
@@ -620,5 +629,6 @@ export function buildModel(revisions, prId, sha, opts = {}) {
     reviewInput,
     classifier2: c2,
     labels: { claimVerifier: CLAIM_VERIFIER_LABEL },
+    agent: loadChat(prId, sha),
   };
 }

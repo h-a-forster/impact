@@ -10,7 +10,10 @@ const state = { hidden: { intentCard: false, mapCard: false, reviewCard: false }
 const sourceCache = new Map();
 
 // ---------- data ----------
+// Session mode (?session=1): every API call carries the switch, so the server serves the shop sample.
+const SESSION = new URLSearchParams(location.search).get("session") === "1";
 async function api(path, opts) {
+  if (SESSION) path += (path.includes("?") ? "&" : "?") + "session=1";
   const res = await fetch(path, opts);
   const body = await res.json();
   if (!res.ok && !body.error) throw new Error(`Request failed: ${res.status}`);
@@ -22,7 +25,8 @@ async function getSource(sha, file) {
   return sourceCache.get(key);
 }
 const currentPr = () => state.revisions.prs.find((p) => p.id === state.prId);
-const revList = () => currentPr().commits.map((c) => ({ sha: c.sha, label: `Commit ${c.index}${c.madeUp ? " · made up" : ""}`, message: c.message, short: short(c.sha) }));
+// In a session a person reviews one commit: later commits do not exist yet, and no other pull request is open.
+const revList = () => currentPr().commits.filter((c) => !SESSION || c.sha === state.sha || c.index < currentPr().commits.find((x) => x.sha === state.sha)?.index).map((c) => ({ sha: c.sha, label: `Commit ${c.index}${c.madeUp ? " · made up" : ""}`, message: c.message, short: short(c.sha) }));
 const stepText = (m) => `commit ${m.selected.index} · ${m.selected.short}`;
 /** Escape, then turn `code` into a code span. */
 const rich = (s) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>');
@@ -91,7 +95,7 @@ function selectNode(id) {
 const GITHUB_URL = "http://localhost:3000"; // the GitHub replica
 function renderHeader() {
   // Left rail: one row per PR, like a list of chats.
-  $("prList").innerHTML = state.revisions.prs.map((p) => `<button type="button" class="rail-pr ${p.id === state.prId ? "active" : ""}" data-pr="${esc(p.id)}" title="${esc(p.title)}"><span class="rail-num">#${p.number}</span><span class="rail-title">${esc(p.title)}</span></button>`).join("");
+  $("prList").innerHTML = state.revisions.prs.filter((p) => !SESSION || p.id === state.prId).map((p) => `<button type="button" class="rail-pr ${p.id === state.prId ? "active" : ""}" data-pr="${esc(p.id)}" title="${esc(p.title)}"><span class="rail-num">#${p.number}</span><span class="rail-title">${esc(p.title)}</span></button>`).join("");
   for (const b of $("prList").querySelectorAll("button")) b.onclick = () => {
     const next = state.revisions.prs.find((p) => p.id === b.dataset.pr);
     state.notice = null;
@@ -662,21 +666,22 @@ const whyHtml = (t) => `<ul class="why">${t.why.map((w) => `<li class="${w.tone}
 const BLAST_WHAT = "3 agents did the same task. We check that the real change stays where they worked.";
 const SWARM_WHAT = "Many agents did the same task. If most make the same change, the real change is likely right.";
 /**
- * Blast radius trust score. Each code file the real change edits (not docs, not unit tests) gets points
+ * Blast radius trust score. Each code file the real change edits (as the server's label counts them) gets points
  * for where it sits: 100 if the careful agent edited it too, 85 the normal agent, 60 only the agent that
  * changes too much, 20 no agent. The score is the average, minus 20 for each of the real change's
  * unit tests that fails on every agent's fix.
  */
 function blastScore(b) {
   const POINTS = { tight: 100, normal: 85, wide: 60, outside: 20 };
-  const files = b.items.filter((x) => x.level === "file" && x.by.real && x.kind !== "test" && x.kind !== "doc");
+  const files = b.items.filter((x) => x.level === "file" && x.by.real && x.kind === "code");
   const base = files.length ? Math.round(files.reduce((a, x) => a + POINTS[x.zone], 0) / files.length) : 100;
   const extra = b.tests?.onlyReal?.length ?? 0, n = files.length;
   const score = Math.max(0, base - 20 * extra);
   const outside = files.filter((x) => x.zone === "outside").length, wide = files.filter((x) => x.zone === "wide").length;
   const where = outside ? { tone: "bad", text: `The real change edits ${things(outside, "code file", "code files")} that no agent touched.` }
     : wide ? { tone: "warn", text: `The real change edits ${things(wide, "code file", "code files")} that only the agent that changes too much touched.` }
-    : { tone: "ok", text: `The real change edits ${things(n, "code file", "code files")}. The agents edited ${n === 1 ? "it" : "them"} too.` };
+    : n ? { tone: "ok", text: `The real change edits ${things(n, "code file", "code files")}. The agents edited ${n === 1 ? "it" : "them"} too.` }
+    : { tone: "ok", text: "The real change edits no code files, only docs or unit tests." };
   const tests = extra ? { tone: "warn", text: `${things(extra, "of its unit tests fails", "of its unit tests fail")} on every agent's fix. So it does something no agent thought was needed.` }
     : b.tests ? { tone: "ok", text: "Its unit tests also pass on the agents' fixes." } : null;
   return { score, tone: trustTone(score), verdict: b.label.text, why: [where, tests].filter(Boolean) };
@@ -710,7 +715,7 @@ function renderBlast() {
     el.dataset.stage = "idle";
     el.innerHTML = `<p class="blast-what">We give the same task to 3 agents: one careful, one normal, one that changes too much. What they touch is the "blast radius" of the task. Then we lay the real change over it.</p>
       <div class="swarm-controls"><button type="button" class="primary" id="blastGo">▶ Run blast radius</button>
-      <span class="muted swarm-rec">Replays 3 real runs of <code>${esc(b.model)}</code>, recorded ${esc(b.recordedAt.slice(0, 10))}. No agent runs now.</span></div>`;
+      <span class="muted swarm-rec">Replays 3 real runs${b.model ? ` of <code>${esc(b.model)}</code>` : ""}, recorded ${esc(b.recordedAt.slice(0, 10))}. No agent runs now.</span></div>`;
     $("blastGo").onclick = () => playBlast();
     return;
   }
@@ -781,7 +786,7 @@ function renderBlast() {
     </div>`)}
     ${fold("files", "Lines changed per file", `Real change: ${num(realCol.files)} files, +${num(realCol.added)} −${num(realCol.removed)}`, `
     <table class="blast-table files">${head}<tbody>${fileRows}${totalRow}</tbody></table>
-    <div class="blast-key muted"><span class="plus">+</span> lines added, <span class="minus">−</span> lines removed, · not touched. The real change is Tieto's AI-written branch, shown as a PR. ${esc(b.tests ? "The agents could not build the code; the unit tests were run afterwards on another machine (see above)." : b.notBuilt)}</div>`)}
+    <div class="blast-key muted"><span class="plus">+</span> lines added, <span class="minus">−</span> lines removed, · not touched. The real change is ${SESSION ? "the pull request under review" : "Tieto's AI-written branch, shown as a PR"}. ${esc(b.tests ? "The agents could not build the code; the unit tests were run afterwards on another machine (see above)." : b.notBuilt)}</div>`)}
     ${fold("numbers", "More numbers", "Functions, reach and overlap", `
       <table class="blast-table">${head}<tbody>
       ${row("Functions edited", (c) => num(c.functions) + (c.newFunctions ? note(`${c.newFunctions} of them new`) : ""), "in product code, not unit tests")}
@@ -794,14 +799,14 @@ function renderBlast() {
       ${wideRow("Every agent touched, the real change did not", things(o.agentsNotReal))}
       </tbody></table>`)}
     ${fold("how", "How it was done", "The 3 runs, their prompts, and the rule for the label", `
-      <p>Run on ${esc(b.recordedAt.slice(0, 10))} with the model <code>${esc(b.model)}</code>, once per agent. Each agent worked alone in its own copy of the code from before the fix (commit <code>${esc(short(b.base))}</code>). The real fix was not in those copies. This tab replays the saved result. No agent runs now.</p>
+      <p>Run on ${esc(b.recordedAt.slice(0, 10))}${b.model ? ` with the model <code>${esc(b.model)}</code>` : ""}, once per agent. Each agent worked alone in its own copy of the code from before the fix (commit <code>${esc(short(b.base))}</code>). The real fix was not in those copies. This tab replays the saved result. No agent runs now.</p>
       <p><b>Rule for the trust label.</b> We look at the product code files the real change touches (not docs, not unit tests). If no agent touched one of them: "Touches code no agent touched". Else, if only the agent that changes too much touched one of them: "Touches more than needed". Else: "Inside the expected zone".</p>
       <p><b>What every agent got.</b> ${b.given.kept.map(esc).join("; ")}.</p>
-      <p><b>What we left out of the AI PR text</b>, so the agents could not copy the real fix: ${b.given.leftOut.map(esc).join("; ")}. ${esc(b.given.note)}</p>
+      ${b.given.leftOut?.length ? `<p><b>What we left out of the AI PR text</b>, so the agents could not copy the real fix: ${b.given.leftOut.map(esc).join("; ")}. ${esc(b.given.note ?? "")}</p>` : ""}
       ${b.runs.filter((r) => r.id !== "real").map((r) => `<div class="blast-run"><b>${esc(r.label)}</b> <span class="muted">${secs(r) ? `· took ${secs(r)}` : ""}</span><div>Told: ${esc(r.instruction ?? "")}</div>
         <details><summary>What it said when it was done</summary><pre class="raw doc">${esc(r.reply ?? "No reply was saved.")}</pre></details>
-        <details><summary>The full prompt, word for word</summary><pre class="raw doc">${esc(r.prompt ?? "")}</pre></details></div>`).join("")}
-      <p class="muted">${esc(b.how.functions)} Callers come from ${esc(b.graphTool ?? "the recorded data")} (a saved run) and the recorded compiler data for this PR.</p>
+        ${r.prompt ? `<details><summary>The full prompt, word for word</summary><pre class="raw doc">${esc(r.prompt)}</pre></details>` : ""}</div>`).join("")}
+      <p class="muted">${esc(b.how.functions)} Callers come from ${esc(b.graphTool ?? "the recorded data")} (a saved run)${SESSION ? "" : " and the recorded compiler data for this PR"}.</p>
       <p class="muted">Trust score: each code file the real change edits gets 100 if the careful agent edited it too, 85 for the normal agent, 60 for only the agent that changes too much, 20 for no agent. We take the average, then 20 off for each of its unit tests that fails on every agent's fix. A fixed rule, no AI.</p>`)}
     </details>`;
   $("blastDetails").ontoggle = (ev) => (blastRun.details = ev.target.open);
@@ -1000,7 +1005,7 @@ function playSwarm() {
       </ul>
       <div id="swarmMatrix" class="swarm-matrix"></div>
       <details class="blast-runs"><summary>How similarity is worked out</summary>
-        <p><b>By files and functions</b> (the main score). We list what each change touches in product code (not docs, not unit tests): the files, and the functions in them that already existed. The real change touches: ${s.real.map((x) => `<code>${esc(x)}</code>`).join(", ")}. Similarity = things both changes touch, divided by things either one touches. 100% means the very same files and functions.</p>
+        <p><b>By files and functions</b> (the main score). We list what each change touches in product code (not docs, not unit tests): the files, and the functions in them that already existed. The real change touches: ${s.real.map((x) => `<code>${esc(x)}</code>`).join(", ") || "no product code"}. Similarity = things both changes touch, divided by things either one touches. 100% means the very same files and functions.</p>
         <p><b>By changed lines.</b> We list every code line each change adds or removes in product code (blank lines left out, spaces squeezed). Similarity = lines both changes add or remove, divided by lines either one does. This one sees inside a function: two different fixes in the same function score low. The real change adds or removes ${s.realLines.length} lines.</p>
         <p>${esc(s.how)}</p>
         <p>Trust score = the share of agents whose change is similar to the real one, out of 100. A fixed rule, no AI.</p>
@@ -1015,7 +1020,7 @@ function swarmVerdict(runs) {
   let pairs = 0, sum = 0;
   for (let i = 0; i < runs.length; i++) for (let j = i + 1; j < runs.length; j++) {
     pairs++;
-    sum += swarmJac(runs[i].things, runs[j].things) / 100;
+    sum += swarmPair(runs[i], runs[j], runs[i].things, runs[j].things) / 100;
   }
   const count = (list) => {
     const m = new Map();
@@ -1033,6 +1038,8 @@ function swarmVerdict(runs) {
   });
   return { near, pairs, sum, topMiss, topExtra, avg, tone, byModel };
 }
+/** Two changes compared, in whole percent. A failed run or one that changed nothing is like nothing. */
+const swarmPair = (a, b, setA, setB) => (a.ok === false || a.noChange || b.ok === false || b.noChange ? 0 : swarmJac(setA, setB));
 /** Jaccard of two lists, in whole percent: shared / all. */
 function swarmJac(a, b) {
   const A = new Set(a), all = new Set([...a, ...b]);
@@ -1043,15 +1050,15 @@ function renderSwarmMatrix(runs) {
   const el = $("swarmMatrix"), s = swarmUI.data;
   if (!el) return;
   const measure = swarmUI.measure ?? "things";
-  const rows = [{ key: "real", name: "Real change", sub: "Tieto's AI-written branch", set: measure === "things" ? s.realThings : s.realLines }, ...runs.map((r, i) => ({ key: r.key, name: `Agent ${i + 1}`, sub: r.modelLabel + (r.madeUp ? " · made up" : ""), set: measure === "things" ? r.things : r.lines }))];
+  const rows = [{ key: "real", name: "Real change", sub: SESSION ? "the pull request under review" : "Tieto's AI-written branch", set: measure === "things" ? s.realThings : s.realLines }, ...runs.map((r, i) => ({ key: r.key, ok: r.ok, noChange: r.noChange, name: `Agent ${i + 1}`, sub: r.modelLabel + (r.madeUp ? " · made up" : ""), set: measure === "things" ? r.things : r.lines }))];
   const cell = (a, b) => {
     if (a.key === b.key) return `<td class="self">—</td>`;
-    const v = swarmJac(a.set, b.set);
+    const v = swarmPair(a, b, a.set, b.set);
     return `<td style="--v:${v}%" title="${esc(a.name)} and ${esc(b.name)}: ${v}% alike">${v}%</td>`;
   };
   const avgOthers = (a) => {
     const others = rows.filter((b) => b.key !== a.key && b.key !== "real");
-    return others.length ? `${Math.round(others.reduce((x, b) => x + swarmJac(a.set, b.set), 0) / others.length)}%` : "—";
+    return others.length ? `${Math.round(others.reduce((x, b) => x + swarmPair(a, b, a.set, b.set), 0) / others.length)}%` : "—";
   };
   el.innerHTML = `<div class="swarm-matrix-head"><h3>Who is like whom</h3>
       <div class="tabs" role="tablist"><button type="button" data-measure="things" class="${measure === "things" ? "active" : ""}">Files and functions</button><button type="button" data-measure="lines" class="${measure === "lines" ? "active" : ""}">Changed lines</button></div></div>
@@ -1078,7 +1085,7 @@ function swarmSideHtml(sel) {
 // ---------- AI review (advice only) ----------
 function renderReview() {
   const m = state.model, el = $("reviewCard"), r = m.review;
-  const cite = (c) => (c.valid ? `<button type="button" class="link mono" data-src="${esc(c.file)}" data-line="${c.line}" title="${esc(c.file)}">${esc(c.file.split("/").pop())}:${c.line}</button>` : `<span class="mono bad-text" title="${esc(c.problem)}">${esc(c.file)}:${esc(c.line)} (invalid)</span>`);
+  const cite = (c) => (c.valid ? `<button type="button" class="link mono" data-src="${esc(c.file)}" data-line="${esc(c.line)}" title="${esc(c.file)}">${esc(c.file.split("/").pop())}:${esc(c.line)}</button>` : `<span class="mono bad-text" title="${esc(c.problem)}">${esc(c.file)}:${esc(c.line)} (invalid)</span>`);
   const c1 = m.classifier1, c2 = m.classifier2;
   const sev = (s) => `<span class="tag ${SEVERITY_TONE[s] ?? ""}">${esc(s)}</span>`;
   el.innerHTML = `<div class="card-head"><div class="head-left"><h2>Review steps</h2><span class="muted">Rules: <button type="button" class="link" data-doc="REVIEW.md">REVIEW.md</button> · <button type="button" class="link" data-doc="review-policy.yml">review-policy.yml</button></span></div>${cardToggle("reviewCard")}</div>
@@ -1178,7 +1185,7 @@ async function sideHtml() {
   if (sel.type === "source") {
     const src = await getSource(sha, sel.file);
     if (src.error) return `<h2>Source</h2><div class="callout bad">${esc(src.error)}</div>`;
-    return `<h2>${esc(sel.file)}:${sel.line}</h2><div class="where">Cited by the reviewer</div>${codeBlock(src, { marks: [{ line: sel.line, label: "cited line" }], title: "source" })}`;
+    return `<h2>${esc(sel.file)}:${esc(sel.line)}</h2><div class="where">Cited by the reviewer</div>${codeBlock(src, { marks: [{ line: sel.line, label: "cited line" }], title: "source" })}`;
   }
   if (sel.type === "edge") {
     const e = m.graph.edges.find((x) => x.id === sel.id && x.level === state.level);
@@ -1262,11 +1269,9 @@ async function tietoNodeHtml(n) {
     : `<div class="callout info">${chip("not edited", "info")} This code is <strong>not in the diff</strong>. It uses code the PR changed, so its behaviour can change.</div>`;
   if (n.evidence === "contradicted") body += `<div class="callout bad"><strong>A targeted unit test fails here.</strong> It passes before this change and fails after it.</div>`;
   if (links.length) body += `<h3>Links</h3><ul class="list">${links.map((e) => `<li>${nodeLink(e.from, labelOf(e.from))} <span class="muted">${esc(e.relation ?? "calls")}</span> ${nodeLink(e.to, labelOf(e.to))}</li>`).join("")}</ul>`;
-  // The changed lines that sit inside this function. Made-up commits come last in m.diff.files.
-  const madeUpFrom = m.diff.files.length - (m.since?.files.length ?? 0);
+  // The changed lines that sit inside this function: the real diff first, then the made-up commit's.
   const inside = (l) => l.t && l.at >= n.line && l.at <= n.endLine;
-  const changes = m.diff.files
-    .map((f, i) => ({ f, madeUp: i >= madeUpFrom }))
+  const changes = [...m.diff.files.filter((f) => !f.madeUp).map((f) => ({ f, madeUp: false })), ...(m.since?.files ?? []).map((f) => ({ f, madeUp: true }))]
     .filter((x) => x.f.file === n.file)
     .map((x) => ({ ...x, hunks: parseHunks(x.f.patch).filter((h) => h.lines.some(inside)) }))
     .filter((x) => x.hunks.length);
@@ -1377,7 +1382,7 @@ const calm = () => Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)
 // sign-off, counts for one commit only.
 const ACKS_KEY = "impact-map-acks";
 let acks = {};
-try { acks = JSON.parse(localStorage.getItem(ACKS_KEY)) ?? {}; } catch {}
+try { if (!SESSION) acks = JSON.parse(localStorage.getItem(ACKS_KEY)) ?? {}; } catch {} // a session starts clean for every person
 const saveAcks = () => { try { localStorage.setItem(ACKS_KEY, JSON.stringify(acks)); } catch {} };
 const acked = (id) => Boolean(acks[reviewKey()]?.[id]);
 function setAck(ids, on) {
@@ -1416,7 +1421,7 @@ const openIssues = () => issueList(state.model).filter((x) => !acked(x.id));
 
 function issueHtml(x) {
   const done = acked(x.id), merged = state.model.decisions.signedOff;
-  const cites = (x.citations ?? []).filter((c) => c.valid).slice(0, 3).map((c) => `<button type="button" class="link mono" data-act="src" data-src="${esc(c.file)}" data-line="${c.line}" title="${esc(c.file)}">${esc(c.file.split("/").pop())}:${c.line}</button>`).join(", ");
+  const cites = (x.citations ?? []).filter((c) => c.valid).slice(0, 3).map((c) => `<button type="button" class="link mono" data-act="src" data-src="${esc(c.file)}" data-line="${esc(c.line)}" title="${esc(c.file)}">${esc(c.file.split("/").pop())}:${esc(c.line)}</button>`).join(", ");
   const btn = x.level === "block" ? `<span class="tag bad">Must be fixed</span>`
     : merged ? ""
     : done ? `<button type="button" data-act="unack" data-id="${esc(x.id)}">Undo</button>`
@@ -1482,7 +1487,7 @@ function introHtml() {
   ].join("");
   const prShort = d.ai?.tldr?.text ?? d.ai?.summary ?? d.author.text;
   return `<h1 class="pr-title">${esc(m.pr.title)}</h1>
-    <div class="pr-sub muted">PR #${m.pr.number} · Tieto's AI-written branch, shown as a PR · ${esc(stepText(m))}${m.selected.madeUp ? ` <span class="tag warn">made up</span>` : ""}</div>
+    <div class="pr-sub muted">PR #${m.pr.number} · ${SESSION ? "AI-written change, shown as a PR" : "Tieto's AI-written branch, shown as a PR"} · ${esc(stepText(m))}${m.selected.madeUp ? ` <span class="tag warn">made up</span>` : ""}</div>
     <div class="advice-live"></div>
     <div class="short ${esc(d.ai?.tldr?.tone ?? "plain")}"><span class="short-label">The PR in short</span><p>${rich(prShort)}</p>
       <button type="button" class="link" data-act="page" data-page="pr">Read the full PR description</button></div>
@@ -1516,7 +1521,7 @@ function scoreRows() {
   else if (!b.recorded) rows.push({ scope: "blast", name: "Blast radius", tone: "plain", score: "No runs yet", why: "No agent runs are saved for this PR." });
   else {
     const t = blastScore(b), extra = b.tests?.onlyReal?.length;
-    rows.push({ scope: "blast", name: "Blast radius", tone: t.tone, score: `Trust ${t.score} / 100`, why: `${b.label.text}.${extra ? ` But ${things(extra, "unit test fails", "unit tests fail")} on every other agent's fix.` : ""}` });
+    rows.push({ scope: "blast", name: "Blast radius", tone: t.tone, score: `Trust ${t.score} / 100`, trust: t.score, why: `Checks only whether the change stays where other agents worked. ${b.label.text}.${extra ? ` But ${things(extra, "unit test fails", "unit tests fail")} on every other agent's fix.` : ""}` });
   }
   const s = sc.swarm;
   if (!s) rows.push({ scope: "swarm", name: "Monte Carlo swarm", wait: true });
@@ -1524,7 +1529,7 @@ function scoreRows() {
   else {
     const set = s.sets.find((x) => x.id === s.defaultSet), runs = set.runs.map((k) => s.runs.find((r) => r.key === k));
     const t = swarmScore(runs);
-    rows.push({ scope: "swarm", name: "Monte Carlo swarm", tone: t.tone, score: `Trust ${t.score} / 100`, why: `${t.verdict}: they made a change like the real one.`, madeUp: set.madeUp });
+    rows.push({ scope: "swarm", name: "Monte Carlo swarm", tone: t.tone, score: `Trust ${t.score} / 100`, trust: t.score, why: `Checks only whether other agents make the same change. ${t.verdict}.`, madeUp: set.madeUp });
   }
   return rows;
 }
@@ -1557,7 +1562,7 @@ function advice() {
   }
   const score = blocked ? 0 : Math.max(0, 100 - parts.reduce((a, p) => a + p[0], 0));
   const verdict = blocked ? ["Cannot merge yet", "bad"] : score >= 75 ? ["Fine to merge", "ok"] : score >= 45 ? ["Look closer first", "warn"] : ["Do not merge yet", "bad"];
-  const next = currentPr().commits.find((c) => c.index > m.selected.index);
+  const next = SESSION ? null : currentPr().commits.find((c) => c.index > m.selected.index); // a session shows one commit only
   const look = blocked ? (next ? { act: "commit", sha: next.sha, name: `Commit ${next.index}${next.madeUp ? " (made up)" : ""}`, why: "It adds the missing proof." } : { act: "issues", name: "The open issues", why: "Proof is missing. The author must add it." })
     : red ? { act: "tool", scope: "pr", name: "Impact Map", why: "It shows where the unit test fails, and what else uses that code." }
     : blastFlag ? { act: "tool", scope: "blast", name: "Blast radius", why: "It shows what only this change does." }
@@ -1572,15 +1577,21 @@ function adviceHtml() {
     ? `<p><b>Look at this first:</b> <button type="button" class="link" data-act="${a.look.act}" data-scope="${a.look.scope ?? ""}" data-sha="${a.look.sha ?? ""}">${esc(a.look.name)}</button>. ${esc(a.look.why)}</p>`
     : `<p>Nothing needs a closer look.</p>`;
   return `<div class="short advice ${a.verdict[1]}"><span class="short-label">My advice</span>
-    <div class="advice-main"><strong>${a.verdict[0]}</strong><span class="advice-score" title="Merge score. 100 = nothing found.">${a.waiting ? "…" : a.score}<small> / 100</small></span></div>
+    <div class="advice-main"><strong>${a.verdict[0]}</strong><span class="advice-score" title="Merge score. 100 = nothing found.">${a.waiting ? "…" : a.score}<small> / 100${a.blocked ? ": proof is missing" : ""}</small></span></div>
     ${look}
     <details class="since-line" data-more="advice" ${ui.openMore.has("advice") ? "open" : ""}><summary>How the score is worked out</summary>
       <p>It starts at 100. A fixed rule takes points off. No AI is used.${a.blocked ? " Proof is missing, so the score is 0." : ""}</p>
       <ul class="advice-parts">${a.parts.map(([n, why]) => `<li><b>−${n}</b> ${esc(why)}</li>`).join("") || "<li>Nothing was taken off.</li>"}</ul>
       <p>75 or more: fine to merge. 45 to 74: look closer first. Under 45: do not merge yet.</p></details></div>`;
 }
-const scoresHtml = () => `<div class="scores">${scoreRows().map((r) => `<button type="button" class="score" data-act="tool" data-scope="${r.scope}" title="Open ${esc(r.name)}">
-    <b>${esc(r.name)}</b>${r.wait ? `<span class="muted">working it out…</span><span></span>` : `<span class="tag ${esc(r.tone)}">${esc(r.score)}</span><span class="score-why">${esc(r.why)}${r.madeUp ? ` <span class="tag warn">made up</span>` : ""}</span>`}<i aria-hidden="true">›</i></button>`).join("")}</div>`;
+/** A high tool score next to a 0 for missing proof reads like a contradiction: say the tools do not look at proof. */
+const proofNote = (rows) => (advice().blocked && rows.some((r) => r.trust >= 75)
+  ? `<p class="muted score-note">Blast radius and Monte Carlo swarm do not check that the change is tested. A high trust score from them does not make up for the missing proof.</p>` : "");
+function scoresHtml() {
+  const rows = scoreRows();
+  return `<div class="scores">${rows.map((r) => `<button type="button" class="score" data-act="tool" data-scope="${r.scope}" title="Open ${esc(r.name)}">
+    <b>${esc(r.name)}</b>${r.wait ? `<span class="muted">working it out…</span><span></span>` : `<span class="tag ${esc(r.tone)}">${esc(r.score)}</span><span class="score-why">${esc(r.why)}${r.madeUp ? ` <span class="tag warn">made up</span>` : ""}</span>`}<i aria-hidden="true">›</i></button>`).join("")}</div>${proofNote(rows)}`;
+}
 const nextHtml = () => `<p><b>What the tools say.</b> <span class="muted">Click one to drill down.</span></p>
   <div class="scores-live"></div>
   <p class="next-ask">Merge now, or look closer first?</p>
@@ -1683,6 +1694,7 @@ const nameForm = (lead) => `${lead}<p>Type your name to sign off. It is saved wi
   <form class="name-form" data-form="merge"><input name="name" type="text" placeholder="Your name" aria-label="Your name" autocomplete="name" /><button class="primary" type="submit">Sign off and merge</button><div class="error" role="alert"></div></form>`;
 function startMerge(said) {
   me(said ?? "Merge this PR");
+  if (SESSION) return bot(`<p>In this test you give your decision with the buttons below this screen.</p>`);
   const m = state.model, all = issueList(m), open = all.filter((x) => !acked(x.id)), hard = open.filter((x) => x.level === "block");
   if (m.decisions.signedOff) return bot(`<p><b>Already merged.</b> ${esc(m.decisions.signOff.name)} signed off ${esc(stepText(m))}.</p>`);
   if (hard.length) {
@@ -1836,7 +1848,7 @@ function initChat() {
   };
   // "Reset demo": also forgets every saved sign-off, on every PR.
   $("resetDemo").onclick = async () => {
-    await api("/api/reset", { method: "POST" });
+    await api("/api/reset", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
     acks = {};
     saveAcks();
     ui.threads = {};
@@ -1859,7 +1871,8 @@ async function init() {
   const h = readHash();
   // Link form used by the GitHub replica: /?repo=<owner/name>&pr=<number>&sha=<sha>&embed=1
   const q = new URLSearchParams(location.search);
-  if (q.get("embed") === "1") document.body.classList.add("embed");
+  if (q.get("embed") === "1" && !SESSION) document.body.classList.add("embed"); // a session shows the whole app
+  if (SESSION) document.body.classList.add("session");
   initChat();
   // The right panel starts closed. ?map=<pr|full|blast|swarm> opens it on the Impact map card.
   // ?show=intentCard opens the full PR description, ?show=reviewCard the review steps.

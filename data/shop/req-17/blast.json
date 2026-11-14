@@ -1,0 +1,323 @@
+{
+ "schema": "impact-map/blast/v1",
+ "pr": "req-17",
+ "recordedAt": "2026-11-14T18:57:46.474Z",
+ "model": null,
+ "modelNote": "The model was not saved with these runs.",
+ "base": "2e22bc2b2fe422595d6030cac407032205406315",
+ "how": {
+  "source": "Three recorded blind attempts on the shop sample (benchmark/cases/blind-attempts/req-17): minimal = the 'careful' brief, normal = the 'normal' brief, wide = the 'greedy' brief. Each agent got REQ-17 and the shop's code from before the change, alone, once. None saw the pull request.",
+  "folders": "Each attempt's patch was laid on a clean copy of the base commit (git fetch --depth 1 of the base only), so the real change was never there. Files an agent saved with Windows line endings were turned back to the shop's own, so a line counts only when its text changed (listed per run under lineEndingsNormalised).",
+  "same": "Same requirement and same code for all three. Only the 'How to work' lines differ.",
+  "functions": "Functions are found by a simple reader of the TypeScript text (scanFunctions in src/lib/blast.mjs: `function` declarations, ended by brace matching), the same way for all 4 changes. A function counts as edited when a changed line sits inside it. Callers come from the shop's saved Graphify code index at the base commit."
+ },
+ "notBuilt": "This record did not run the tests on the agents' changes. Each agent ran the shop's tests itself and said what it saw in its reply.",
+ "given": {
+  "file": "requirements/REQ-17.md",
+  "text": "# REQ-17 Round discounts to the nearest cent\n\nCheckout and Order Import round discounts to the nearest cent, with\nhalf-cents rounded up.\n\n- With a 105-cent order and a 10% discount, the discount is 11 cents and the\n  total is 94 cents.\n- Behaviour to preserve: at zero discount the total stays 105 cents.\n\nAffected workflows: Checkout, Order Import.\n",
+  "kept": [
+   "The requirement REQ-17, word for word",
+   "The shop's code and tests from before the change"
+  ],
+  "leftOut": [
+   "The pull request: its title, description, commits and code"
+  ],
+  "note": "REQ-17 itself names the two workflows it affects, Checkout and Order Import."
+ },
+ "real": {
+  "id": "real",
+  "head": "ae08cfbd40d82d45ac1dd7668a7e126acc194830",
+  "source": "the shop sample's req-17 commit 1 (ae08cfb) against its base (2e22bc2)",
+  "files": [
+   {
+    "file": "src/pricing/discount.ts",
+    "status": "M",
+    "kind": "code",
+    "added": 2,
+    "removed": 1,
+    "patch": "@@ -6,6 +6,7 @@ export function applyDiscount(subtotalCents: number, percent: number): number {\n   if (percent < 0 || percent > 100) {\n     throw new RangeError(\"percent must be between 0 and 100\");\n   }\n-  const discountCents = Math.floor((subtotalCents * percent) / 100);\n+  // REQ-17: round the discount to the nearest cent, half-cents up.\n+  const discountCents = Math.floor((subtotalCents * percent + 50) / 100);\n   return subtotalCents - discountCents;\n }",
+    "functions": [
+     {
+      "key": "applyDiscount",
+      "name": "applyDiscount",
+      "line": 5,
+      "endLine": 12,
+      "isNew": false,
+      "added": 2,
+      "removed": 1
+     }
+    ],
+    "linesOutsideFunctions": 0
+   },
+   {
+    "file": "tests/checkout.test.ts",
+    "status": "M",
+    "kind": "test",
+    "added": 10,
+    "removed": 0,
+    "patch": "@@ -6,3 +6,13 @@ test(\"checkout: 200 cents at 10% totals 180 cents\", () => {\n   const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: 10 };\n   assert.equal(checkoutTotal(cart), 180);\n });\n+\n+test(\"REQ-17 checkout: 105 cents at 10% totals 94 cents\", () => {\n+  const cart = { items: [{ priceCents: 105, quantity: 1 }], discountPercent: 10 };\n+  assert.equal(checkoutTotal(cart), 94);\n+});\n+\n+test(\"REQ-17 checkout: zero discount keeps the total at 105 cents\", () => {\n+  const cart = { items: [{ priceCents: 105, quantity: 1 }], discountPercent: 0 };\n+  assert.equal(checkoutTotal(cart), 105);\n+});",
+    "functions": [],
+    "linesOutsideFunctions": 10
+   }
+  ]
+ },
+ "runs": [
+  {
+   "id": "minimal",
+   "brief": "careful",
+   "from": "benchmark/cases/blind-attempts/req-17/careful",
+   "prompt": null,
+   "promptNote": "The full prompt was not saved with these runs. The brief used the 'How to work' lines of the app's Blast radius prompts.",
+   "instruction": "Make the smallest change that meets the requirements. Touch as few files, as few functions and as few lines as you can. No refactoring, no tidy-ups, no renames and no doc changes. Add no unit tests unless the requirements cannot be met without them.",
+   "startedAt": null,
+   "endedAt": null,
+   "exitCode": 0,
+   "reply": "Changed `src/pricing/discount.ts` only: `Math.round` instead of `Math.floor`. Checkout and Order Import both use this function, so both get the change. All 3 existing tests pass. None of them covers the 105-cent case, and no new tests were added.",
+   "toolCalls": null,
+   "lineEndingsNormalised": [],
+   "files": [
+    {
+     "file": "src/pricing/discount.ts",
+     "status": "M",
+     "kind": "code",
+     "added": 1,
+     "removed": 1,
+     "patch": "@@ -6,6 +6,6 @@ export function applyDiscount(subtotalCents: number, percent: number): number {\n   if (percent < 0 || percent > 100) {\n     throw new RangeError(\"percent must be between 0 and 100\");\n   }\n-  const discountCents = Math.floor((subtotalCents * percent) / 100);\n+  const discountCents = Math.round((subtotalCents * percent) / 100);\n   return subtotalCents - discountCents;\n }",
+     "functions": [
+      {
+       "key": "applyDiscount",
+       "name": "applyDiscount",
+       "line": 5,
+       "endLine": 11,
+       "isNew": false,
+       "added": 1,
+       "removed": 1
+      }
+     ],
+     "linesOutsideFunctions": 0
+    }
+   ]
+  },
+  {
+   "id": "normal",
+   "brief": "normal",
+   "from": "benchmark/cases/blind-attempts/req-17/normal",
+   "prompt": null,
+   "promptNote": "The full prompt was not saved with these runs. The brief used the 'How to work' lines of the app's Blast radius prompts.",
+   "instruction": "Solve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.",
+   "startedAt": null,
+   "endedAt": null,
+   "exitCode": 0,
+   "reply": "Changed `src/pricing/discount.ts` (round to the nearest cent, half-cents up), added two tests to `tests/checkout.test.ts` and the same two through the import path in `tests/orderImport.test.ts`, and described the rounding in `docs/pricing.md`. All 7 tests pass.",
+   "toolCalls": null,
+   "lineEndingsNormalised": [
+    "docs/pricing.md",
+    "src/pricing/discount.ts",
+    "tests/checkout.test.ts",
+    "tests/orderImport.test.ts"
+   ],
+   "files": [
+    {
+     "file": "docs/pricing.md",
+     "status": "M",
+     "kind": "doc",
+     "added": 2,
+     "removed": 1,
+     "patch": "@@ -2,4 +2,5 @@\n \n All money is handled as whole cents.\n \n-Discounts are a whole-number percent of the order subtotal.\n+Discounts are a whole-number percent of the order subtotal, rounded\n+to the nearest cent with half-cents rounded up.",
+     "functions": []
+    },
+    {
+     "file": "src/pricing/discount.ts",
+     "status": "M",
+     "kind": "code",
+     "added": 2,
+     "removed": 1,
+     "patch": "@@ -6,6 +6,7 @@ export function applyDiscount(subtotalCents: number, percent: number): number {\n   if (percent < 0 || percent > 100) {\n     throw new RangeError(\"percent must be between 0 and 100\");\n   }\n-  const discountCents = Math.floor((subtotalCents * percent) / 100);\n+  // Round to the nearest cent, half-cents up (integer maths, no float error).\n+  const discountCents = Math.floor((subtotalCents * percent + 50) / 100);\n   return subtotalCents - discountCents;\n }",
+     "functions": [
+      {
+       "key": "applyDiscount",
+       "name": "applyDiscount",
+       "line": 5,
+       "endLine": 12,
+       "isNew": false,
+       "added": 2,
+       "removed": 1
+      }
+     ],
+     "linesOutsideFunctions": 0
+    },
+    {
+     "file": "tests/checkout.test.ts",
+     "status": "M",
+     "kind": "test",
+     "added": 10,
+     "removed": 0,
+     "patch": "@@ -6,3 +6,13 @@ test(\"checkout: 200 cents at 10% totals 180 cents\", () => {\n   const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: 10 };\n   assert.equal(checkoutTotal(cart), 180);\n });\n+\n+test(\"checkout: 105 cents at 10% rounds the 10.5-cent discount up, totalling 94 cents\", () => {\n+  const cart = { items: [{ priceCents: 105, quantity: 1 }], discountPercent: 10 };\n+  assert.equal(checkoutTotal(cart), 94);\n+});\n+\n+test(\"checkout: 105 cents at 0% stays 105 cents\", () => {\n+  const cart = { items: [{ priceCents: 105, quantity: 1 }], discountPercent: 0 };\n+  assert.equal(checkoutTotal(cart), 105);\n+});",
+     "functions": [],
+     "linesOutsideFunctions": 10
+    },
+    {
+     "file": "tests/orderImport.test.ts",
+     "status": "M",
+     "kind": "test",
+     "added": 8,
+     "removed": 0,
+     "patch": "@@ -5,3 +5,11 @@ import { importOrder } from \"../src/import/orderImport.ts\";\n test(\"import: a row with the wrong column count is rejected\", () => {\n   assert.throws(() => importOrder(\"A-1,105\"), /expected 3 columns/);\n });\n+\n+test(\"import: 105 cents at 10% rounds the discount to 11 cents, totalling 94 cents\", () => {\n+  assert.equal(importOrder(\"A-1,105,10\").totalCents, 94);\n+});\n+\n+test(\"import: 105 cents at 0% stays 105 cents\", () => {\n+  assert.equal(importOrder(\"A-1,105,0\").totalCents, 105);\n+});",
+     "functions": [],
+     "linesOutsideFunctions": 8
+    }
+   ]
+  },
+  {
+   "id": "wide",
+   "brief": "greedy",
+   "from": "benchmark/cases/blind-attempts/req-17/greedy",
+   "prompt": null,
+   "promptNote": "The full prompt was not saved with these runs. The brief used the 'How to work' lines of the app's Blast radius prompts.",
+   "instruction": "You are free to go well beyond the smallest fix. While you solve the problem, also refactor, tidy up and harden the code around it wherever you think it helps: similar weak spots elsewhere, shared helpers, naming, docs, unit tests. Prefer a broad, thorough change over a narrow one. The requirements must still be met.",
+   "startedAt": null,
+   "endedAt": null,
+   "exitCode": 0,
+   "reply": "Changed `src/pricing/discount.ts` (the fix, a shared `discountCents` function, and input checks), `src/import/orderImport.ts` (stricter row parsing), `src/checkout/checkout.ts` (rejects negative or fractional items), new `tests/discount.test.ts`, more tests in `tests/checkout.test.ts` and `tests/orderImport.test.ts`, and `docs/pricing.md`. All 12 tests pass.",
+   "toolCalls": null,
+   "lineEndingsNormalised": [],
+   "files": [
+    {
+     "file": "docs/pricing.md",
+     "status": "M",
+     "kind": "doc",
+     "added": 4,
+     "removed": 1,
+     "patch": "@@ -2,4 +2,7 @@\n \n All money is handled as whole cents.\n \n-Discounts are a whole-number percent of the order subtotal.\n+Discounts are a whole-number percent (0 to 100) of the order subtotal.\n+The discount is rounded to the nearest cent, with half-cents rounded up\n+(REQ-17): a 105-cent order at 10% gets an 11-cent discount and totals 94\n+cents. Checkout and Order Import both use `src/pricing/discount.ts`.",
+     "functions": []
+    },
+    {
+     "file": "src/checkout/checkout.ts",
+     "status": "M",
+     "kind": "code",
+     "added": 7,
+     "removed": 1,
+     "patch": "@@ -13,7 +13,13 @@ export interface Cart {\n export function cartSubtotal(cart: Cart): number {\n   let subtotal = 0;\n   for (const item of cart.items) {\n-    subtotal += item.priceCents * item.quantity;\n+    if (!Number.isSafeInteger(item.priceCents) || item.priceCents < 0) {\n+      throw new RangeError(\"priceCents must be a non-negative whole number of cents\");\n+    }\n+    if (!Number.isSafeInteger(item.quantity) || item.quantity < 0) {\n+      throw new RangeError(\"quantity must be a non-negative whole number\");\n+    }\n+    subtotal +=item.priceCents * item.quantity;\n   }\n   return subtotal;\n }",
+     "functions": [
+      {
+       "key": "cartSubtotal",
+       "name": "cartSubtotal",
+       "line": 13,
+       "endLine": 25,
+       "isNew": false,
+       "added": 7,
+       "removed": 1
+      }
+     ],
+     "linesOutsideFunctions": 0
+    },
+    {
+     "file": "src/import/orderImport.ts",
+     "status": "M",
+     "kind": "code",
+     "added": 15,
+     "removed": 4,
+     "patch": "@@ -5,16 +5,27 @@ export interface ImportedOrder {\n   totalCents: number;\n }\n \n+export interface OrderRow {\n+  id: string;\n+  subtotalCents: number;\n+  discountPercent: number;\n+}\n+\n+/** Strict whole-number parse: rejects empty fields, signs, decimals and exponents. */\n+function parseWholeNumber(field: string): number | undefined {\n+  return /^\\d+$/.test(field) ? Number(field) : undefined;\n+}\n+\n /** Parse one CSV row: `id,subtotalCents,discountPercent`. */\n-export function parseOrderRow(row: string): { id: string; subtotalCents: number; discountPercent: number } {\n+export function parseOrderRow(row: string): OrderRow {\n   const parts = row.split(\",\").map((part) => part.trim());\n   if (parts.length !== 3) {\n     throw new Error(\"expected 3 columns: id,subtotalCents,discountPercent\");\n   }\n   const [id, subtotal, percent] = parts;\n-  const subtotalCents = Number(subtotal);\n-  const discountPercent = Number(percent);\n-  if (!id || !Number.isInteger(subtotalCents) || !Number.isInteger(discountPercent)) {\n+  const subtotalCents = parseWholeNumber(subtotal);\n+  const discountPercent = parseWholeNumber(percent);\n+  if (!id || subtotalCents === undefined || discountPercent === undefined) {\n     throw new Error(\"invalid order row: \" + row);\n   }\n   return { id, subtotalCents, discountPercent };",
+     "functions": [
+      {
+       "key": "parseWholeNumber",
+       "name": "parseWholeNumber",
+       "line": 15,
+       "endLine": 17,
+       "isNew": true,
+       "added": 3,
+       "removed": 0
+      },
+      {
+       "key": "parseOrderRow",
+       "name": "parseOrderRow",
+       "line": 20,
+       "endLine": 32,
+       "isNew": false,
+       "added": 4,
+       "removed": 4
+      }
+     ],
+     "linesOutsideFunctions": 8
+    },
+    {
+     "file": "src/pricing/discount.ts",
+     "status": "M",
+     "kind": "code",
+     "added": 26,
+     "removed": 5,
+     "patch": "@@ -2,10 +2,31 @@\n  * Shared pricing maths. All amounts are whole cents.\n  * Used by Checkout and Order Import.\n  */\n-export function applyDiscount(subtotalCents: number, percent: number): number {\n-  if (percent < 0 || percent > 100) {\n-    throw new RangeError(\"percent must be between 0 and 100\");\n+\n+function assertWholeCents(name: string, cents: number): void {\n+  if (!Number.isSafeInteger(cents) || cents < 0) {\n+    throw new RangeError(`${name} must be a non-negative whole number of cents`);\n+  }\n+}\n+\n+function assertPercent(percent: number): void {\n+  if (!Number.isInteger(percent) || percent < 0 || percent > 100) {\n+    throw new RangeError(\"percent must be a whole number between 0 and 100\");\n   }\n-  const discountCents = Math.floor((subtotalCents * percent) / 100);\n-  return subtotalCents - discountCents;\n+}\n+\n+/**\n+ * Discount on a subtotal, rounded to the nearest cent with half-cents\n+ * rounded up (REQ-17). Integer arithmetic only, so no float drift:\n+ * floor((subtotal * percent + 50) / 100).\n+ */\n+export function discountCents(subtotalCents: number, percent: number): number {\n+  assertWholeCents(\"subtotalCents\", subtotalCents);\n+  assertPercent(percent);\n+  return Math.floor((subtotalCents * percent + 50) / 100);\n+}\n+\n+/** Subtotal minus its rounded discount (see `discountCents`). */\n+export function applyDiscount(subtotalCents: number, percent: number): number {\n+  return subtotalCents - discountCents(subtotalCents, percent);\n }",
+     "functions": [
+      {
+       "key": "assertWholeCents",
+       "name": "assertWholeCents",
+       "line": 6,
+       "endLine": 10,
+       "isNew": true,
+       "added": 5,
+       "removed": 0
+      },
+      {
+       "key": "assertPercent",
+       "name": "assertPercent",
+       "line": 12,
+       "endLine": 16,
+       "isNew": true,
+       "added": 4,
+       "removed": 0
+      },
+      {
+       "key": "discountCents",
+       "name": "discountCents",
+       "line": 23,
+       "endLine": 27,
+       "isNew": true,
+       "added": 5,
+       "removed": 0
+      },
+      {
+       "key": "applyDiscount",
+       "name": "applyDiscount",
+       "line": 30,
+       "endLine": 32,
+       "isNew": false,
+       "added": 2,
+       "removed": 5
+      }
+     ],
+     "linesOutsideFunctions": 10
+    },
+    {
+     "file": "tests/checkout.test.ts",
+     "status": "M",
+     "kind": "test",
+     "added": 15,
+     "removed": 0,
+     "patch": "@@ -6,3 +6,18 @@ test(\"checkout: 200 cents at 10% totals 180 cents\", () => {\n   const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: 10 };\n   assert.equal(checkoutTotal(cart), 180);\n });\n+\n+test(\"REQ-17 checkout: 105 cents at 10% rounds the discount to 11 cents, total 94\", () => {\n+  const cart = { items: [{ priceCents: 105, quantity: 1 }], discountPercent: 10 };\n+  assert.equal(checkoutTotal(cart), 94);\n+});\n+\n+test(\"checkout: negative or fractional items are rejected\", () => {\n+  assert.throws(() => checkoutTotal({ items: [{ priceCents: -5, quantity: 1 }], discountPercent: 0 }), RangeError);\n+  assert.throws(() => checkoutTotal({ items: [{ priceCents: 5, quantity: 1.5 }], discountPercent: 0 }), RangeError);\n+});\n+\n+test(\"REQ-17 checkout: 105 cents at 0% stays 105\", () => {\n+  const cart = { items: [{ priceCents: 105, quantity: 1 }], discountPercent: 0 };\n+  assert.equal(checkoutTotal(cart), 105);\n+});",
+     "functions": [],
+     "linesOutsideFunctions": 15
+    },
+    {
+     "file": "tests/discount.test.ts",
+     "status": "A",
+     "kind": "test",
+     "added": 24,
+     "removed": 0,
+     "patch": "@@ -0,0 +1,24 @@\n+import { test } from \"node:test\";\n+import assert from \"node:assert/strict\";\n+import { applyDiscount, discountCents } from \"../src/pricing/discount.ts\";\n+\n+test(\"REQ-17 pricing: discounts round to the nearest cent, half-cents up\", () => {\n+  assert.equal(discountCents(105, 10), 11); // 10.5 -> 11\n+  assert.equal(discountCents(104, 10), 10); // 10.4 -> 10\n+  assert.equal(discountCents(106, 10), 11); // 10.6 -> 11\n+  assert.equal(discountCents(1, 50), 1); // 0.5 -> 1\n+  assert.equal(applyDiscount(105, 10), 94);\n+});\n+\n+test(\"REQ-17 pricing: zero and full discounts are exact\", () => {\n+  assert.equal(applyDiscount(105, 0), 105);\n+  assert.equal(applyDiscount(105, 100), 0);\n+});\n+\n+test(\"pricing: invalid inputs are rejected\", () => {\n+  assert.throws(() => applyDiscount(105, -1), RangeError);\n+  assert.throws(() => applyDiscount(105, 101), RangeError);\n+  assert.throws(() => applyDiscount(105, 10.5), RangeError);\n+  assert.throws(() => applyDiscount(-1, 10), RangeError);\n+  assert.throws(() => applyDiscount(1.5, 10), RangeError);\n+});",
+     "functions": [],
+     "linesOutsideFunctions": 24
+    },
+    {
+     "file": "tests/orderImport.test.ts",
+     "status": "M",
+     "kind": "test",
+     "added": 14,
+     "removed": 0,
+     "patch": "@@ -5,3 +5,17 @@ import { importOrder } from \"../src/import/orderImport.ts\";\n test(\"import: a row with the wrong column count is rejected\", () => {\n   assert.throws(() => importOrder(\"A-1,105\"), /expected 3 columns/);\n });\n+\n+test(\"import: empty, negative or fractional fields are rejected\", () => {\n+  for (const row of [\"A-1,,10\", \"A-1,105,\", \"A-1,-105,10\", \"A-1,105,1.5\", \"A-1,1e3,10\", \",105,10\"]) {\n+    assert.throws(() => importOrder(row), /invalid order row/, row);\n+  }\n+});\n+\n+test(\"REQ-17 import: 105 cents at 10% rounds the discount to 11 cents, total 94\", () => {\n+  assert.deepEqual(importOrder(\"A-1,105,10\"), { id: \"A-1\", totalCents: 94 });\n+});\n+\n+test(\"REQ-17 import: 105 cents at 0% stays 105\", () => {\n+  assert.equal(importOrder(\"A-1,105,0\").totalCents, 105);\n+});",
+     "functions": [],
+     "linesOutsideFunctions": 14
+    }
+   ]
+  }
+ ]
+}
