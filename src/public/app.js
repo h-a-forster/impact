@@ -1318,6 +1318,11 @@ function render() {
   renderReview();
   renderSide();
   applyCanvas();
+  // The eval mark sits next to the tools under the chat, so it is always one click away.
+  const eb = $("evalBtn"), marked = !!state.model.evalCase;
+  eb.classList.toggle("on", marked);
+  eb.textContent = marked ? "✓ Eval test case" : "Mark as eval test case";
+  eb.title = marked ? "This PR is a test for the AI reviewer. Click to remove the mark." : "Mark this if the PR broke things after merge. It becomes a test for the AI reviewer.";
   // One chat per (PR, commit). A new one starts with the summary. The same one only refreshes its issue list.
   if (ui.key !== reviewKey()) {
     ui.key = reviewKey();
@@ -1712,7 +1717,7 @@ async function signOff(form) {
   bot(`<div class="okbox"><b>Merged.</b> ${esc(name)} signed off ${esc(stepText(state.model))}.</div>
     <p class="muted">Demo: the sign-off is saved with this commit. Nothing is pushed to GitHub.</p>
     <p>If this PR breaks something later, mark it. It then becomes a test for the AI reviewer.</p>
-    <button type="button" class="danger" data-act="evalcase">Eval test case</button>`);
+    <button type="button" class="danger" data-act="evalcase" data-on="1">Eval test case</button>`);
 }
 
 // ----- ask the agent that wrote the PR (demo: saved answers that come with the PR's context.md) -----
@@ -1780,10 +1785,13 @@ async function act(b) {
   if (a === "run") return select({ type: "run" });
   if (a === "commit") return load(state.prId, b.dataset.sha);
   if (a === "evalcase") {
-    await api("/api/evalcase", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pr: state.prId, on: true }) });
-    me("Mark it as an eval test case");
+    const on = b.dataset.on ? true : !m.evalCase; // the button under the chat turns the mark on and off
+    await api("/api/evalcase", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pr: state.prId, on }) });
+    me(on ? "Mark it as an eval test case" : "Remove the eval test case mark");
     await load(state.prId, state.sha);
-    return bot(`<p><b>Saved.</b> This PR is now a test for the AI reviewer: a good reviewer must flag it.</p><p class="muted">You can remove the mark under “See the review steps”.</p>`);
+    return bot(on
+      ? `<p><b>Saved.</b> This PR is now a test for the AI reviewer: a good reviewer must flag it.</p><p class="muted">Click “✓ Eval test case” under the chat to remove the mark.</p>`
+      : `<p><b>Removed.</b> This PR is no longer an eval test case.</p>`);
   }
 }
 function initChat() {

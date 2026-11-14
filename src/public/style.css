@@ -618,6 +618,9 @@ body { overflow: hidden; }
 .quick { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 .quick button { border-radius: 999px; padding: 4px 12px; font-size: 13px; color: var(--muted); }
 .quick button:hover { color: var(--ink); }
+.quick .eval-btn { margin-left: auto; color: var(--bad); border-color: var(--bad); }
+.quick .eval-btn:hover { color: var(--bad); background: var(--bad-bg); }
+.quick .eval-btn.on { background: var(--bad-bg); font-weight: 700; }
 .ask { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 26px; padding: 6px 6px 6px 18px; background: var(--card); box-shadow: 0 2px 10px rgba(0, 0, 0, .06); }
 .ask:focus-within { border-color: var(--muted); }
 .ask input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 15px; padding: 6px 0; }
