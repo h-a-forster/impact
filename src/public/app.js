@@ -183,11 +183,14 @@ const cardToggle = () => "";
 //   solid lines for links read from the code (EXTRACTED), dashed for links it guessed (INFERRED).
 //   Same library (vendored, no CDN), same settings. A dot's colour shows its review state.
 const clip = (s, n) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
+/** Affected by the PR, not edited, and no test checks it: the trap a reviewer must see without reading. */
+const untested = (n) => n.state === "downstream" && n.evidence === "unverified";
 function badgeFor(n) {
   if (n.badge !== undefined) return n.badge;
   if (n.type === "test") return n.testStatus === "passed" ? ["PASSED", "ok"] : n.testStatus === "failed" ? ["FAILED", "bad"] : ["NO RESULT", "warn"];
   if (n.type === "pr" || n.type === "requirement") return null;
   if (n.evidence === "contradicted") return [n.state === "edited" ? "EDITED · UNIT TEST FAILS" : "AFFECTED · UNIT TEST FAILS", "bad"];
+  if (untested(n)) return ["AFFECTED · NO TEST", "warn"];
   if (n.state === "edited") return ["EDITED", "edited"];
   if (n.state === "downstream") return ["AFFECTED", "info"];
   return null;
@@ -195,6 +198,12 @@ function badgeFor(n) {
 const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const gfy = { network: null, nodeSet: null, edgeSet: null, key: null, look: null, fontScale: 1, timer: null, onNode: null, onEdge: null, nodeIds: new Set(), edgeIds: new Set() };
 const isUnitTest = (n) => n.type === "testfile" || n.type === "test" || n.id === "concept:tests";
+/** A test dot's name: its file and case number (the full name is on hover). Only a test that does not pass says so. */
+function testLabel(n, all) {
+  const cases = all.filter((x) => x.type === "test" && x.file === n.file).sort((a, b) => a.line - b.line);
+  const status = n.testStatus === "failed" ? " · FAILED" : n.testStatus === "passed" ? "" : " · NO RESULT";
+  return `${(n.file ?? "").split("/").pop()} #${cases.findIndex((x) => x.id === n.id) + 1}${status}`;
+}
 /** Show which dot or link is picked, without redrawing (so the layout and zoom stay put). */
 function markSelection() {
   const sel = state.sel;
@@ -227,8 +236,10 @@ function drawDots(el, nodes, allEdges, onNode, onEdge) {
   const key = JSON.stringify([document.documentElement.dataset.theme, state.mapScope, state.fullRun, nodes.map((n) => n.id), edges.map((e) => [e.id, e.resolution])]);
   const look = JSON.stringify(nodes.map((n) => [n.state, n.evidence, n.badge, n.now]));
 
-  const C = Object.fromEntries(["ink", "muted", "line", "card", "bg", "soft", "edited", "down", "bad", "req", "test"].map((k) => [k, cssVar(`--${k}`)]));
+  const C = Object.fromEntries(["ink", "muted", "line", "card", "bg", "soft", "edited", "down", "bad", "warn", "req", "test"].map((k) => [k, cssVar(`--${k}`)]));
   const byId = new Map(nodes.map((n) => [n.id, n]));
+  // Test case numbers count every test in the file, shown or hidden, so they do not shift with the filter.
+  const allNodes = state.mapScope === "full" ? nodes : state.model.graph.nodes.filter((n) => n.level === state.level);
   const lit = (n) => n.state !== "none" || n.type === "pr" || n.type === "requirement";
   const degree = new Map();
   for (const e of edges) for (const id of [e.from, e.to]) degree.set(id, (degree.get(id) ?? 0) + 1);
@@ -239,17 +250,18 @@ function drawDots(el, nodes, allEdges, onNode, onEdge) {
     const deg = degree.get(n.id) ?? 0;
     const anchor = n.type === "pr" || n.type === "requirement";
     const fill = n.evidence === "contradicted" ? C.bad : n.state === "edited" ? C.edited : n.state === "downstream" ? C.down : n.type === "pr" ? C.ink : n.type === "requirement" ? C.req : isUnitTest(n) ? C.card : C.line;
-    const border = n.now ? C.ink : lit(n) ? fill : isUnitTest(n) ? C.test : C.muted;
+    // An affected function no test checks keeps its blue fill and gets an amber ring.
+    const border = n.now ? C.ink : untested(n) ? C.warn : lit(n) ? fill : isUnitTest(n) ? C.test : C.muted;
     const badge = badgeFor(n);
     return {
       id: n.id,
-      label: clip(n.type === "pr" ? n.label.split(":")[0] : n.label, 30),
+      label: n.type === "test" && n.file ? testLabel(n, allNodes) : clip(n.type === "pr" ? n.label.split(":")[0] : n.label, 30),
       title: [n.label, n.sub, badge?.[0]].filter(Boolean).join("\n"),
       shape: anchor ? "diamond" : "dot",
       // Graphify's rule: a dot grows with the number of links it has. A dot edited in this step is bigger and glows.
       size: (anchor ? 13 : 9 + 19 * (deg / maxDeg)) * (n.now ? 1.35 : 1),
       color: { background: fill, border, highlight: { background: fill, border: C.ink }, hover: { background: fill, border: C.ink } },
-      borderWidth: n.now ? 3.5 : lit(n) ? 1.5 : 1.2,
+      borderWidth: n.now || untested(n) ? 3.5 : lit(n) ? 1.5 : 1.2,
       borderWidthSelected: 4,
       shadow: n.now ? { enabled: true, color: fill, size: 26, x: 0, y: 0 } : { enabled: false },
       // On a crowded map, Graphify only names the busy dots. The rest show their name on hover.
@@ -342,8 +354,8 @@ function drawDots(el, nodes, allEdges, onNode, onEdge) {
   for (const b of el.querySelectorAll("[data-zoom]")) b.onclick = () => (b.dataset.zoom === "fit" ? network.fit({ animation: true }) : network.moveTo({ scale: network.getScale() * (b.dataset.zoom === "in" ? 1.3 : 1 / 1.3), animation: true }));
   markSelection();
 }
-/** Under the graph: a short colour key. Everything else sits behind "About this map". */
-function renderMapFoot(nodes, edges) {
+/** Under the graph: a short colour key. Everything else sits behind "About this map". `hidden` = functions left off the map. */
+function renderMapFoot(nodes, edges, hidden = 0) {
   const m = state.model, el = $("mapFoot"), full = state.mapScope === "full", dots = state.level === "function";
   const g = full ? state.full.graphify : m.graphify;
   const sw = (cls, text) => `<span><i class="sw ${dots ? "dot " : ""}${cls}"></i> ${text}</span>`;
@@ -352,9 +364,14 @@ function renderMapFoot(nodes, edges) {
   const key = [
     sw("sw-edited", full ? "edited so far" : "edited"),
     full ? sw("sw-edited sw-now", "edited in this step") : "",
-    sw("sw-downstream", "affected, not edited"),
+    nodes.some((n) => n.state === "downstream") ? sw("sw-downstream", "affected, not edited") : "",
+    nodes.some(untested) ? sw("sw-untested", "affected, no test") : "",
     nodes.some((n) => n.evidence === "contradicted") ? sw("sw-failing", "a unit test fails") : "",
   ].join("");
+  // Functions level: only what the PR edits or affects, and their tests. One click shows the rest.
+  const filter = !full && dots && (hidden || state.allFunctions)
+    ? `<div class="map-hidden muted">${state.allFunctions ? "Showing every function · " : `${things(hidden, "unrelated function", "unrelated functions")} hidden · `}<button type="button" class="link" data-allfns="1">${state.allFunctions ? "Hide unrelated" : "Show all"}</button></div>`
+    : "";
   const calls = edges.filter((e) => e.kind === "calls");
   const guessed = calls.filter((e) => e.resolution === "inferred").length;
   const li = (x, why) => `<li><code>${esc(x.label)}</code> <span class="mono muted">${esc(x.file.split("/").pop())}:${x.line}</span>${why ? ` · ${esc(why)}` : ""}</li>`;
@@ -375,9 +392,25 @@ function renderMapFoot(nodes, edges) {
   const gaps = full || !g ? "" : `
       ${g.missed.length ? `<details><summary>${g.missed.length} thing${g.missed.length === 1 ? "" : "s"} Graphify missed</summary><div class="muted">The compiler data (Roslyn, recorded earlier) knows every use of every name. Graphify reads the text of the code, so it can miss some.</div><ul>${g.missed.map((x) => li(x, x.reason)).join("")}</ul></details>` : ""}
       ${g.added.length ? `<details><summary>${g.added.length} caller${g.added.length === 1 ? "" : "s"} only Graphify found</summary><ul>${g.added.map((x) => li(x)).join("")}</ul></details>` : ""}`;
-  el.innerHTML = `<details class="map-about" ${state.aboutOpen ? "open" : ""}><summary><span class="legend">${key}</span><span class="about-link">About this map</span></summary>
+  el.innerHTML = `${filter}<details class="map-about" ${state.aboutOpen ? "open" : ""}><summary><span class="legend">${key}</span><span class="about-link">About this map</span></summary>
       <div class="about-body"><div class="legend">${more}</div><p>${how}</p><p>${source}</p>${gaps}</div></details>`;
   el.querySelector(".map-about").ontoggle = (ev) => (state.aboutOpen = ev.target.open);
+  for (const b of el.querySelectorAll("[data-allfns]")) b.onclick = () => {
+    state.allFunctions = !state.allFunctions;
+    renderGraph();
+  };
+}
+/** Functions level: drop what the PR neither edits nor affects, unless it tests something that is. The picked node stays. */
+function relevantFunctions(nodes, edges) {
+  const shown = (n) => n.state !== "none" || n.type === "pr" || n.type === "requirement" || n.id === state.sel?.id;
+  const keep = new Set(nodes.filter(shown).map((n) => n.id));
+  for (const e of edges) if (e.kind === "tests" && keep.has(e.to)) keep.add(e.from);
+  return nodes.filter((n) => keep.has(n.id));
+}
+/** Concepts level: an area with a changed file in it counts as edited, even when no function in it is (a unit test file, a doc). */
+function markEditedAreas(nodes) {
+  const changed = new Set(state.model.diff.files.map((f) => `file:${f.file}`));
+  return nodes.map((n) => (n.state === "none" && n.members?.some((id) => changed.has(id)) ? { ...n, state: "edited" } : n));
 }
 function renderGraph() {
   const m = state.model;
@@ -408,14 +441,22 @@ function renderGraph() {
   $("fullBar").hidden = !full;
   if (blast) return renderBlast();
   if (swarm) {
-    // The swarm view draws itself once per PR. After that it keeps its own state (menus, a run in play).
-    if (swarmUI.pr !== state.prId) renderSwarm();
+    // The swarm view draws itself once per PR. After that it keeps its own state (menus, a run in play),
+    // unless a replay was cut short: then it draws the saved result again.
+    if (swarmUI.pr !== state.prId || swarmUI.cut) renderSwarm();
     return;
   }
   if (full) return renderFull();
-  const edges = m.graph.edges.filter((e) => e.level === state.level), nodes = m.graph.nodes.filter((n) => n.level === state.level);
+  let edges = m.graph.edges.filter((e) => e.level === state.level), nodes = m.graph.nodes.filter((n) => n.level === state.level);
+  if (state.level === "concept") nodes = markEditedAreas(nodes);
+  const all = nodes.length;
+  if (state.level === "function" && !state.allFunctions) {
+    nodes = relevantFunctions(nodes, edges);
+    const ids = new Set(nodes.map((n) => n.id));
+    edges = edges.filter((e) => ids.has(e.from) && ids.has(e.to));
+  }
   drawGraph(nodes, edges, selectNode, (id) => select({ type: "edge", id }));
-  renderMapFoot(nodes, edges);
+  renderMapFoot(nodes, edges, all - nodes.length);
 }
 /** Hands the boxes and links to the React Flow graph (src/graph/main.jsx, built into graph.bundle.js). */
 function drawBoxes(el, nodes, edges, onNode, onEdge) {
@@ -661,13 +702,20 @@ function blastTestsHtml(b) {
 // ---------- trust scores: each trust skill (Blast radius, Monte Carlo swarm) ends in one number out of 100 ----------
 // A fixed rule works each one out. No AI. 75 or more is green, 45 to 74 amber, under 45 red.
 const trustTone = (score) => (score >= 75 ? "ok" : score >= 45 ? "warn" : "bad");
-/** The top of a skill's result: the score, a few words for it, and one line on what the skill does. */
-const trustHtml = (t, what) => `<div class="trust ${t.tone}"><div class="trust-num"><b>${t.score}</b><small>/ 100</small><span>Trust score</span></div>
+/** The top of a skill's result: the score, what it measured (`label`), a few words for it, and one line on what the skill does. */
+const trustHtml = (t, what, label) => `<div class="trust ${t.tone}"><div class="trust-num"><b>${t.score}</b><small>/ 100</small><span>${esc(label)}</span></div>
   <div class="trust-text"><strong>${esc(t.verdict)}</strong><p>${what}</p></div></div>`;
+/** One display name per model id. An id not listed here shows as it is. */
+const MODEL_NAMES = { "claude-opus-5-5": "Opus 5.5", "claude-sonnet-5-5": "Sonnet 5.5", "claude-haiku-5-5": "Haiku 5.5", "claude-fable-5-2": "Fable 5.2" };
+const modelName = (id) => MODEL_NAMES[id] ?? id;
 /** Why the score is what it is: one short line per reason. */
 const whyHtml = (t) => `<ul class="why">${t.why.map((w) => `<li class="${w.tone}"><i aria-hidden="true">${w.tone === "ok" ? "✓" : "!"}</i><span>${rich(w.text)}</span></li>`).join("")}</ul>`;
+// What each skill does, and what it does not: said once here, not in every row.
+const NO_TESTS = "It does not check tests.";
 const BLAST_WHAT = "3 agents did the same task. We check that the real change stays where they worked.";
-const SWARM_WHAT = "Many agents did the same task. If most make the same change, the real change is likely right.";
+const SWARM_WHAT = `Many agents did the same task. We count how many make the same change. ${NO_TESTS}`;
+/** Blast radius says it does not check tests, unless this PR's unit tests were run both ways (blastTestsHtml). */
+const blastCaveat = (b) => (b.tests ? "" : ` ${NO_TESTS}`);
 /**
  * Blast radius trust score. Each code file the real change edits (as the server's label counts them) gets points
  * for where it sits: 100 if the careful agent edited it too, 85 the normal agent, 60 only the agent that
@@ -712,17 +760,8 @@ function renderBlast() {
     el.innerHTML = `<p class="blast-what">We give the same task to 3 agents: one careful, one normal, one that changes too much. What they touch is the "blast radius" of the task. Then we lay the real change over it.</p><div class="callout info">${esc(b.message)}</div>`;
     return;
   }
-  // First a button. Pressing it replays the 3 recorded runs, then shows the result.
-  const run = blastRun.pr === state.prId ? blastRun.phase : "idle";
-  if (run === "idle") {
-    el.dataset.stage = "idle";
-    el.innerHTML = `<p class="blast-what">We give the same task to 3 agents: one careful, one normal, one that changes too much. What they touch is the "blast radius" of the task. Then we lay the real change over it.</p>
-      <div class="swarm-controls"><button type="button" class="primary" id="blastGo">▶ Run blast radius</button>
-      <span class="muted swarm-rec">Replays 3 real runs${b.model ? ` of <code>${esc(b.model)}</code>` : ""}, recorded ${esc(b.recordedAt.slice(0, 10))}. No agent runs now.</span></div>`;
-    $("blastGo").onclick = () => playBlast();
-    return;
-  }
-  if (run === "running") {
+  // The tab opens on the saved result. "↻ Replay" plays the 3 recorded runs, then shows it again.
+  if (blastRun.pr === state.prId && blastRun.phase === "running") {
     // The animation owns the box while it runs. A redraw of the page must not restart it.
     if (el.dataset.stage !== "running") playBlast();
     return;
@@ -769,9 +808,16 @@ function renderBlast() {
   // The simple view: the trust score, why, and how many files each one changed. The rest sits in one fold.
   const trust = blastScore(b), most = Math.max(1, ...cols.map((c) => c.files));
   if (state.sel?.type === "blast") blastRun.details = true; // a picked file lives in the fold: keep it open
-  el.innerHTML = `<div class="blast-top">${trustHtml(trust, BLAST_WHAT)}<button type="button" id="blastAgain">↻ Run again</button></div>
+  // The bars count files, split by kind, so they match the "code files" in the lines above.
+  const split = (c) => {
+    const mine = files.filter((x) => x.by[c.id]);
+    const parts = ["code", "test", "doc"].map((k) => [mine.filter((x) => x.kind === k).length, k]).filter(([n]) => n);
+    return parts.length ? ` <span class="muted">(${parts.map(([n, k]) => `${n} ${k}`).join(", ")})</span>` : "";
+  };
+  el.innerHTML = `<div class="blast-top">${trustHtml(trust, BLAST_WHAT + blastCaveat(b), "Scope")}<button type="button" id="blastAgain">↻ Replay</button></div>
     ${whyHtml(trust)}
-    <div class="bars"><div class="bars-title">Files each one changed</div>${cols.map((c) => `<div class="bar-row${c.id === "real" ? " real" : ""}"><span>${esc(BLAST_SHORT[c.id] ?? c.label)}${c.id === "real" ? "" : " agent"}</span><span class="bar"><i style="width:${Math.round((100 * c.files) / most)}%"></i></span><b>${c.files} file${c.files === 1 ? "" : "s"}</b></div>`).join("")}</div>
+    <div class="bars"><div class="bars-title">Files each one changed</div>${cols.map((c) => `<div class="bar-row${c.id === "real" ? " real" : ""}"><span>${esc(BLAST_SHORT[c.id] ?? c.label)}${c.id === "real" ? "" : " agent"}</span><span class="bar"><i style="width:${Math.round((100 * c.files) / most)}%"></i></span><b>${c.files} file${c.files === 1 ? "" : "s"}${split(c)}</b></div>`).join("")}</div>
+    <div class="muted swarm-rec">3 agents${b.model ? `, ${esc(modelName(b.model))}` : ""}, recorded ${esc(b.recordedAt.slice(0, 10))}, no agent runs now.</div>
     <details class="tool-details" id="blastDetails" ${blastRun.details ? "open" : ""}><summary>Show the details</summary>
     <p class="blast-what">The coloured zones show the files the 3 agents touched. The thick outline is the real change.</p>
     <div class="blast-label ${esc(b.label.tone)}"><span class="stamp-label">Trust label</span><strong>${esc(b.label.text)}</strong><span>${esc(b.label.how)}</span></div>
@@ -802,7 +848,7 @@ function renderBlast() {
       ${wideRow("Every agent touched, the real change did not", things(o.agentsNotReal))}
       </tbody></table>`)}
     ${fold("how", "How it was done", "The 3 runs, their prompts, and the rule for the label", `
-      <p>Run on ${esc(b.recordedAt.slice(0, 10))}${b.model ? ` with the model <code>${esc(b.model)}</code>` : ""}, once per agent. Each agent worked alone in its own copy of the code from before the fix (commit <code>${esc(short(b.base))}</code>). The real fix was not in those copies. This tab replays the saved result. No agent runs now.</p>
+      <p>Run on ${esc(b.recordedAt.slice(0, 10))}${b.model ? ` with ${esc(modelName(b.model))} (<code>${esc(b.model)}</code>)` : ""}, once per agent. Each agent worked alone in its own copy of the code from before the fix (commit <code>${esc(short(b.base))}</code>). The real fix was not in those copies. This tab replays the saved result. No agent runs now.</p>
       <p><b>Rule for the trust label.</b> We look at the product code files the real change touches (not docs, not unit tests). If no agent touched one of them: "Touches code no agent touched". Else, if only the agent that changes too much touched one of them: "Touches more than needed". Else: "Inside the expected zone".</p>
       <p><b>What every agent got.</b> ${b.given.kept.map(esc).join("; ")}.</p>
       ${b.given.leftOut?.length ? `<p><b>What we left out of the AI PR text</b>, so the agents could not copy the real fix: ${b.given.leftOut.map(esc).join("; ")}. ${esc(b.given.note ?? "")}</p>` : ""}
@@ -810,7 +856,7 @@ function renderBlast() {
         <details><summary>What it said when it was done</summary><pre class="raw doc">${esc(r.reply ?? "No reply was saved.")}</pre></details>
         ${r.prompt ? `<details><summary>The full prompt, word for word</summary><pre class="raw doc">${esc(r.prompt)}</pre></details>` : ""}</div>`).join("")}
       <p class="muted">${esc(b.how.functions)} Callers come from ${esc(b.graphTool ?? "the recorded data")} (a saved run)${SESSION ? "" : " and the recorded compiler data for this PR"}.</p>
-      <p class="muted">Trust score: each code file the real change edits gets 100 if the careful agent edited it too, 85 for the normal agent, 60 for only the agent that changes too much, 20 for no agent. We take the average, then 20 off for each of its unit tests that fails on every agent's fix. A fixed rule, no AI.</p>`)}
+      <p class="muted">Scope: each code file the real change edits gets 100 if the careful agent edited it too, 85 for the normal agent, 60 for only the agent that changes too much, 20 for no agent. We take the average, then 20 off for each of its unit tests that fails on every agent's fix. A fixed rule, no AI.</p>`)}
     </details>`;
   $("blastDetails").ontoggle = (ev) => (blastRun.details = ev.target.open);
   for (const btn of el.querySelectorAll("[data-blast]")) btn.onclick = () => selectBlast(btn.dataset.blast);
@@ -857,6 +903,8 @@ const swarmUI = { pr: null, data: null, model: null, count: null, timers: [], no
 function stopSwarm() {
   for (const t of swarmUI.timers) clearTimeout(t);
   swarmUI.timers = [];
+  // A replay cut short leaves a half-drawn stage: the tab draws the saved result again when it next opens.
+  if (swarmUI.playing) Object.assign(swarmUI, { playing: false, cut: true });
 }
 const swarmSet = (id) => swarmUI.data.sets.find((x) => x.id === id);
 const swarmRun = (key) => swarmUI.data.runs.find((r) => r.key === key);
@@ -890,44 +938,53 @@ async function renderSwarm({ autoplay = false, model = null, count = null } = {}
     el.innerHTML = wrap(`<div class="muted">${esc(s?.message ?? "")}</div>`);
     return;
   }
-  const label = (id) => (s.choiceLabels[id] ?? swarmSet(id)?.label ?? id);
-  const def = swarmSet(s.defaultSet);
+  // The model and agent count are a set's own names ("demo", "mix") or a model id.
+  const label = (id) => (MODEL_NAMES[id] ? modelName(id) : swarmSet(id)?.label ?? id);
+  // The tab opens on the saved result. The pickers sit behind "Change"; "↻ Replay" plays the pick.
   el.innerHTML = wrap(`
     <div class="swarm-controls">
-      <label>Model <select id="swarmModel">${s.choices.map((id) => `<option value="${esc(id)}" ${id === swarmUI.model ? "selected" : ""}>${esc(label(id))}</option>`).join("")}</select></label>
-      <label>Agents <select id="swarmCount">${Array.from({ length: s.maxAgents }, (_, i) => i + 1).map((n) => `<option value="${n}" ${n === swarmUI.count ? "selected" : ""}>${n}</option>`).join("")}</select></label>
-      <button type="button" class="primary" id="swarmGo">▶ Run Monte Carlo swarm</button>
+      <button type="button" class="primary" id="swarmGo">↻ Replay</button>
+      <details class="swarm-pick"><summary>Change</summary>
+        <label>Model <select id="swarmModel">${s.choices.map((id) => `<option value="${esc(id)}" ${id === swarmUI.model ? "selected" : ""}>${esc(label(id))}</option>`).join("")}</select></label>
+        <label>Agents <select id="swarmCount">${Array.from({ length: s.maxAgents }, (_, i) => i + 1).map((n) => `<option value="${n}" ${n === swarmUI.count ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+      </details>
     </div>
-    <div class="muted swarm-rec">Replays runs recorded ${esc(s.recordedAt.slice(0, 10))}. No agent runs now. Plays by default: ${esc(def.label)}.</div>
+    <div class="muted swarm-rec">Recorded ${esc(s.recordedAt.slice(0, 10))}, no agent runs now.</div>
     <div id="swarmNote" class="swarm-note" ${swarmUI.note ? "" : "hidden"}>${esc(swarmUI.note ?? "")}</div>
     <div id="swarmStage" class="swarm-stage" hidden></div>`);
-  $("swarmModel").onchange = (ev) => {
+  const picked = () => {
     stopSwarm();
+    $("swarmGo").textContent = "▶ Run";
+  };
+  $("swarmModel").onchange = (ev) => {
+    picked();
     swarmUI.model = ev.target.value;
   };
   $("swarmCount").onchange = (ev) => {
-    stopSwarm();
+    picked();
     swarmUI.count = Number(ev.target.value);
   };
   $("swarmGo").onclick = () => playSwarm();
-  if (autoplay) {
-    // A deep link can pick the model and the count first (&model=<id>&n=<count>).
-    if (model) swarmUI.model = model;
-    if (count) swarmUI.count = count;
-    playSwarm();
-  }
+  // A deep link can pick the model and the count first (&model=<id>&n=<count>).
+  if (model) swarmUI.model = model;
+  if (count) swarmUI.count = count;
+  playSwarm({ animate: autoplay });
 }
-function playSwarm() {
+/** Draws the picked set of runs: played out (`animate`), or straight to the saved result. */
+function playSwarm({ animate = true } = {}) {
   stopSwarm();
+  swarmUI.cut = false;
   const s = swarmUI.data;
   // Play the pick if it is recorded. Otherwise go back to the demo set, and say so.
   const picked = swarmSet(swarmUI.model);
   if (!picked || swarmUI.count > picked.runs.length) {
-    const want = `${swarmUI.count} × ${swarmUI.model === "mix" ? "the mix" : s.choiceLabels[swarmUI.model] ?? swarmUI.model}`;
+    const want = `${swarmUI.count} × ${swarmUI.model === "mix" ? "the mix" : modelName(swarmUI.model)}`;
     swarmDefault();
     swarmUI.note = `${want} is not recorded for this demo, so this plays the recorded set: ${swarmSet(swarmUI.model).label}.`;
-    renderSwarm();
+    $("swarmModel").value = swarmUI.model;
+    $("swarmCount").value = String(swarmUI.count);
   } else swarmUI.note = null;
+  $("swarmGo").textContent = "↻ Replay";
   const note = $("swarmNote");
   note.hidden = !swarmUI.note;
   note.textContent = swarmUI.note ?? "";
@@ -935,7 +992,9 @@ function playSwarm() {
   const stage = $("swarmStage");
   stage.hidden = false;
   const fast = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-  const later = (ms, fn) => swarmUI.timers.push(setTimeout(fn, fast ? 0 : ms));
+  // Not animated: every step runs now, in order, so the saved result is drawn at once.
+  const later = (ms, fn) => (animate ? swarmUI.timers.push(setTimeout(fn, fast ? 0 : ms)) : fn());
+  swarmUI.playing = animate;
   // Stacked dots: runs with the same score sit on top of each other.
   const seen = new Map();
   const stack = runs.map((r) => {
@@ -944,14 +1003,16 @@ function playSwarm() {
     return k;
   });
   const set = swarmSet(swarmUI.model);
-  stage.innerHTML = `${set.madeUp ? `<div class="swarm-madeup"><span class="tag warn">Made up for the demo</span> ${esc(set.note)}</div>` : ""}<div class="swarm-flow">
+  swarmUI.shown = { set, runs }; // what the tab shows, for the line in the chat
+  stage.innerHTML = `${set.madeUp ? `<div class="swarm-madeup"><span class="tag warn">Made up for the demo</span> ${esc(set.note)}</div>` : ""}
+    <div class="swarm-result" id="swarmResult" hidden></div>
+    <div class="swarm-flow">
       <div class="swarm-req" id="swarmReq"><b>Requirements</b><span>Same text for every agent</span></div>
       <div class="swarm-agents">${runs.map((r, i) => `<button type="button" class="swarm-agent" data-run="${esc(r.key)}">
         <span class="swarm-name">Agent ${i + 1}<span class="swarm-model">${esc(r.modelLabel)}${r.madeUp ? " · made up" : ""}</span></span>
         <span class="swarm-bar"><i></i></span>
         <span class="swarm-status">waiting</span></button>`).join("")}</div>
     </div>
-    <div class="swarm-result" id="swarmResult" hidden></div>
     <details class="tool-details" id="swarmDetails" hidden><summary>Show the details</summary>
     <div class="swarm-scale">
       <div class="swarm-scale-label muted">How similar each agent's change is to the real change</div>
@@ -968,7 +1029,7 @@ function playSwarm() {
   const rows = [...stage.querySelectorAll(".swarm-agent")];
   const dots = [...stage.querySelectorAll(".swarm-dot")];
   // 1. The requirements go out to every agent, one after the other.
-  later(100, () => $("swarmReq").classList.add("sending"));
+  if (animate) later(100, () => $("swarmReq").classList.add("sending"));
   let end = 0;
   runs.forEach((r, i) => {
     const start = 400 + i * 220;
@@ -992,11 +1053,12 @@ function playSwarm() {
   });
   // 4. The answer.
   later(end + 500, () => {
+    swarmUI.playing = false;
     const { near, pairs, sum, topMiss, topExtra, avg, tone, byModel } = swarmVerdict(runs);
     // The simple view: the trust score and why. The scale, the numbers and the matrix sit in the fold.
     const trust = swarmScore(runs), res = $("swarmResult");
     res.hidden = false;
-    res.innerHTML = `${trustHtml(trust, SWARM_WHAT)}${whyHtml(trust)}<p class="muted">Click an agent above to see its change.</p>`;
+    res.innerHTML = `${trustHtml(trust, SWARM_WHAT, "Agreement")}${whyHtml(trust)}<p class="muted">Click an agent below to see its change.</p>`;
     $("swarmDetails").hidden = false;
     $("swarmMore").innerHTML = `<div class="blast-label ${tone}"><span class="stamp-label">Swarm result${runs.some((r) => r.madeUp) ? " · made up for the demo" : ""}</span>
         <strong>${near} of ${runs.length} agent${runs.length === 1 ? "" : "s"} ended up similar to the real change</strong>
@@ -1011,7 +1073,7 @@ function playSwarm() {
         <p><b>By files and functions</b> (the main score). We list what each change touches in product code (not docs, not unit tests): the files, and the functions in them that already existed. The real change touches: ${s.real.map((x) => `<code>${esc(x)}</code>`).join(", ") || "no product code"}. Similarity = things both changes touch, divided by things either one touches. 100% means the very same files and functions.</p>
         <p><b>By changed lines.</b> We list every code line each change adds or removes in product code (blank lines left out, spaces squeezed). Similarity = lines both changes add or remove, divided by lines either one does. This one sees inside a function: two different fixes in the same function score low. The real change adds or removes ${s.realLines.length} lines.</p>
         <p>${esc(s.how)}</p>
-        <p>Trust score = the share of agents whose change is similar to the real one, out of 100. A fixed rule, no AI.</p>
+        <p>Agreement = the share of agents whose change is similar to the real one, out of 100. A fixed rule, no AI.</p>
         <details><summary>The prompt every agent got, word for word</summary><pre class="raw doc">${esc(s.prompt.text)}</pre></details>
       </details>`;
     renderSwarmMatrix(runs);
@@ -1700,9 +1762,9 @@ function startThread() {
 const TOOL_ASK = { pr: "Show me the Impact Map", full: "Show me the whole repo", blast: "Run the blast radius", swarm: "Run the Monte Carlo swarm" };
 function mapSummary() {
   const m = state.model, n = m.diff.files.length;
-  const red = m.graph.nodes.some((x) => x.evidence === "contradicted");
+  const red = m.graph.nodes.some((x) => x.evidence === "contradicted"), amber = m.graph.nodes.some(untested);
   return `<p>This PR edits <b>${things(n, "file", "files")}</b>. ${esc(m.classifier1.reason)}</p>
-    <p class="muted">The map is open on the right. Orange = edited. Blue = affected, not edited.${red ? " Red = a unit test fails there." : ""} Click a box to see its code.</p>
+    <p class="muted">The map is open on the right. Orange = edited. Blue = affected, not edited.${amber ? " Blue with an amber ring = affected, and no test checks it." : ""}${red ? " Red = a unit test fails there." : ""} Click a box to see its code.</p>
     <div class="choices"><button type="button" class="choice" data-act="tool" data-scope="full"><b>See the whole repo</b><span>Every PR, one commit at a time.</span></button></div>`;
 }
 async function useTool(scope, said) {
@@ -1713,16 +1775,17 @@ async function useTool(scope, said) {
   if (scope === "blast") {
     const b = await loadBlast();
     if (!b.recorded) return bot(`<p>${esc(b.message)}</p>`);
-    playBlast();
-    const t = blastScore(b);
-    return bot(`${trustHtml(t, BLAST_WHAT)}${whyHtml(t)}<p class="muted">It is playing on the right. Replays saved runs. No agent runs now.</p>`, 900);
+    // One line here; the score, reasons and provenance are in the panel. A unit test that fails on every agent's fix is said here too.
+    const verdict = b.label.text.charAt(0).toLowerCase() + b.label.text.slice(1);
+    const [, tests] = blastScore(b).why;
+    return bot(`<p><b>Blast radius:</b> ${esc(verdict)}.${tests?.tone === "warn" ? ` ${rich(tests.text)}` : ""}${blastCaveat(b)} Details on the right.</p>`, 900);
   }
-  await renderSwarm({ autoplay: true });
+  // The tab draws its saved result as it opens (renderGraph). Wait for that draw, not a second one.
+  await swarmUI.loading;
   const s = swarmUI.data;
   if (!s?.recorded) return bot(`<p>${esc(s?.message ?? "No runs are recorded for this PR yet.")}</p>`);
-  const set = swarmSet(swarmUI.model), runs = set.runs.slice(0, swarmUI.count).map(swarmRun);
-  const t = swarmScore(runs);
-  return bot(`${trustHtml(t, SWARM_WHAT)}${whyHtml(t)}${set.madeUp ? `<p><span class="tag warn">Made up for the demo</span> ${esc(set.note.replace(/^Made up for the demo\.\s*/, ""))}</p>` : ""}<p class="muted">It is playing on the right. Click an agent there to see its change. Replays saved runs. No agent runs now.</p>`, 900);
+  const { set, runs } = swarmUI.shown;
+  return bot(`<p><b>Monte Carlo swarm:</b> ${esc(swarmScore(runs).verdict)}. ${NO_TESTS} Details on the right.</p>${set.madeUp ? `<p><span class="tag warn">Made up for the demo</span> ${esc(set.note.replace(/^Made up for the demo\.\s*/, ""))}</p>` : ""}`, 900);
 }
 function showPage(page, said) {
   me(said ?? (page === "pr" ? "Show me the full PR description" : "Show me the review steps"));
@@ -1781,9 +1844,8 @@ function agentIntro(said) {
   me(said ?? "Ask the agent that wrote this PR");
   const a = state.model.agent;
   if (!a) return bot(`<p>This PR has no saved notes from its coding agent.</p>`);
-  bot(`<p>Ask why the PR was written this way. The answers come from <button type="button" class="link" data-act="ctx">context.md</button>: the coding agent's own notes, saved with the PR.</p>
-    ${suggestHtml(a.chat)}
-    <div class="byline">${esc(a.model)} · snapshot ${esc(a.snapshot)} · made up for the demo: saved answers, no live model.</div>`);
+  bot(`<p>Ask why the PR was written this way: the answers come from the coding agent's own notes, <button type="button" class="link" data-act="ctx">context.md</button>.</p>
+    ${suggestHtml(a.chat)}`);
   $("askInput").focus();
 }
 function askAgent(q) {
@@ -1794,7 +1856,7 @@ function askAgent(q) {
   const best = a.chat.map((c) => ({ c, n: words.filter((w) => `${c.q} ${c.keys ?? ""}`.toLowerCase().includes(w)).length })).sort((x, y) => y.n - x.n)[0];
   if (!best?.n) return bot(`<p>The demo only has saved answers. Try one of these:</p>${suggestHtml(a.chat)}`);
   const left = a.chat.filter((c) => c !== best.c && !threadOf().some((x) => x.who === "me" && x.text === c.q));
-  return bot(`<p>${rich(best.c.a)}</p><div class="byline">Saved answer from <button type="button" class="link" data-act="ctx">context.md</button> · ${esc(a.model)} · no live model</div>${left.length ? suggestHtml(left) : ""}`, 700);
+  return bot(`<p>${rich(best.c.a)}</p><div class="byline">Saved answer from <button type="button" class="link" data-act="ctx">context.md</button> · ${esc(modelName(a.model))}</div>${left.length ? suggestHtml(left.slice(0, 2)) : ""}`, 700);
 }
 /** Free text: a tool name or "merge" does that. Anything else is a question for the agent. */
 function handleText(q) {
