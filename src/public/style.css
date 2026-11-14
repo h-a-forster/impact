@@ -251,7 +251,7 @@ pre.raw { border: 1px solid var(--line); border-radius: 8px; padding: 9px; backg
    The rail lists only that pull request and the pills stop at that commit (app.js). Hidden: the way out
    to GitHub, "Reset demo" (it deletes the sign-off the test reads), the eval-case mark (it writes data),
    and the whole-repo map (its saved picture is of the demo's repository, not the shop). */
-body.session .back, body.session #resetDemo, body.session .evalcase, body.session [data-act="commit"],
+body.session .back, body.session #resetDemo, body.session .evalcase, body.session #evalBtn, body.session [data-act="commit"],
 body.session [data-scope="full"] { display: none !important; }
 
 /* Review steps */
@@ -602,8 +602,6 @@ body { overflow: hidden; }
 .score .tag { justify-self: start; }
 .score-why { color: var(--muted); font-size: 14px; }
 .score i { font-style: normal; color: var(--muted); font-size: 18px; }
-.scores-live p.score-note { font-size: 14px; margin: -6px 0 16px; }
-.next-ask { margin-top: 4px; }
 @media (max-width: 700px) { .score { grid-template-columns: minmax(0, 1fr) 14px; gap: 2px 12px; } .score > :not(i) { grid-column: 1; } .score i { grid-column: 2; grid-row: 1 / span 3; } }
 .app.canvas-open .score { grid-template-columns: minmax(0, 1fr) 14px; gap: 2px 12px; }
 .app.canvas-open .score > :not(i) { grid-column: 1; }
@@ -628,9 +626,7 @@ body { overflow: hidden; }
 .quick { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 .quick button { border-radius: 999px; padding: 4px 12px; font-size: 13px; color: var(--muted); }
 .quick button:hover { color: var(--ink); }
-.quick .eval-btn { margin-left: auto; color: var(--bad); border-color: var(--bad); }
-.quick .eval-btn:hover { color: var(--bad); background: var(--bad-bg); }
-.quick .eval-btn.on { background: var(--bad-bg); font-weight: 700; }
+.eval-btn.on { color: var(--ink); font-weight: 700; }
 .ask { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 26px; padding: 6px 6px 6px 18px; background: var(--card); box-shadow: 0 2px 10px rgba(0, 0, 0, .06); }
 .ask:focus-within { border-color: var(--muted); }
 .ask input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 15px; padding: 6px 0; }
