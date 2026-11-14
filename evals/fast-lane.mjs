@@ -219,7 +219,9 @@ for (const [name, alterReview, alterBrief] of BROKEN_REVIEWER) {
   const route = pipelineRoute(alterReview, alterBrief);
   results.push({ name, route, held: route !== ROUTES.AUTO && !route.startsWith("crashed") });
 }
-const [[, gitBaseline], ...gitRoutes] = throughGit([["a plain edit to a document", PLAIN_EDIT], ...THROUGH_GIT]);
+// The same plain edit where .gitattributes names *.md: git settings are not code that reads the document.
+const GIT_SETTINGS = (add) => add("100644", "*.md text eol=lf\n", ".gitattributes");
+const [[, gitBaseline], [, gitSettingsBaseline], ...gitRoutes] = throughGit([["a plain edit to a document", PLAIN_EDIT], ["a plain edit beside git settings", PLAIN_EDIT, GIT_SETTINGS], ...THROUGH_GIT]);
 for (const [name, route] of gitRoutes) results.push({ name, route, held: route !== ROUTES.AUTO });
 const leaks = results.filter((r) => !r.held);
 const pipelineBaseline = pipelineRoute((record) => record);
@@ -231,7 +233,7 @@ for (const [name, alter] of KNOWN_LIMITS) {
   alter(change);
   console.log(`  ${routeOf(change) === ROUTES.AUTO ? "allowed" : "held  "} ${name.padEnd(51)} -> ${routeOf(change)}  (known limit)`);
 }
-const baselines = [["the plain docs-only change", baselineRoute], ["the recorded docs-only pull request, whole pipeline", pipelineBaseline], ["a plain edit to a document, through git", gitBaseline]];
+const baselines = [["the plain docs-only change", baselineRoute], ["the recorded docs-only pull request, whole pipeline", pipelineBaseline], ["a plain edit to a document, through git", gitBaseline], ["a plain edit beside a .gitattributes that names *.md", gitSettingsBaseline]];
 console.log("");
 for (const [name, route] of baselines) console.log(`  ${route === ROUTES.AUTO ? "ok    " : "BROKEN"} ${name.padEnd(52)} -> ${route}`);
 console.log(`\n${results.length - leaks.length} of ${results.length} held. ${leaks.length} got through.`);

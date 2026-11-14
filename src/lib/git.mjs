@@ -84,6 +84,9 @@ const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
  * A glob on the file's extension counts too: a test runner set to run every *.md (doctests)
  * makes each document a test.
  */
+// Settings files that git and editors read but no program runs: "*.md text" in .gitattributes is not a reader.
+const NEVER_RUN = [".gitattributes", ".gitignore", ".editorconfig", ".markdownlint*", ".prettierignore"];
+
 function codeThatReads(file, sha, opts) {
   const slash = file.lastIndexOf("/");
   const patterns = [`[/\\\\"'\`]${escapeRegExp(file.slice(slash + 1))}`];
@@ -94,7 +97,7 @@ function codeThatReads(file, sha, opts) {
     patterns.push(`${folder}[/\\\\]`, `["'\`]${folder}["'\`]`);
   }
   try {
-    const args = ["grep", "-l", "-I", "-E", ...patterns.flatMap((p) => ["-e", p]), sha, "--", ".", ":(exclude)*.md", ":(exclude)review-policy.yml", `:(exclude)${file}`];
+    const args = ["grep", "-l", "-I", "-E", ...patterns.flatMap((p) => ["-e", p]), sha, "--", ".", ":(exclude)*.md", ":(exclude)review-policy.yml", ...NEVER_RUN.map((name) => `:(exclude,glob)**/${name}`), `:(exclude)${file}`];
     return git(args, opts).split("\n").find(Boolean)?.replace(`${sha}:`, "") ?? null;
   } catch (error) {
     if (error.status === 1) return null; // git grep exits 1 when nothing matches
