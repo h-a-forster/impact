@@ -10,7 +10,7 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { AGENTS, fileKind, patchLines, scanFunctions } from "../src/lib/blast.mjs";
+import { AGENTS, fileKind, fileRecord } from "../src/lib/blast.mjs";
 import { DATA, ROOT } from "../src/lib/paths.mjs";
 
 const arg = (name, def) => {
@@ -25,34 +25,6 @@ const promptDir = path.join(prDir, "blast-prompts");
 const pack = JSON.parse(fs.readFileSync(path.join(prDir, "pack.json"), "utf8"));
 const git = (cwd, ...args) => execFileSync("git", ["-c", "core.quotepath=false", ...args], { cwd, encoding: "utf8", maxBuffer: 1 << 28 });
 const unix = (s) => s.replace(/\r\n/g, "\n");
-
-/** One changed file: numbers, patch, and the functions the changed lines sit in. */
-function fileRecord(file, status, patch, headText, baseText) {
-  const kind = fileKind(file);
-  const lines = patchLines(patch);
-  const rec = { file, status, kind, added: lines.filter((l) => l.t === "add").length, removed: lines.filter((l) => l.t === "del").length, patch, functions: [] };
-  if (!/\.cs$/i.test(file)) return rec;
-  // An added line belongs to the function it sits in after the change.
-  // A removed line belongs to the function it sat in before the change.
-  const before = new Map((baseText === null ? [] : scanFunctions(baseText)).map((f) => [f.key, f]));
-  const after = headText === null ? [] : scanFunctions(headText);
-  const within = (f, n) => Boolean(f) && n >= f.line && n <= f.endLine;
-  for (const f of after) {
-    const was = before.get(f.key);
-    const added = lines.filter((l) => l.t === "add" && within(f, l.at)).length;
-    const removed = lines.filter((l) => l.t === "del" && within(was, l.old)).length;
-    if (added + removed) rec.functions.push({ key: f.key, name: f.name, line: f.line, endLine: f.endLine, isNew: !was, added, removed });
-  }
-  // A function that the change deleted whole.
-  for (const was of before.values()) {
-    if (after.some((f) => f.key === was.key)) continue;
-    const removed = lines.filter((l) => l.t === "del" && within(was, l.old)).length;
-    if (removed) rec.functions.push({ key: was.key, name: was.name, line: null, endLine: null, isNew: false, deleted: true, added: 0, removed });
-  }
-  const inside = rec.functions.reduce((s, f) => s + f.added + f.removed, 0);
-  rec.linesOutsideFunctions = rec.added + rec.removed - inside;
-  return rec;
-}
 
 /** The new text of a file: the old text with a diff laid on. Used when the pack holds no text for a file (unit tests). */
 function applyPatch(base, patch) {

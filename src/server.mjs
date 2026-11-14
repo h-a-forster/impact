@@ -6,6 +6,7 @@ import { buildFullMap, buildModel, demoRevisions } from "./lib/model.mjs";
 import { ledgerSource } from "./lib/ledger.mjs";
 import { loadTietoSlice } from "./lib/graphify-tieto.mjs";
 import { buildBlast } from "./lib/blast.mjs";
+import { buildSwarm } from "./lib/swarm.mjs";
 import { decisionView, recordDecision } from "./lib/decisions.mjs";
 import { findPr, prSummary } from "./lib/github.mjs";
 import { DEMO, REVISIONS_FILE, ROOT, SAMPLE_REPO } from "./lib/paths.mjs";
@@ -77,6 +78,11 @@ const handler = async (req, res) => {
       // "Blast radius" tab: 3 recorded agent runs on the same task, compared with the real change.
       const pr = demoRevisions().prs.find((p) => p.id === url.searchParams.get("pr"));
       return pr ? json(res, 200, buildBlast(pr.id)) : json(res, 404, { error: `Unknown PR ${url.searchParams.get("pr")}` });
+    }
+    if (url.pathname === "/api/swarm") {
+      // Monte Carlo swarm on the "Blast radius" tab: N recorded runs of one model, scored against the real change.
+      const pr = demoRevisions().prs.find((p) => p.id === url.searchParams.get("pr"));
+      return pr ? json(res, 200, buildSwarm(pr.id)) : json(res, 404, { error: `Unknown PR ${url.searchParams.get("pr")}` });
     }
     if (url.pathname === "/api/fullmap") return json(res, 200, buildFullMap(demoRevisions()));
     if (url.pathname === "/api/summary") {

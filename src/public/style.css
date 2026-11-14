@@ -356,3 +356,47 @@ button.danger { background: var(--bad); color: var(--card); border-color: var(--
 .z-outside { border: 1.5px dashed var(--bad); }
 .blast-key { font-size: 12px; margin-top: 8px; }
 .bbox { width: 250px; }
+
+/* Monte Carlo swarm, at the bottom of the Blast radius tab */
+.swarm { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.swarm-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.swarm-head h3 { margin: 0; font-size: 13px; color: var(--ink); }
+.swarm-controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+.swarm-controls select { margin-left: 4px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); }
+.swarm-rec { font-size: 12px; }
+.swarm-stage { margin-top: 14px; border: 1px solid var(--line); border-radius: 10px; padding: 14px; background: var(--bg); }
+.swarm-flow { display: grid; grid-template-columns: 170px 1fr; gap: 18px; align-items: center; }
+.swarm-req { display: flex; flex-direction: column; gap: 2px; border: 2px solid var(--req); background: var(--req-bg); border-radius: 10px; padding: 12px; text-align: center; }
+.swarm-req span { font-size: 12px; color: var(--muted); }
+.swarm-req.sending { animation: sreq 1.2s ease-in-out 3; }
+@keyframes sreq { 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--req) 25%, transparent); } }
+.swarm-agents { display: flex; flex-direction: column; gap: 6px; }
+.swarm-agent { display: grid; grid-template-columns: 70px 160px 1fr; gap: 10px; align-items: center; text-align: left; padding: 6px 10px; border-radius: 8px; opacity: .35; transition: opacity .4s, border-color .4s; }
+.swarm-agent.working, .swarm-agent.done { opacity: 1; }
+.swarm-agent.done.near { border-color: var(--ok); }
+.swarm-agent.done.far { border-color: var(--bad); }
+.swarm-name { font-weight: 700; font-size: 13px; }
+.swarm-bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.swarm-bar i { display: block; height: 100%; width: 0; background: var(--accent); }
+.swarm-agent.working .swarm-bar i { animation: sbar var(--work, 2s) linear forwards; }
+.swarm-agent.done .swarm-bar i { width: 100%; }
+.swarm-agent.done.near .swarm-bar i { background: var(--ok); }
+.swarm-agent.done.far .swarm-bar i { background: var(--bad); }
+@keyframes sbar { to { width: 100%; } }
+.swarm-status { font-size: 12.5px; color: var(--muted); }
+.swarm-agent.done .swarm-status { color: var(--ink); }
+.swarm-scale { margin: 22px 8px 0; }
+.swarm-track { position: relative; height: 96px; border-bottom: 2px solid var(--muted); background: linear-gradient(to right, var(--bad-bg), var(--warn-bg) 50%, var(--ok-bg)); border-radius: 8px 8px 0 0; }
+.swarm-axis { position: relative; height: 16px; margin-top: 3px; font-size: 11px; color: var(--muted); }
+.swarm-axis span { position: absolute; transform: translateX(-50%); }
+.swarm-scale-label { font-size: 12px; margin-bottom: 4px; }
+.swarm-near { position: absolute; top: 0; bottom: 0; border-left: 2px dashed var(--muted); }
+.swarm-near span { position: absolute; top: 2px; left: 4px; font-size: 11px; color: var(--muted); }
+.swarm-real { position: absolute; top: 0; bottom: 0; border-left: 3px solid var(--ink); }
+.swarm-real span { position: absolute; top: 2px; right: 6px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.swarm-dot { position: absolute; width: 14px; height: 14px; padding: 0; margin-left: -7px; border-radius: 50%; border: 2px solid var(--card); background: var(--muted); opacity: 0; transform: translateY(-60px) scale(.4); transition: opacity .5s, transform .6s cubic-bezier(.2, 1.4, .4, 1); }
+.swarm-dot.in { opacity: 1; transform: none; }
+.swarm-dot.near { background: var(--ok); } .swarm-dot.far { background: var(--bad); }
+.swarm-result { margin-top: 14px; }
+.swarm-facts { margin: 8px 0 0; padding-left: 18px; font-size: 13px; display: flex; flex-direction: column; gap: 3px; }
+@media (prefers-reduced-motion: reduce) { .swarm-req.sending, .swarm-agent.working .swarm-bar i { animation: none; width: 100%; } .swarm-dot { transition: none; } }

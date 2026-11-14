@@ -119,6 +119,21 @@ much ("wide"). What they touched is the zone a fix can reasonably reach. The rea
   Docs, unit test files and functions are not scored. They are named in the line under the
   label. The other 3 PRs have no runs and say so.
 
+### Monte Carlo swarm (bottom of the Blast radius tab)
+
+Press **Run Monte Carlo swarm** to watch N agents get the same requirements, each write a fix,
+and land on a 0 to 100% similarity scale next to the real change. It replays real runs:
+5 agents on Sonnet 5.5 (`claude-sonnet-5-5`), recorded 2026-11-14, each alone in a clean copy of the
+base commit, all with the normal agent's prompt (`blast-prompts/normal.txt`). No agent runs in the demo.
+
+- Record: `data/tieto/ju26-issue-2283/swarm.json`. Rebuild with
+  `node scripts/record-swarm.mjs --setup`, then `--run`, then `--record` (`--model`, `--count`).
+- Maths: `src/lib/swarm.mjs`, served by `GET /api/swarm?pr=<id>`.
+- **Similarity rule.** Each change is a set: the product code files it touches, plus the functions in
+  them it edits that already existed (no docs, no unit tests). Similarity = shared / all (Jaccard).
+  "Similar" = 50% or more. "Agents agree with each other" = the average over every pair of agents.
+- Deep link: `?map=blast&swarm=1` plays it; `&agent=<n>` opens one agent in the side panel.
+
 ## What is real, what is recorded, what is rule-based
 
 | Part | Status |
