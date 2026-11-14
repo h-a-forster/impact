@@ -19,6 +19,7 @@ import path from "node:path";
 import { DATA } from "./paths.mjs";
 
 export const SIMILAR_AT = 0.5;
+const DEFAULT_MODEL = "claude-sonnet-5-5";
 const file = (prId, name) => path.join(DATA, "tieto", prId, name);
 const shopFile = (prId) => path.join(DATA, "shop", prId, "swarm.json");
 
@@ -135,6 +136,10 @@ export function buildSwarm(prId) {
     const parts = [...new Set(demo.map((r) => r.modelLabel))].map((l) => [l, demo.filter((r) => r.modelLabel === l).length]);
     sets.unshift({ id: "demo", madeUp: true, note: rec.demo.note, label: `Demo mix, made up: ${parts.map(([l, k]) => `${k} ${l}`).join(", ")}`, runs: demo.map((r) => r.key) });
   }
+  // The default plays real runs whenever there are any: the default model's, else the first real set.
+  // The made-up set stays in the menu.
+  const realSets = sets.filter((x) => !x.madeUp && x.runs.length);
+  const defaultSet = (realSets.find((x) => x.id === DEFAULT_MODEL) ?? realSets[0] ?? sets[0]).id;
   return {
     pr: prId,
     recorded: true,
@@ -147,8 +152,7 @@ export function buildSwarm(prId) {
     // The real change as sets, so the page can build the matrix (real change + agents, every pair).
     realThings: [...real.keys()],
     realLines: [...realLines.keys()],
-    // The demo default: the first set (the mix when there is one), all of its runs.
-    defaultSet: sets[0].id,
+    defaultSet,
     // Shown in the model list even when nothing is recorded for them.
     choices: ["demo", "mix", "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-2"],
     choiceLabels: { "claude-opus-5-5": "Opus 5.5", "claude-sonnet-5-5": "Sonnet 5.5", "claude-haiku-5-5": "Haiku 5.5", "claude-fable-5-2": "Fable 5.2" },
