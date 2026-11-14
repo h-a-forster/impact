@@ -4,7 +4,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const short = (sha) => (sha ?? "").slice(0, 7);
 const chip = (text, cls) => `<span class="chip ${esc(cls ?? text)}">${esc(text)}</span>`;
 
-const state = { revisions: null, prId: null, sha: null, level: "function", sel: null, model: null, notice: null, descView: "author", mapScope: "pr", full: null, fullStep: 0, fullRun: 0, fullTimer: null, blast: {} };
+const state = { hidden: {}, revisions: null, prId: null, sha: null, level: "function", sel: null, model: null, notice: null, mapScope: "pr", full: null, fullStep: 0, fullRun: 0, fullTimer: null, blast: {} };
 const sourceCache = new Map();
 
 // ---------- data ----------
@@ -132,24 +132,42 @@ function renderVerdict() {
 // ---------- PR description: the author's, or the AI-written PR in the team's shape ----------
 /** The agent's saved context for this PR. The Q&A agent answers from it. */
 const openContext = () => select({ type: "doc", file: `context/${state.prId}.md`, title: "context.md" });
+// Only the AI PR is shown. The author's commit message is no longer on screen (user's choice, 2026-11-14).
+// A PR with no AI PR saved still falls back to the author's text, so the card is never empty.
 function renderDescription() {
   const m = state.model, el = $("intentCard"), d = m.description;
-  const view = d.ai ? state.descView : "author";
-  const body = view === "ai"
+  const body = d.ai
     ? `<div class="tags">${d.ai.tags.map((t) => `<span class="tag ${esc(t.tone)}">${esc(t.label)}</span>`).join("")}</div>
        <p class="lead">${rich(d.ai.summary)}</p>
        <dl class="desc-grid">${d.ai.sections.map((s) => `<dt>${esc(s.title)}</dt><dd>${rich(s.text)}</dd>`).join("")}</dl>
        <div class="byline">${esc(d.ai.generatedBy)}</div>`
     : `${d.author.text.split("\n\n").map((p) => `<p>${rich(p)}</p>`).join("")}
        <div class="byline">Written by: ${esc(d.author.by)}</div>`;
-  el.innerHTML = `<div class="card-head"><h2>${esc(m.pr.title)}</h2>
-      <div class="tabs" role="tablist"><button type="button" data-view="author" class="${view === "author" ? "active" : ""}">Author's description</button><button type="button" data-view="ai" class="${view === "ai" ? "active" : ""}" ${d.ai ? "" : "disabled"}>AI PR</button></div></div>${body}${m.agent ? `<div class="byline">Agent snapshot (demo data): ${esc(m.agent.model)} · ${esc(m.agent.snapshot)} · <button type="button" class="link" data-ctx="1">context.md</button> (what the agent knew and decided)</div>` : ""}`;
+  el.innerHTML = `<div class="card-head"><div class="head-left"><h2>${d.ai ? "AI PR" : "Description"}</h2><span class="muted">${esc(m.pr.title)}</span></div>${cardToggle("intentCard")}</div>${body}${m.agent ? `<div class="byline">Agent snapshot (demo data): ${esc(m.agent.model)} · ${esc(m.agent.snapshot)} · <button type="button" class="link" data-ctx="1">context.md</button> (what the agent knew and decided)</div>` : ""}`;
   for (const b of el.querySelectorAll("[data-ctx]")) b.onclick = openContext;
-  for (const b of el.querySelectorAll("[data-view]")) b.onclick = () => {
-    state.descView = b.dataset.view;
-    renderDescription();
-  };
 }
+
+// ---------- show / hide for the big cards: AI PR, Impact map, Review steps ----------
+const cardToggle = (id) => `<button type="button" class="card-toggle" data-card="${id}" aria-expanded="${!state.hidden?.[id]}">${state.hidden?.[id] ? "▸ Show" : "▾ Hide"}</button>`;
+function applyCardToggles() {
+  for (const id of ["intentCard", "mapCard", "reviewCard"]) {
+    const hidden = Boolean(state.hidden?.[id]);
+    $(id)?.classList.toggle("collapsed", hidden);
+    const b = $(id)?.querySelector(".card-toggle");
+    if (b) {
+      b.textContent = hidden ? "▸ Show" : "▾ Hide";
+      b.setAttribute("aria-expanded", String(!hidden));
+    }
+  }
+}
+document.addEventListener("click", (ev) => {
+  const b = ev.target.closest?.(".card-toggle");
+  if (!b) return;
+  state.hidden = { ...state.hidden, [b.dataset.card]: !state.hidden?.[b.dataset.card] };
+  applyCardToggles();
+  // The map is drawn to fit its box, so draw it again when it comes back.
+  if (b.dataset.card === "mapCard" && !state.hidden.mapCard) renderGraph();
+});
 
 // ---------- graph ----------
 // Two ways to draw, picked by level (see drawGraph):
@@ -589,9 +607,8 @@ function renderBlast() {
   const things = (arr) => (arr.length ? arr.map((t) => `<code>${esc(t.label)}</code>${t.kind === "doc" ? " (doc)" : t.kind === "test" ? " (unit test)" : ""}`).join(", ") : "nothing");
   const head = `<thead><tr><th></th>${cols.map((c) => `<th class="${c.id === "real" ? "real" : ""}">${esc(c.label)}${c.id !== "real" && !c.ok ? note(`<span class="bad-text">the run failed</span>`) : c.noChange ? note("made no change") : ""}</th>`).join("")}</tr></thead>`;
   const secs = (r) => (r.startedAt && r.endedAt ? `${Math.max(1, Math.round((new Date(r.endedAt) - new Date(r.startedAt)) / 1000))} s` : "");
-  // Every part below the trust label is a fold you can open and close. What is open is kept while you click around.
-  const open = (state.blastOpen ??= { zones: true });
-  const fold = (id, title, hint, body) => `<details class="fold" data-fold="${id}" ${open[id] ? "open" : ""}><summary><span class="fold-title">${title}</span><span class="fold-hint">${hint}</span></summary><div class="fold-body">${body}</div></details>`;
+  // The picture and the table are always shown. The extras are small "show more" links.
+  const fold = (id, title, hint, body) => (id === "zones" || id === "files" ? body : `<details class="blast-runs"><summary>${title}: ${hint}</summary>${body}</details>`);
   const realCol = cols.find((c) => c.id === "real");
   el.innerHTML = `<p class="blast-what">We gave the same task to 3 agents: one careful, one normal, one that changes too much. The coloured zones show the files they touched. The thick outline is the real change.</p>
     <div class="blast-label ${esc(b.label.tone)}"><span class="stamp-label">Trust label</span><strong>${esc(b.label.text)}</strong><span>${esc(b.label.how)}</span></div>
@@ -629,7 +646,6 @@ function renderBlast() {
         <details><summary>What it said when it was done</summary><pre class="raw doc">${esc(r.reply ?? "No reply was saved.")}</pre></details>
         <details><summary>The full prompt, word for word</summary><pre class="raw doc">${esc(r.prompt ?? "")}</pre></details></div>`).join("")}
       <p class="muted">${esc(b.how.functions)} Callers come from ${esc(b.graphTool ?? "the recorded data")} (a saved run) and the recorded compiler data for this PR.</p>`)}`;
-  for (const d of el.querySelectorAll("[data-fold]")) d.ontoggle = () => (open[d.dataset.fold] = d.open);
   for (const btn of el.querySelectorAll("[data-blast]")) btn.onclick = () => selectBlast(btn.dataset.blast);
 }
 /** Side panel for one box: what each of the 4 changes did there. */
@@ -688,16 +704,12 @@ async function renderSwarm({ autoplay = false, model = null, count = null } = {}
     if (swarmUI.data.recorded) swarmDefault();
   }
   const s = swarmUI.data;
-  // The whole swarm is one fold. It opens by itself when the swarm plays.
-  if (autoplay) swarmUI.open = true;
-  const wrap = (body) => `<details class="fold swarm" id="swarmFold" ${swarmUI.open ? "open" : ""}><summary><span class="fold-title">Monte Carlo swarm</span><span class="fold-hint">Give the same task to many agents. How often does one end up close to the real change?</span></summary><div class="fold-body">${body}</div></details>`;
-  const keepOpen = () => ($("swarmFold").ontoggle = () => (swarmUI.open = $("swarmFold").open));
+  const wrap = (body) => `<div class="swarm"><div class="swarm-head"><h3>Monte Carlo swarm</h3><span class="muted">Give the same task to many agents. How often does one end up close to the real change?</span></div>${body}</div>`;
   if (!s?.recorded) {
     el.innerHTML = wrap(`<div class="muted">${esc(s?.message ?? "")}</div>`);
-    keepOpen();
     return;
   }
-  const label = (id) => (id === "mix" ? swarmSet("mix")?.label ?? "Mix" : s.choiceLabels[id] ?? id);
+  const label = (id) => (s.choiceLabels[id] ?? swarmSet(id)?.label ?? id);
   const def = swarmSet(s.defaultSet);
   el.innerHTML = wrap(`
     <div class="swarm-controls">
@@ -705,10 +717,9 @@ async function renderSwarm({ autoplay = false, model = null, count = null } = {}
       <label>Agents <select id="swarmCount">${Array.from({ length: s.maxAgents }, (_, i) => i + 1).map((n) => `<option value="${n}" ${n === swarmUI.count ? "selected" : ""}>${n}</option>`).join("")}</select></label>
       <button type="button" class="primary" id="swarmGo">▶ Run Monte Carlo swarm</button>
     </div>
-    <div class="muted swarm-rec">Replays real runs recorded ${esc(s.recordedAt.slice(0, 10))}. No agent runs now. Recorded for the demo: ${esc(def.label)}.</div>
+    <div class="muted swarm-rec">Replays runs recorded ${esc(s.recordedAt.slice(0, 10))}. No agent runs now. Plays by default: ${esc(def.label)}.</div>
     <div id="swarmNote" class="swarm-note" ${swarmUI.note ? "" : "hidden"}>${esc(swarmUI.note ?? "")}</div>
     <div id="swarmStage" class="swarm-stage" hidden></div>`);
-  keepOpen();
   $("swarmModel").onchange = (ev) => {
     stopSwarm();
     swarmUI.model = ev.target.value;
@@ -756,10 +767,11 @@ function playSwarm() {
     seen.set(r.score, k + 1);
     return k;
   });
-  stage.innerHTML = `<div class="swarm-flow">
+  const set = swarmSet(swarmUI.model);
+  stage.innerHTML = `${set.madeUp ? `<div class="swarm-madeup"><span class="tag warn">Made up for the demo</span> ${esc(set.note)}</div>` : ""}<div class="swarm-flow">
       <div class="swarm-req" id="swarmReq"><b>Requirements</b><span>Same text for every agent</span></div>
       <div class="swarm-agents">${runs.map((r, i) => `<button type="button" class="swarm-agent" data-run="${esc(r.key)}">
-        <span class="swarm-name">Agent ${i + 1}<span class="swarm-model">${esc(r.modelLabel)}</span></span>
+        <span class="swarm-name">Agent ${i + 1}<span class="swarm-model">${esc(r.modelLabel)}${r.madeUp ? " · made up" : ""}</span></span>
         <span class="swarm-bar"><i></i></span>
         <span class="swarm-status">waiting</span></button>`).join("")}</div>
     </div>
@@ -822,7 +834,7 @@ function playSwarm() {
     });
     const res = $("swarmResult");
     res.hidden = false;
-    res.innerHTML = `<div class="blast-label ${tone}"><span class="stamp-label">Swarm result</span>
+    res.innerHTML = `<div class="blast-label ${tone}"><span class="stamp-label">Swarm result${runs.some((r) => r.madeUp) ? " · made up for the demo" : ""}</span>
         <strong>${near} of ${runs.length} agent${runs.length === 1 ? "" : "s"} ended up similar to the real change</strong>
         <span>"Similar" means ${s.similarAt}% or more. Average similarity: ${avg}%.${pairs ? ` The agents agree with each other ${Math.round((sum / pairs) * 100)}% of the time.` : ""}${byModel.length > 1 ? ` By model: ${byModel.join(" · ")}.` : ""}</span></div>
       <ul class="swarm-facts">
@@ -830,14 +842,13 @@ function playSwarm() {
         ${topExtra ? `<li><b>Agents did this, the real change did not:</b> <code>${esc(topExtra[0])}</code> (${topExtra[1]} of ${runs.length})</li>` : `<li>No agent touched code the real change left alone.</li>`}
         <li class="muted">${esc(s.notBuilt)}</li>
       </ul>
-      <details class="fold" id="swarmMatrixFold" ${swarmUI.matrixOpen ? "open" : ""}><summary><span class="fold-title">Who is like whom</span><span class="fold-hint">Every agent against the real change and against each other</span></summary><div class="fold-body"><div id="swarmMatrix" class="swarm-matrix"></div></div></details>
-      <details class="fold"><summary><span class="fold-title">How similarity is worked out</span><span class="fold-hint">Two ways to measure, and the prompt</span></summary><div class="fold-body">
+      <div id="swarmMatrix" class="swarm-matrix"></div>
+      <details class="blast-runs"><summary>How similarity is worked out</summary>
         <p><b>By files and functions</b> (the main score). We list what each change touches in product code (not docs, not unit tests): the files, and the functions in them that already existed. The real change touches: ${s.real.map((x) => `<code>${esc(x)}</code>`).join(", ")}. Similarity = things both changes touch, divided by things either one touches. 100% means the very same files and functions.</p>
         <p><b>By changed lines.</b> We list every code line each change adds or removes in product code (blank lines left out, spaces squeezed). Similarity = lines both changes add or remove, divided by lines either one does. This one sees inside a function: two different fixes in the same function score low. The real change adds or removes ${s.realLines.length} lines.</p>
         <p>${esc(s.how)}</p>
         <details><summary>The prompt every agent got, word for word</summary><pre class="raw doc">${esc(s.prompt.text)}</pre></details>
-      </div></details>`;
-    $("swarmMatrixFold").ontoggle = () => (swarmUI.matrixOpen = $("swarmMatrixFold").open);
+      </details>`;
     renderSwarmMatrix(runs);
   });
 }
@@ -851,7 +862,7 @@ function renderSwarmMatrix(runs) {
   const el = $("swarmMatrix"), s = swarmUI.data;
   if (!el) return;
   const measure = swarmUI.measure ?? "things";
-  const rows = [{ key: "real", name: "Real change", sub: "Tieto's AI-written branch", set: measure === "things" ? s.realThings : s.realLines }, ...runs.map((r, i) => ({ key: r.key, name: `Agent ${i + 1}`, sub: r.modelLabel, set: measure === "things" ? r.things : r.lines }))];
+  const rows = [{ key: "real", name: "Real change", sub: "Tieto's AI-written branch", set: measure === "things" ? s.realThings : s.realLines }, ...runs.map((r, i) => ({ key: r.key, name: `Agent ${i + 1}`, sub: r.modelLabel + (r.madeUp ? " · made up" : ""), set: measure === "things" ? r.things : r.lines }))];
   const cell = (a, b) => {
     if (a.key === b.key) return `<td class="self">—</td>`;
     const v = swarmJac(a.set, b.set);
@@ -861,7 +872,7 @@ function renderSwarmMatrix(runs) {
     const others = rows.filter((b) => b.key !== a.key && b.key !== "real");
     return others.length ? `${Math.round(others.reduce((x, b) => x + swarmJac(a.set, b.set), 0) / others.length)}%` : "—";
   };
-  el.innerHTML = `<div class="swarm-matrix-head">
+  el.innerHTML = `<div class="swarm-matrix-head"><h3>Who is like whom</h3>
       <div class="tabs" role="tablist"><button type="button" data-measure="things" class="${measure === "things" ? "active" : ""}">Files and functions</button><button type="button" data-measure="lines" class="${measure === "lines" ? "active" : ""}">Changed lines</button></div></div>
     <div class="muted swarm-matrix-sub">${measure === "things" ? "How alike two changes are by the files and functions they touch." : "How alike two changes are by the exact code lines they add or remove."} Darker = more alike. Row 1 is each agent against the real change.</div>
     <table class="swarm-table"><thead><tr><th></th>${rows.map((b) => `<th class="${b.key === "real" ? "real" : ""}">${esc(b.name)}<div class="cell-note">${esc(b.sub)}</div></th>`).join("")}<th class="avg">Average with the other agents</th></tr></thead>
@@ -876,7 +887,7 @@ function swarmSideHtml(sel) {
   const r = swarmUI.data?.runs.find((x) => x.key === sel.key);
   if (!r) return "";
   const list = (arr) => (arr.length ? arr.map((x) => `<code>${esc(x)}</code>`).join(", ") : "nothing");
-  return `<h2>Agent ${sel.agent ?? r.n} · ${esc(r.modelLabel)}</h2><div class="where">Monte Carlo swarm · took ${r.seconds ?? "?"} s · recorded ${esc(swarmUI.data.recordedAt.slice(0, 10))}</div>
+  return `<h2>Agent ${sel.agent ?? r.n} · ${esc(r.modelLabel)}</h2><div class="where">Monte Carlo swarm · ${r.madeUp ? "made up for the demo" : `took ${r.seconds ?? "?"} s · recorded ${esc(swarmUI.data.recordedAt.slice(0, 10))}`}</div>${r.madeUp ? `<div class="callout bad">${esc(r.reply)}</div>` : ""}
     <div class="callout ${r.similar ? "ok" : "bad"}"><strong>${r.score}% like the real change</strong> by files and functions · <strong>${r.lineScore}%</strong> by changed lines.</div>
     <dl class="kv"><dt>Both touched</dt><dd>${list(r.shared)}</dd><dt>Only the real change</dt><dd>${list(r.missed)}</dd><dt>Only this agent</dt><dd>${list(r.extra)}</dd></dl>
     <h3>What it changed</h3>${r.changes.length ? r.changes.map((f) => changeBlock(f.file, parseHunks(f.patch), `${f.added} added, ${f.removed} removed`)).join("<div style='height:8px'></div>") : `<div class="muted">No change.</div>`}
@@ -889,7 +900,7 @@ function renderReview() {
   const cite = (c) => (c.valid ? `<button type="button" class="link mono" data-src="${esc(c.file)}" data-line="${c.line}">${esc(c.file)}:${c.line}</button>` : `<span class="mono bad-text" title="${esc(c.problem)}">${esc(c.file)}:${esc(c.line)} (invalid)</span>`);
   const c1 = m.classifier1, c2 = m.classifier2;
   const sev = (s) => `<span class="tag ${SEVERITY_TONE[s] ?? ""}">${esc(s)}</span>`;
-  el.innerHTML = `<div class="card-head"><h2>Review steps</h2><span class="muted">The rules come from <button type="button" class="link" data-doc="REVIEW.md">REVIEW.md</button> and <button type="button" class="link" data-doc="review-policy.yml">review-policy.yml</button></span></div>
+  el.innerHTML = `<div class="card-head"><div class="head-left"><h2>Review steps</h2><span class="muted">The rules come from <button type="button" class="link" data-doc="REVIEW.md">REVIEW.md</button> and <button type="button" class="link" data-doc="review-policy.yml">review-policy.yml</button></span></div>${cardToggle("reviewCard")}</div>
     <div class="step"><div class="step-head"><span class="step-n">1</span><strong>Classifier 1</strong> ${sev(c1.severity)} <span class="muted">rule ${esc(c1.rule)} · before the AI review</span></div>
       <div>${esc(c1.reason)}</div></div>
     <div class="step"><div class="step-head"><span class="step-n">2</span><strong>AI review</strong> <span class="tag ${r.findings.length ? "warn" : "ok"}">${r.findings.length} finding${r.findings.length === 1 ? "" : "s"}</span> <span class="muted">advice only</span></div>
@@ -1168,6 +1179,7 @@ function render() {
   renderDecision();
   renderAgent();
   renderSide();
+  applyCardToggles();
 }
 
 // ---------- ask the agent that wrote the PR (demo: sample answers saved with the PR) ----------
@@ -1235,7 +1247,8 @@ async function init() {
   const q = new URLSearchParams(location.search);
   if (q.get("embed") === "1") document.body.classList.add("embed");
   if (q.get("chat") === "1") chat.open = true;
-  if (["author", "ai"].includes(q.get("desc"))) state.descView = q.get("desc");
+  // ?hide=intentCard,mapCard,reviewCard starts with those cards hidden.
+  for (const id of (q.get("hide") ?? "").split(",").filter(Boolean)) state.hidden[id] = true;
   const linkedRepo = q.get("repo");
   const linkedPr = q.get("pr") ? state.revisions.prs.find((p) => String(p.number) === q.get("pr") && (!linkedRepo || p.repo === linkedRepo)) : null;
   if (linkedRepo && !linkedPr) {
@@ -1267,14 +1280,6 @@ async function init() {
     if (q.get("box")) selectBlast(q.get("box"));
     // &swarm=1 plays the Monte Carlo swarm (&model=<id>&n=<count> to pick first). &agent=<n> also opens that agent in the side panel.
     if (q.get("measure") === "lines") swarmUI.measure = "lines";
-    // &open=zones,files,numbers,how,swarm,matrix opens those folds (for screenshots).
-    if (q.get("open")) {
-      const want = q.get("open").split(",");
-      state.blastOpen = Object.fromEntries(["zones", "files", "numbers", "how"].map((k) => [k, want.includes(k)]));
-      swarmUI.open = want.includes("swarm");
-      swarmUI.matrixOpen = want.includes("matrix");
-      render();
-    }
     if (q.get("swarm") === "1") {
       await renderSwarm({ autoplay: true, model: q.get("model"), count: Number(q.get("n")) || null });
       if (q.get("agent")) {

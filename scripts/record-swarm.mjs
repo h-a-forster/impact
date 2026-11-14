@@ -123,6 +123,20 @@ if (has("record")) {
     notBuilt: "This machine has no .NET SDK. Nobody built the code or ran the unit tests. We do not know if any agent's fix works.",
     // The demo mix the Run button plays by default: [model, run number]. Picked before looking at the results.
     mix: [["claude-opus-5-5", 1], ["claude-sonnet-5-5", 1], ["claude-sonnet-5-5", 2], ["claude-haiku-5-5", 1], ["claude-haiku-5-5", 2]],
+    // MADE UP FOR THE DEMO (shown with a "made up" tag on screen). The real runs all made the same change,
+    // so this set shows what variation looks like. Each agent is a REAL recorded change (the code is real),
+    // but the model name on it is made up. "from": real = Tieto's branch, blast:<id> = a Blast radius run,
+    // swarm:<model>:<n> = a swarm run. "only" keeps just those files. "seconds" is for the animation.
+    demo: {
+      note: "Made up for the demo. Each agent's code is a real recorded change, but the model names on them are made up. The real runs all made the same change, so they show no variation.",
+      runs: [
+        { model: "claude-opus-5-5", from: "real", only: ["src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"], seconds: 130 },
+        { model: "claude-sonnet-5-5", from: "swarm:claude-sonnet-5-5:1", seconds: 18 },
+        { model: "claude-sonnet-5-5", from: "blast:normal", seconds: 92 },
+        { model: "claude-haiku-5-5", from: "blast:wide", only: ["src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"], seconds: 50 },
+        { model: "claude-haiku-5-5", from: "blast:wide", seconds: 48 },
+      ],
+    },
     models,
   };
   fs.writeFileSync(path.join(prDir, "swarm.json"), JSON.stringify(out, null, 1) + "\n");

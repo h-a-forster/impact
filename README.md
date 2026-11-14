@@ -126,8 +126,10 @@ and land on a 0 to 100% similarity scale next to the real change. It replays rea
 2026-11-14, each agent alone in a clean copy of the base commit, all with the normal agent's prompt
 (`blast-prompts/normal.txt`). No agent runs in the demo.
 
-- **Demo default:** a mix of 5 agents: 1 Opus 5.5, 2 Sonnet 5.5, 2 Haiku 5.5. Also recorded:
-  5 Sonnet 5.5 agents. The menus offer more (Fable 5.2, up to 10 agents); a pick that is not
+- **Demo default: "Demo mix, made up"** (tagged "made up for the demo" on screen). The real runs all
+  made the same change, so this set shows variation: each agent is a REAL recorded change (Tieto's
+  branch, a Blast radius run, or a swarm run; see `demo` in `swarm.json`) with a made-up model name.
+  Real sets: "Mix, real runs" (1 Opus 5.5, 2 Sonnet 5.5, 2 Haiku 5.5) and 5 Sonnet 5.5 agents. The menus offer more (Fable 5.2, up to 10 agents); a pick that is not
   recorded plays the demo mix and says so on screen.
 - Record: `data/tieto/ju26-issue-2283/swarm.json`. Rebuild with
   `node scripts/record-swarm.mjs --setup`, then `--run`, then `--record` (`--model`, `--count`).
@@ -138,8 +140,12 @@ and land on a 0 to 100% similarity scale next to the real change. It replays rea
 - **Two scores per agent:** like the real change, and like the other agents (average). The
   "Who is like whom" matrix compares every pair (real change + each agent), by files and functions
   or by **changed lines** (the exact code lines added or removed in product code; Jaccard again).
-- **Folds:** everything under the trust label opens and closes (zone picture open by default).
-- Deep link: `?map=blast&swarm=1` plays it; `&model=<id|mix>&n=<count>` picks first; `&agent=<n>` opens one agent; `&measure=lines` sets the matrix; `&open=zones,files,numbers,how,swarm,matrix` opens folds.
+- Deep link: `?map=blast&swarm=1` plays it; `&model=<id|mix>&n=<count>` picks first; `&agent=<n>` opens one agent; `&measure=lines` sets the matrix.
+
+### Page layout
+
+- The description card shows only the AI PR (the author's commit message is no longer shown).
+- The AI PR, Impact map and Review steps cards each have a Hide / Show button. `?hide=intentCard,mapCard,reviewCard` starts with them hidden.
 
 ## What is real, what is recorded, what is rule-based
 

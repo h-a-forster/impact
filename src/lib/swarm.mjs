@@ -57,41 +57,67 @@ export function similarity(a, b) {
 export function buildSwarm(prId) {
   if (!fs.existsSync(file(prId, "swarm.json")) || !fs.existsSync(file(prId, "blast.json"))) return { pr: prId, recorded: false, message: "No swarm runs recorded for this PR yet." };
   const rec = JSON.parse(fs.readFileSync(file(prId, "swarm.json"), "utf8"));
-  const realFiles = JSON.parse(fs.readFileSync(file(prId, "blast.json"), "utf8")).real.files;
+  const blast = JSON.parse(fs.readFileSync(file(prId, "blast.json"), "utf8"));
+  const realFiles = blast.real.files;
   const real = thingsOf(realFiles);
   const realLines = linesOf(realFiles);
   const pct = (x) => Math.round(x * 100);
-  const models = Object.entries(rec.models).map(([id, m]) => {
-    const sets = m.runs.map((r) => thingsOf(r.files));
-    const runs = m.runs.map((r, i) => {
-      const mine = sets[i];
-      const score = similarity(mine, real);
-      return {
-        key: `${id}:${r.n}`,
-        model: id,
-        modelLabel: m.label,
-        n: r.n,
-        things: [...mine.keys()],
-        lines: [...linesOf(r.files).keys()],
-        lineScore: pct(similarity(linesOf(r.files), realLines)),
-        ok: r.exitCode === 0,
-        noChange: r.files.length === 0,
-        score: pct(score),
-        similar: score >= SIMILAR_AT,
-        shared: [...mine.values()].filter((t) => real.has(t.id)).map((t) => t.label),
-        missed: [...real.values()].filter((t) => !mine.has(t.id)).map((t) => t.label),
-        extra: [...mine.values()].filter((t) => !real.has(t.id)).map((t) => t.label),
-        files: r.files.length,
-        added: r.files.reduce((s, f) => s + f.added, 0),
-        removed: r.files.reduce((s, f) => s + f.removed, 0),
-        touchedDocs: r.files.some((f) => f.kind === "doc"),
-        touchedTests: r.files.some((f) => f.kind === "test"),
+  const LABEL = Object.fromEntries(Object.entries(rec.models).map(([id, m]) => [id, m.label]));
+  /** One agent's run, scored against the real change. */
+  const makeRun = ({ key, model, n, files, ok, seconds, reply, madeUp = false, from = null }) => {
+    const mine = thingsOf(files);
+    const score = similarity(mine, real);
+    return {
+      key,
+      model,
+      modelLabel: LABEL[model] ?? model,
+      n,
+      madeUp,
+      from,
+      things: [...mine.keys()],
+      lines: [...linesOf(files).keys()],
+      lineScore: pct(similarity(linesOf(files), realLines)),
+      ok,
+      noChange: files.length === 0,
+      score: pct(score),
+      similar: score >= SIMILAR_AT,
+      shared: [...mine.values()].filter((t) => real.has(t.id)).map((t) => t.label),
+      missed: [...real.values()].filter((t) => !mine.has(t.id)).map((t) => t.label),
+      extra: [...mine.values()].filter((t) => !real.has(t.id)).map((t) => t.label),
+      files: files.length,
+      added: files.reduce((s, f) => s + f.added, 0),
+      removed: files.reduce((s, f) => s + f.removed, 0),
+      touchedDocs: files.some((f) => f.kind === "doc"),
+      touchedTests: files.some((f) => f.kind === "test"),
+      seconds,
+      reply,
+      changes: files.map((f) => ({ file: f.file, kind: f.kind, added: f.added, removed: f.removed, patch: f.patch })),
+    };
+  };
+  const models = Object.entries(rec.models).map(([id, m]) => ({
+    id,
+    label: m.label,
+    runs: m.runs.map((r) =>
+      makeRun({
+        key: `${id}:${r.n}`, model: id, n: r.n, files: r.files, ok: r.exitCode === 0, reply: r.reply,
         seconds: r.startedAt && r.endedAt ? Math.round((new Date(r.endedAt) - new Date(r.startedAt)) / 1000) : null,
-        reply: r.reply,
-        changes: r.files.map((f) => ({ file: f.file, kind: f.kind, added: f.added, removed: f.removed, patch: f.patch })),
-      };
+      })),
+  }));
+  // The made-up demo set: real recorded changes, with made-up model names on them (see record-swarm.mjs).
+  const SOURCE_NAME = { real: "Tieto's AI-written branch (the real change)", "blast:minimal": "the careful agent's run", "blast:normal": "the normal agent's run", "blast:wide": "the run of the agent that changes too much" };
+  const filesFrom = (from) => {
+    if (from === "real") return realFiles;
+    if (from.startsWith("blast:")) return blast.runs.find((r) => r.id === from.slice(6))?.files ?? [];
+    const [, model, n] = from.split(":");
+    return rec.models[model]?.runs.find((r) => r.n === Number(n))?.files ?? [];
+  };
+  const demo = (rec.demo?.runs ?? []).map((d, i) => {
+    const files = filesFrom(d.from).filter((f) => !d.only || d.only.includes(f.file));
+    const fromName = SOURCE_NAME[d.from] ?? `swarm run ${d.from.split(":").slice(1).join(" #")}`;
+    return makeRun({
+      key: `demo:${i + 1}`, model: d.model, n: i + 1, files, ok: true, seconds: d.seconds ?? null, madeUp: true, from: d.from,
+      reply: `Made up for the demo. This code is a real recorded change: ${fromName}${d.only ? `, only ${d.only.map((x) => x.split("/").pop()).join(", ")}` : ""}. The model name on it is made up.`,
     });
-    return { id, label: m.label, runs };
   });
   // What the Run button can play: each model on its own, and the demo mix. Only recorded runs, never made up.
   const runOf = (model, n) => models.find((m) => m.id === model)?.runs.find((r) => r.n === n);
@@ -100,7 +126,11 @@ export function buildSwarm(prId) {
   if (mix.length) {
     // In the order the mix lists them.
     const parts = [...new Set(mix.map((r) => r.modelLabel))].map((l) => [l, mix.filter((r) => r.modelLabel === l).length]);
-    sets.unshift({ id: "mix", label: `Mix: ${parts.map(([l, k]) => `${k} ${l}`).join(", ")}`, runs: mix.map((r) => r.key) });
+    sets.unshift({ id: "mix", label: `Mix, real runs: ${parts.map(([l, k]) => `${k} ${l}`).join(", ")}`, runs: mix.map((r) => r.key) });
+  }
+  if (demo.length) {
+    const parts = [...new Set(demo.map((r) => r.modelLabel))].map((l) => [l, demo.filter((r) => r.modelLabel === l).length]);
+    sets.unshift({ id: "demo", madeUp: true, note: rec.demo.note, label: `Demo mix, made up: ${parts.map(([l, k]) => `${k} ${l}`).join(", ")}`, runs: demo.map((r) => r.key) });
   }
   return {
     pr: prId,
@@ -117,10 +147,10 @@ export function buildSwarm(prId) {
     // The demo default: the first set (the mix when there is one), all of its runs.
     defaultSet: sets[0].id,
     // Shown in the model list even when nothing is recorded for them.
-    choices: ["mix", "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-2"],
+    choices: ["demo", "mix", "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-2"],
     choiceLabels: { "claude-opus-5-5": "Opus 5.5", "claude-sonnet-5-5": "Sonnet 5.5", "claude-haiku-5-5": "Haiku 5.5", "claude-fable-5-2": "Fable 5.2" },
     maxAgents: 10,
     sets,
-    runs: models.flatMap((m) => m.runs),
+    runs: [...demo, ...models.flatMap((m) => m.runs)],
   };
 }
