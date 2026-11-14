@@ -620,7 +620,10 @@ export function buildModel(revisions, prId, sha, opts = {}) {
   const review = finalizeReview(reviewRecord, ctx, reviewInput);
   // Every commit up to the selected one counts: one untrusted commit keeps the whole change out of the fast lane.
   const authors = pr.commits.filter((c) => c.index <= commit.index).map((c) => authorOf(c.sha));
-  const c2 = classifier2(policy, { initial: c1, checks, evidence, review, changedFiles: changed, authors });
+  // Everything the author wrote that the reviewer reads: the title, the brief and its claims.
+  const briefText = ["author", "why", "before", "after", "preserve", "approach", "alternatives", "rollback"].map((key) => brief?.[key]);
+  const description = [pr.title, ...briefText, ...(briefRev.openGaps ?? []), ...(briefRev.claims ?? []).map((c) => c.text)].filter((t) => typeof t === "string").join("\n");
+  const c2 = classifier2(policy, { initial: c1, checks, evidence, review, changedFiles: changed, authors, description });
 
   return {
     ...common,

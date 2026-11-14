@@ -1,5 +1,5 @@
 import YAML from "yaml";
-import { readFileAt } from "./git.mjs";
+import { addressesAnAgent, readFileAt } from "./git.mjs";
 
 export const ROUTES = {
   WAITING: "Waiting for checks or evidence",
@@ -52,6 +52,15 @@ function fastLaneHold(rules, files, authors) {
   const onList = (a) => Array.isArray(trusted) && trusted.includes(a);
   if (!authors?.length || !authors.every(onList)) return { rule: "C2-UNTRUSTED-AUTHOR", text: "The author is not on the team's trusted list for the fast lane." };
   return null;
+}
+
+/**
+ * A description that speaks to the AI reviewer is trying to steer it. If the reviewer obeyed,
+ * its silence proves nothing, so the fast lane does not count on it.
+ */
+function descriptionHold(description) {
+  if (!addressesAnAgent(description)) return null;
+  return { rule: "C2-ADDRESSES-REVIEWER", text: "The PR description contains text addressed to the AI reviewer or an agent, so a silent review does not count." };
 }
 
 /**
@@ -147,7 +156,7 @@ export function classifier1(policy, facts) {
  * review and checks. Keeps or raises severity. Picks exactly one route.
  */
 export function classifier2(policy, input) {
-  const { initial, checks, evidence, review, changedFiles, authors } = input;
+  const { initial, checks, evidence, review, changedFiles, authors, description } = input;
   const files = changedFiles.map((f) => f.file);
   let severity = initial.severity;
   const notes = [];
@@ -200,7 +209,7 @@ export function classifier2(policy, input) {
     const requiredPassed = checks.length > 0 && (policy.required_checks ?? []).every((name) => checks.some((c) => c.name === name && c.status === "passed"));
     const reviewerSilent = reviewAvailable && Array.isArray(review.findings) && review.findings.length === 0;
     const qualifies = severity === "Low" && allow && requiredPassed && reviewerSilent;
-    const hold = qualifies ? fastLaneHold(policy.auto_merge_dry_run, files, authors) : null;
+    const hold = qualifies ? (descriptionHold(description) ?? fastLaneHold(policy.auto_merge_dry_run, files, authors)) : null;
     if (hold) {
       route = ROUTES.HUMAN;
       rule = hold.rule;
