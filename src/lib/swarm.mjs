@@ -70,7 +70,9 @@ export function buildSwarm(prId) {
   /** One agent's run, scored against the real change. */
   const makeRun = ({ key, model, n, files, ok, seconds, reply, madeUp = false, from = null }) => {
     const mine = thingsOf(files);
-    const score = similarity(mine, real);
+    // A failed run, or one that changed nothing, agrees with nothing (two empty sets would score 100%).
+    const counts = ok && files.length > 0;
+    const score = counts ? similarity(mine, real) : 0;
     return {
       key,
       model,
@@ -80,7 +82,7 @@ export function buildSwarm(prId) {
       from,
       things: [...mine.keys()],
       lines: [...linesOf(files).keys()],
-      lineScore: pct(similarity(linesOf(files), realLines)),
+      lineScore: counts ? pct(similarity(linesOf(files), realLines)) : 0,
       ok,
       noChange: files.length === 0,
       score: pct(score),

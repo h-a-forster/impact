@@ -9,6 +9,7 @@ import { buildModel, demoRevisions, loadBrief, loadRevisions } from "../src/lib/
 import { loadRun } from "../src/lib/runner.mjs";
 import { decisionView, recordDecision } from "../src/lib/decisions.mjs";
 import { findPr, prSummary } from "../src/lib/github.mjs";
+import { buildSwarm } from "../src/lib/swarm.mjs";
 import { DATA } from "../src/lib/paths.mjs";
 import { ROOT } from "../src/lib/paths.mjs";
 
@@ -212,6 +213,24 @@ group = "Demo PRs";
   const pr = demo.prs.find((p) => p.id === "ju26-issue-2283");
   const files = buildModel(demo, pr.id, pr.commits[1].sha).diff.files.map((f) => f.file);
   check("made-up commit 2 lists each edited file once", [files.length, new Set(files).size], [4, 4]);
+}
+
+// ---- 9. Swarm agreement -----------------------------------------------------
+group = "Swarm agreement";
+{
+  const similar = (prId) => buildSwarm(prId).runs.map((r) => r.similar);
+  check("docs-only change: agents that edit the same doc agree", similar("docs-example"), [true, true, true, true, true]);
+  // A docs-only real change, against a run that failed and one that changed nothing.
+  const doc = { file: "docs/pricing.md", kind: "doc", added: 1, removed: 0, patch: "@@ -1 +1 @@\n+x", functions: [] };
+  const run = (n, exitCode, files) => ({ n, exitCode, files, reply: "" });
+  const dir = path.join(DATA, "shop", `eval-swarm-${process.pid}`);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "swarm.json"), JSON.stringify({ real: { files: [doc] }, models: { m: { label: "M", runs: [run(1, 1, []), run(2, 0, []), run(3, 0, [doc])] } } }));
+  try {
+    check("a failed run or one that changed nothing does not agree", similar(path.basename(dir)), [false, false, true]);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 // ---- Report ---------------------------------------------------------------

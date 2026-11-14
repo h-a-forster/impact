@@ -1020,7 +1020,7 @@ function swarmVerdict(runs) {
   let pairs = 0, sum = 0;
   for (let i = 0; i < runs.length; i++) for (let j = i + 1; j < runs.length; j++) {
     pairs++;
-    sum += swarmJac(runs[i].things, runs[j].things) / 100;
+    sum += swarmPair(runs[i], runs[j], runs[i].things, runs[j].things) / 100;
   }
   const count = (list) => {
     const m = new Map();
@@ -1038,6 +1038,8 @@ function swarmVerdict(runs) {
   });
   return { near, pairs, sum, topMiss, topExtra, avg, tone, byModel };
 }
+/** Two changes compared, in whole percent. A failed run or one that changed nothing is like nothing. */
+const swarmPair = (a, b, setA, setB) => (a.ok === false || a.noChange || b.ok === false || b.noChange ? 0 : swarmJac(setA, setB));
 /** Jaccard of two lists, in whole percent: shared / all. */
 function swarmJac(a, b) {
   const A = new Set(a), all = new Set([...a, ...b]);
@@ -1048,15 +1050,15 @@ function renderSwarmMatrix(runs) {
   const el = $("swarmMatrix"), s = swarmUI.data;
   if (!el) return;
   const measure = swarmUI.measure ?? "things";
-  const rows = [{ key: "real", name: "Real change", sub: SESSION ? "the pull request under review" : "Tieto's AI-written branch", set: measure === "things" ? s.realThings : s.realLines }, ...runs.map((r, i) => ({ key: r.key, name: `Agent ${i + 1}`, sub: r.modelLabel + (r.madeUp ? " · made up" : ""), set: measure === "things" ? r.things : r.lines }))];
+  const rows = [{ key: "real", name: "Real change", sub: SESSION ? "the pull request under review" : "Tieto's AI-written branch", set: measure === "things" ? s.realThings : s.realLines }, ...runs.map((r, i) => ({ key: r.key, ok: r.ok, noChange: r.noChange, name: `Agent ${i + 1}`, sub: r.modelLabel + (r.madeUp ? " · made up" : ""), set: measure === "things" ? r.things : r.lines }))];
   const cell = (a, b) => {
     if (a.key === b.key) return `<td class="self">—</td>`;
-    const v = swarmJac(a.set, b.set);
+    const v = swarmPair(a, b, a.set, b.set);
     return `<td style="--v:${v}%" title="${esc(a.name)} and ${esc(b.name)}: ${v}% alike">${v}%</td>`;
   };
   const avgOthers = (a) => {
     const others = rows.filter((b) => b.key !== a.key && b.key !== "real");
-    return others.length ? `${Math.round(others.reduce((x, b) => x + swarmJac(a.set, b.set), 0) / others.length)}%` : "—";
+    return others.length ? `${Math.round(others.reduce((x, b) => x + swarmPair(a, b, a.set, b.set), 0) / others.length)}%` : "—";
   };
   el.innerHTML = `<div class="swarm-matrix-head"><h3>Who is like whom</h3>
       <div class="tabs" role="tablist"><button type="button" data-measure="things" class="${measure === "things" ? "active" : ""}">Files and functions</button><button type="button" data-measure="lines" class="${measure === "lines" ? "active" : ""}">Changed lines</button></div></div>
