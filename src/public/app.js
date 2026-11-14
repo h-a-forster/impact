@@ -384,14 +384,16 @@ function renderGraph() {
     b.onclick = () => setScope(b.dataset.scope);
   }
   // The "Blast radius" tab has its own picture (renderBlast). The map and its legends are hidden by CSS.
-  const blast = state.mapScope === "blast";
+  // "Blast radius" and "Monte Carlo swarm" are tabs with their own content. The map and its legends are hidden by CSS.
+  const blast = state.mapScope === "blast", swarm = state.mapScope === "swarm";
   $("mapCard").dataset.scope = state.mapScope;
   $("blastView").hidden = !blast;
-  $("swarmView").hidden = !blast;
-  if (!blast) stopSwarm();
+  $("swarmView").hidden = !swarm;
+  if (!swarm) stopSwarm();
   else if (swarmUI.pr !== state.prId) renderSwarm();
   $("fullBar").hidden = !full;
   if (blast) return renderBlast();
+  if (swarm) return;
   $("legendPr").hidden = full;
   $("legendFull").hidden = !full;
   if (full) return renderFull();
@@ -702,15 +704,21 @@ function swarmDefault() {
 async function renderSwarm({ autoplay = false, model = null, count = null } = {}) {
   const el = $("swarmView");
   if (swarmUI.pr !== state.prId) {
+    // One load per PR. A second call while it loads waits for the same load.
     stopSwarm();
     swarmUI.pr = state.prId;
     swarmUI.data = null;
     swarmUI.note = null;
-    el.innerHTML = "";
-    swarmUI.data = await api("/api/swarm?pr=" + encodeURIComponent(state.prId));
-    if (swarmUI.pr !== state.prId) return;
-    if (swarmUI.data.recorded) swarmDefault();
+    el.innerHTML = `<div class="muted">Loading…</div>`;
+    const pr = state.prId;
+    swarmUI.loading = api("/api/swarm?pr=" + encodeURIComponent(pr)).then((data) => {
+      if (swarmUI.pr !== pr) return;
+      swarmUI.data = data;
+      if (data.recorded) swarmDefault();
+    });
   }
+  await swarmUI.loading;
+  if (swarmUI.pr !== state.prId) return;
   const s = swarmUI.data;
   const wrap = (body) => `<div class="swarm"><div class="swarm-head"><h3>Monte Carlo swarm</h3><span class="muted">Give the same task to many agents. How often does one end up close to the real change?</span></div>${body}</div>`;
   if (!s?.recorded) {
@@ -1288,9 +1296,17 @@ async function init() {
     await loadBlast();
     render();
     if (q.get("box")) selectBlast(q.get("box"));
-    // &swarm=1 plays the Monte Carlo swarm (&model=<id>&n=<count> to pick first). &agent=<n> also opens that agent in the side panel.
+  }
+  // ?map=swarm opens the "Monte Carlo swarm" tab and plays it (&model=<id>&n=<count> to pick first,
+  // &agent=<n> opens that agent, &measure=lines sets the matrix). The old ?map=blast&swarm=1 still works.
+  if (q.get("map") === "swarm" || (q.get("map") === "blast" && q.get("swarm") === "1")) {
     if (q.get("measure") === "lines") swarmUI.measure = "lines";
-    if (q.get("swarm") === "1") {
+    state.mapScope = "swarm";
+    $("mapCard").dataset.scope = "swarm";
+    $("blastView").hidden = true;
+    $("swarmView").hidden = false;
+    render();
+    {
       await renderSwarm({ autoplay: true, model: q.get("model"), count: Number(q.get("n")) || null });
       if (q.get("agent")) {
         // &agent=<n>: the n-th agent of the set that just played.

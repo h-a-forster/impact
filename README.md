@@ -119,7 +119,7 @@ much ("wide"). What they touched is the zone a fix can reasonably reach. The rea
   Docs, unit test files and functions are not scored. They are named in the line under the
   label. The other 3 PRs have no runs and say so.
 
-### Monte Carlo swarm (bottom of the Blast radius tab)
+### Monte Carlo swarm (its own tab, next to Blast radius)
 
 Press **Run Monte Carlo swarm** to watch N agents get the same requirements, each write a fix,
 and land on a 0 to 100% similarity scale next to the real change. It replays real runs, recorded
@@ -140,7 +140,7 @@ and land on a 0 to 100% similarity scale next to the real change. It replays rea
 - **Two scores per agent:** like the real change, and like the other agents (average). The
   "Who is like whom" matrix compares every pair (real change + each agent), by files and functions
   or by **changed lines** (the exact code lines added or removed in product code; Jaccard again).
-- Deep link: `?map=blast&swarm=1` plays it; `&model=<id|mix>&n=<count>` picks first; `&agent=<n>` opens one agent; `&measure=lines` sets the matrix.
+- Deep link: `?map=swarm` opens the tab and plays it (the old `?map=blast&swarm=1` still works); `&model=<id|mix>&n=<count>` picks first; `&agent=<n>` opens one agent; `&measure=lines` sets the matrix.
 
 ### Page layout
 

@@ -291,7 +291,8 @@ button.danger { background: var(--bad); color: var(--card); border-color: var(--
 
 /* Blast radius tab: 3 agent runs as nested zones, the real change as a thick outline. */
 :root { --zone-tight: var(--ok); --zone-tight-bg: var(--ok-bg); --zone-normal: var(--down); --zone-normal-bg: var(--down-bg); --zone-wide: var(--edited); --zone-wide-bg: var(--edited-bg); }
-#mapCard[data-scope="blast"] .graph-wrap, #mapCard[data-scope="blast"] .gfy-note, #mapCard[data-scope="blast"] > .legend { display: none; }
+#mapCard[data-scope="blast"] .graph-wrap, #mapCard[data-scope="blast"] .gfy-note, #mapCard[data-scope="blast"] > .legend,
+#mapCard[data-scope="swarm"] .graph-wrap, #mapCard[data-scope="swarm"] .gfy-note, #mapCard[data-scope="swarm"] > .legend { display: none; }
 .blast-what { font-size: 14.5px; margin: 0 0 10px; }
 .blast-label { display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--line); border-left: 5px solid var(--muted); border-radius: 8px; padding: 9px 12px; background: var(--soft); margin-bottom: 10px; }
 .blast-label strong { font-size: 17px; line-height: 1.25; }
@@ -344,7 +345,7 @@ button.danger { background: var(--bad); color: var(--card); border-color: var(--
 .blast-run details { margin-top: 4px; }
 
 /* Blast radius, file level: no level tabs, one row per file. */
-#mapCard[data-scope="blast"] #levelTabs { display: none; }
+#mapCard[data-scope="blast"] #levelTabs, #mapCard[data-scope="swarm"] #levelTabs { display: none; }
 .blast-table.files td { font-size: 14px; white-space: nowrap; }
 .blast-table.files tbody th { font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
 .blast-table tr.pick { cursor: pointer; }
@@ -357,7 +358,7 @@ button.danger { background: var(--bad); color: var(--card); border-color: var(--
 .blast-key { font-size: 12px; margin-top: 8px; }
 .bbox { width: 250px; }
 
-/* Monte Carlo swarm, at the bottom of the Blast radius tab */
+/* Monte Carlo swarm tab */
 .swarm-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
 .swarm-head h3 { margin: 0; font-size: 13px; color: var(--ink); }
 .swarm-controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
@@ -419,7 +420,7 @@ button.danger { background: var(--bad); color: var(--card); border-color: var(--
 .swarm-table tr.real th, .swarm-table th.real { border-left: 3px solid var(--ink); }
 .swarm-table tr.real th:first-child { font-weight: 800; }
 /* Monte Carlo swarm section */
-.swarm { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.swarm { margin-top: 0; }
 
 /* Show / hide for the big cards (AI PR, Impact map, Review steps) */
 .card-toggle { margin-left: auto; font-size: 12.5px; padding: 3px 10px; color: var(--muted); }
