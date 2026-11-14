@@ -52,7 +52,7 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 system-ui, "Segoe UI", sans-serif; }
-h2 { font-size: 15px; margin: 0; }
+h2 { font-size: 15px; margin: 0; text-wrap: balance; }
 h3 { font-size: 12px; margin: 16px 0 6px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 p { margin: 0 0 8px; }
 code { font-family: var(--mono); font-size: 12.5px; background: var(--soft); border-radius: 4px; padding: 1px 5px; }
@@ -69,9 +69,9 @@ button.primary { background: var(--accent); color: var(--card); border-color: va
 
 /* Top bar */
 .topbar { position: sticky; top: 0; z-index: 5; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; padding: 10px 20px; background: var(--card); border-bottom: 1px solid var(--line); }
-.pr-picker { padding: 5px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); max-width: 460px; }
+.pr-picker { padding: 5px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); flex: 1 1 200px; min-width: 0; max-width: 460px; }
 .pills { display: flex; gap: 6px; margin-left: auto; }
-.pill { border-radius: 999px; padding: 4px 12px; display: flex; gap: 6px; align-items: baseline; }
+.pill { border-radius: 999px; padding: 4px 12px; display: flex; gap: 6px; align-items: baseline; white-space: nowrap; }
 .pill.active { background: var(--ink); color: var(--card); border-color: var(--ink); }
 .pill .mono { opacity: .7; }
 .notice { margin: 10px 20px 0; padding: 9px 12px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); }
@@ -87,11 +87,11 @@ button.primary { background: var(--accent); color: var(--card); border-color: va
 .card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
 
 /* Stamps: one per decision. Label on top, value in the middle, who decided at the bottom. */
-.stamps { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
-.stamp { display: flex; flex-direction: column; gap: 2px; text-align: left; border: 1px solid var(--line); border-left: 5px solid var(--muted); border-radius: 8px; padding: 9px 12px; background: var(--soft); }
+.stamps { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.stamp { display: flex; flex-direction: column; gap: 2px; text-align: left; border: 1px solid var(--line); border-left: 5px solid var(--muted); border-radius: 8px; padding: 8px 12px; background: var(--soft); }
 .stamp-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
-.stamp-value { font-size: 16px; font-weight: 700; line-height: 1.25; }
-.stamp-by { font-size: 11.5px; color: var(--muted); }
+.stamp-value { font-size: 16px; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums; }
+.stamp-by { font-size: 11.5px; font-weight: 700; color: var(--warn); }
 .stamp.ok { border-left-color: var(--ok); background: var(--ok-bg); } .stamp.ok .stamp-value { color: var(--ok); }
 .stamp.warn { border-left-color: var(--warn); background: var(--warn-bg); } .stamp.warn .stamp-value { color: var(--warn); }
 .stamp.bad { border-left-color: var(--bad); background: var(--bad-bg); } .stamp.bad .stamp-value { color: var(--bad); }
@@ -125,7 +125,7 @@ button.primary { background: var(--accent); color: var(--card); border-color: va
 .timeline { display: flex; align-items: center; gap: 6px; }
 .timeline button { min-width: 38px; }
 .timeline button:disabled { opacity: .35; cursor: default; }
-.timeline-label { margin-left: 8px; font-size: 13px; line-height: 1.35; min-height: 36px; }
+.timeline-label { margin-left: 8px; font-size: 13px; line-height: 1.35; min-height: 36px; min-width: 0; }
 .timeline-dots { display: flex; gap: 4px; margin-bottom: 8px; }
 .timeline-dots i { flex: 1; height: 4px; border-radius: 2px; background: var(--line); transition: background-color .4s; }
 .timeline-dots i.on { background: var(--edited); opacity: .45; }
@@ -142,10 +142,19 @@ button.primary { background: var(--accent); color: var(--card); border-color: va
 .gfy-canvas { height: 560px; }
 .gfy-zoom { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; }
 .gfy-zoom button { min-width: 30px; padding: 2px 8px; }
-.gfy-note { margin-top: 10px; font-size: 12.5px; }
-.gfy-note details { margin-top: 6px; }
-.gfy-note summary { cursor: pointer; color: var(--accent); }
-.gfy-note ul { margin: 6px 0 0; padding-left: 18px; max-height: 180px; overflow: auto; }
+/* Under the graph: a short colour key. The rest opens from "About this map". */
+.map-foot { margin-top: 10px; font-size: 12.5px; }
+.map-about > summary { display: flex; justify-content: space-between; align-items: center; gap: 6px 16px; flex-wrap: wrap; cursor: pointer; list-style: none; }
+.map-about > summary::-webkit-details-marker { display: none; }
+.map-about > summary .legend { margin-top: 0; }
+.about-link { color: var(--accent); white-space: nowrap; }
+.about-link::before { content: "▸ "; }
+.map-about[open] .about-link::before { content: "▾ "; }
+.about-body { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
+.about-body p { margin: 0; }
+.about-body .legend { margin-top: 0; }
+.about-body summary { cursor: pointer; color: var(--accent); }
+.about-body ul { margin: 6px 0 0; padding-left: 18px; max-height: 180px; overflow: auto; }
 div.vis-tooltip { position: absolute; white-space: pre-line; max-width: 420px; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: 12px/1.45 system-ui, "Segoe UI", sans-serif; box-shadow: 0 4px 14px rgba(0, 0, 0, .18); pointer-events: none; z-index: 5; }
 /* React Flow's own parts take their colours from the variables above, in light and dark. */
 .graph-wrap .react-flow {
@@ -183,7 +192,7 @@ div.vis-tooltip { position: absolute; white-space: pre-line; max-width: 420px; p
 .graph-wrap .react-flow__edge.gedge { cursor: default; }
 .graph-wrap .react-flow__edge.gedge.pick { cursor: pointer; }
 .graph-wrap .react-flow__edge.gedge.dim { opacity: .3; }
-.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; }
+.legend { display: flex; gap: 6px 16px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; }
 .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; border: 1.5px solid; }
 .sw-edited { background: var(--edited-bg); border-color: var(--edited); }
 .sw-downstream { background: var(--down-bg); border-color: var(--down); }
@@ -200,7 +209,9 @@ div.vis-tooltip { position: absolute; white-space: pre-line; max-width: 420px; p
 .ln-dotted { border-top-style: dotted; border-top-width: 1.5px; opacity: .8; }
 
 /* AI review */
-.finding { border-left: 3px solid var(--line); padding: 2px 0 2px 12px; margin: 12px 0; display: flex; flex-direction: column; gap: 4px; }
+.finding { border-left: 3px solid var(--line); padding: 1px 0 1px 12px; margin: 6px 0; }
+.finding > div { margin-top: 4px; }
+.finding[open] { margin-bottom: 12px; }
 .finding.warn { border-color: var(--warn); }
 .finding.bad { border-color: var(--bad); }
 details.finding > summary { cursor: pointer; }
@@ -251,7 +262,7 @@ body.embed .pills { margin-left: 0; }
 body.embed .back { display: none; }
 
 /* Review steps */
-.step { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-top: 10px; }
+.step { border-top: 1px solid var(--line); padding: 10px 0 0; margin-top: 10px; }
 .step-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
 .step-n { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--ink); color: var(--card); font-size: 12px; font-weight: 700; }
 
@@ -279,10 +290,12 @@ pre.raw.doc { max-height: none; white-space: pre-wrap; }
 
 /* Eval test case */
 button.danger { background: var(--bad); color: var(--card); border-color: var(--bad); font-weight: 700; }
-.evalcase { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
-.evalcase.on { border: 1px solid var(--bad); border-radius: 8px; padding: 10px 12px; background: var(--bad-bg); }
+.evalcase { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; font-size: 12.5px; }
+.evalcase button.danger { padding: 3px 10px; }
+.evalcase.on { border: 1px solid var(--bad); border-radius: 8px; padding: 6px 10px; background: var(--bad-bg); }
 .head-left { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 #fullBar { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+#fullHint { font-size: 12.5px; }
 #fullBar .pills.wrap { margin: 0 0 8px; }
 .code-head > .mono { word-break: break-all; }
 .code-head > span:last-child { white-space: nowrap; }
@@ -428,3 +441,5 @@ button.danger { background: var(--bad); color: var(--card); border-color: var(--
 .card.collapsed > .card-head { margin-bottom: 0; }
 .card.collapsed .card-head .tabs { display: none; }
 .swarm-madeup { margin-bottom: 10px; font-size: 13px; }
+/* The map's colour key belongs to the map: not on the Blast radius or swarm tabs. */
+#mapCard[data-scope="blast"] .map-foot, #mapCard[data-scope="swarm"] .map-foot { display: none; }

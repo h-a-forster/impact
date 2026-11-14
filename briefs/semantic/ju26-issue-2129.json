@@ -1,10 +1,10 @@
 {
   "pr": "ju26-issue-2129",
   "author": {
-    "by": "Stelian Vultur (vultuste) · commit message on branch ju26-issue-2129. Tieto's repo has branches, not pull requests.",
+    "by": "Stelian Vultur (vultuste) · commit message on branch ju26-issue-2129",
     "text": "Agentic implementation of #2129 Feature Request: Allow generation of Formatter for a type in a referenced assembly"
   },
-  "generatedBy": "AI-written (Claude), saved for this demo",
+  "generatedBy": "Written by AI (Claude), saved for the demo",
   "verdict": {
     "classifier1": "3 changed project files (.csproj) are on the team's risky list.",
     "reason": "Two parts of the request have no proof yet.",

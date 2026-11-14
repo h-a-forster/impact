@@ -1,10 +1,10 @@
 {
   "pr": "ju26-issue-2234",
   "author": {
-    "by": "Stelian Vultur (vultuste) · commit message on branch ju26-issue-2234. Tieto's repo has branches, not pull requests.",
+    "by": "Stelian Vultur (vultuste) · commit message on branch ju26-issue-2234",
     "text": "Implementation for #2234 The analyzer does not work if SuppressSourceGeneration = true"
   },
-  "generatedBy": "AI-written (Claude), saved for this demo",
+  "generatedBy": "Written by AI (Claude), saved for the demo",
   "verdict": {
     "classifier1": "The changed code is used in 2 other places that this PR does not edit.",
     "reason": "One extra unit test disagrees with what this change should do. A named person must decide if that is OK.",
