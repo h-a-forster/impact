@@ -8,7 +8,7 @@ import { DATA, DEMO } from "./paths.mjs";
 const EXPORTS = path.join(DATA, "graphify");
 export const GRAPHIFY_COMMAND = "GRAPHIFY_BACKEND=none graphify extract . --code-only --out <outside the tree>";
 
-function graphifyBin() {
+export function graphifyBin() {
   const exe = process.platform === "win32" ? "graphify.exe" : "graphify";
   const local = path.join(os.homedir(), ".local", "bin", exe);
   return fs.existsSync(local) ? local : exe;

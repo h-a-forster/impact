@@ -76,7 +76,7 @@ function patchOf(f) {
     .join("\n");
 }
 
-function conceptOf(file, concepts) {
+export function conceptOf(file, concepts) {
   // More specific groups first; "docs" and "tests" are broad catch-alls.
   const ordered = [...concepts].sort((a, b) => Math.max(...b.patterns.map((p) => p.length)) - Math.max(...a.patterns.map((p) => p.length)));
   const hit = ordered.find((c) => matchesAny(file, c.patterns));

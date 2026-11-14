@@ -4,6 +4,7 @@ import path from "node:path";
 import { readFileAt, revisionExists } from "./lib/git.mjs";
 import { buildFullMap, buildModel, demoRevisions } from "./lib/model.mjs";
 import { ledgerSource } from "./lib/ledger.mjs";
+import { loadTietoSlice } from "./lib/graphify-tieto.mjs";
 import { decisionView, recordDecision } from "./lib/decisions.mjs";
 import { findPr, prSummary } from "./lib/github.mjs";
 import { DEMO, REVISIONS_FILE, ROOT, SAMPLE_REPO } from "./lib/paths.mjs";
@@ -65,6 +66,12 @@ const handler = async (req, res) => {
     if (url.pathname === "/api/model") {
       return json(res, 200, modelFor(url.searchParams.get("pr"), url.searchParams.get("sha")));
     }
+    if (url.pathname === "/api/graphify") {
+      // The saved Graphify export for a PR (a slice of graph.json), as a file to read.
+      const pr = demoRevisions().prs.find((p) => p.id === url.searchParams.get("pr"));
+      const slice = pr ? loadTietoSlice(pr.commits[0].sha) : null;
+      return slice ? json(res, 200, slice) : json(res, 404, { error: "No saved Graphify export for this pull request" });
+    }
     if (url.pathname === "/api/fullmap") return json(res, 200, buildFullMap(demoRevisions()));
     if (url.pathname === "/api/summary") {
       // Used by the GitHub replica: live state for the Impact review check, per commit.
@@ -113,6 +120,6 @@ http.createServer(handler).on("error", () => {}).listen(PORT, "::1");
 
 server.listen(PORT, "127.0.0.1", () => {
   console.log(`Code Review Impact Map: http://localhost:${PORT}`);
-  console.log(`Open Impact Map link for the demo PR: http://localhost:${PORT}/#pr=req-17`);
+  console.log(`Open Impact Map link for the demo PR: http://localhost:${PORT}/#pr=ju26-issue-2283`);
   console.log(`GitHub replica link form:              http://localhost:${PORT}/?repo=<owner/name>&pr=<number>&sha=<sha>`);
 });

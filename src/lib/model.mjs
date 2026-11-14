@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { changedFiles as gitChangedFiles, changedLineRanges, readFileAt, unifiedDiff } from "./git.mjs";
 import { loadIndex } from "./graphify.mjs";
+import { graphifyGraph, loadBaseLinks } from "./graphify-tieto.mjs";
 import { mapTests, TEST_MAPPER_LABEL } from "./testmap.mjs";
 import { loadBaseRun, loadRun } from "./runner.mjs";
 import { buildLedgerModel, ledgerPrs } from "./ledger.mjs";
@@ -50,15 +51,19 @@ function buildTietoModel(pr, sha) {
   const o = commit.index > 1 ? (saved.revisions?.[String(commit.index)]?.model ?? {}) : null;
   const failing = (e) => (e === "contradicted" && !o?.fixed ? "contradicted" : null);
   const text = (list) => (list ?? []).map((t) => ({ type: "text", text: t }));
+  // The map is drawn from a saved Graphify run on commit 1's code. Without one, the recorded graph is used.
+  const gfy = graphifyGraph(m, pr.commits[0].sha);
+  const graph = gfy ?? m.graph;
   return {
     source: "tieto",
     pr,
     base: m.base,
     selected: { sha, short: short(sha), isBase: false, index: commit.index, message: commit.message, madeUp: Boolean(commit.madeUp) },
     graph: {
-      nodes: m.graph.nodes.map(({ rowIds, ...n }) => ({ ...n, evidence: failing(n.evidence), sub: n.type === "pr" ? `commit ${short(sha)}` : n.type === "requirement" ? "GitHub issue" : n.sub })),
-      edges: m.graph.edges,
+      nodes: graph.nodes.map(({ rowIds, ...n }) => ({ ...n, evidence: failing(n.evidence), sub: n.type === "pr" ? `commit ${short(sha)}` : n.type === "requirement" ? "GitHub issue" : n.sub })),
+      edges: graph.edges,
     },
+    graphify: gfy?.info ?? null,
     tests: [],
     run: null,
     checks: m.checks.map((c) => ({
@@ -183,31 +188,43 @@ export function buildFullMap(revisions) {
           if (n.state !== "none" && !edited.concept.has(areaOf(n.file).id)) affected.concept.add(areaOf(n.file).id);
         }
       }
-      for (const e of m.graph.edges) if (e.level === "function" && e.kind === "calls") calls.set(`${e.from}>${e.to}`, { from: e.from, to: e.to });
+      for (const e of m.graph.edges) {
+        if (e.level !== "function" || e.kind !== "calls") continue;
+        const key = `${e.from}>${e.to}`;
+        calls.set(key, { from: e.from, to: e.to, resolution: e.resolution === "inferred" && calls.get(key)?.resolution !== "resolved" ? "inferred" : "resolved" });
+      }
       const list = (sets) => Object.fromEntries(Object.entries(sets).map(([k, v]) => [k, [...v]]));
       commits.push({ sha: c.sha, short: short(c.sha), pr: pr.id, prNumber: pr.number, title: pr.title, index: c.index, message: c.message, madeUp: Boolean(c.madeUp), fileCount: changed.length, edited: list(edited), affected: list(affected) });
     }
   }
 
   // Links. Functions: calls. Files and concepts: the same calls, rolled up.
-  const edge = (level, from, to) => ({ id: `${from}>${to}`, level, from, to, kind: "calls" });
+  const edge = (level, from, to, resolution = "resolved") => ({ id: `${from}>${to}`, level, from, to, kind: "calls", resolution });
+  // A rolled-up link is "inferred" only when every link under it is.
+  const merge = (seen, level, from, to, resolution) => {
+    const key = `${from}>${to}`;
+    if (from !== to && !(seen.get(key)?.resolution === "resolved")) seen.set(key, edge(level, from, to, resolution));
+  };
   const rollUp = (level, keyOf) => {
     const seen = new Map();
     for (const c of calls.values()) {
       const a = functions.get(c.from), b = functions.get(c.to);
       if (!a || !b) continue;
       const from = keyOf(a.file), to = keyOf(b.file);
-      if (from !== to) seen.set(`${from}>${to}`, edge(level, from, to));
+      merge(seen, level, from, to, c.resolution);
     }
     return seen;
   };
   const conceptEdges = rollUp("concept", (file) => areaOf(file).id);
+  // Concept level, whole repo: Graphify's call links at the base commit, rolled up from files to areas.
+  const baseLinks = loadBaseLinks();
+  for (const l of baseLinks?.fileLinks ?? []) merge(conceptEdges, "concept", areaOf(l.from).id, areaOf(l.to).id, l.extracted ? "resolved" : "inferred");
   // Concept level also gets project dependencies from the snapshot (.csproj references).
   const refs = new Map(snap.projects.map((p) => [p.id, p.references]));
   for (const [from, fromProjects] of areaProjects) {
     for (const [to, toProjects] of areaProjects) {
       // Docs and build files are file types, not code areas: no dependency links for them.
-      if (from === to || conceptEdges.has(`${to}>${from}`) || [from, to].some((x) => x === "concept:docs" || x === "concept:build-config")) continue;
+      if (from === to || conceptEdges.has(`${from}>${to}`) || conceptEdges.has(`${to}>${from}`) || [from, to].some((x) => x === "concept:docs" || x === "concept:build-config")) continue;
       if ([...fromProjects].some((p) => (refs.get(p) ?? []).some((r) => toProjects.has(r) && !fromProjects.has(r)))) conceptEdges.set(`${from}>${to}`, edge("concept", from, to));
     }
   }
@@ -224,8 +241,9 @@ export function buildFullMap(revisions) {
     levels: {
       concept: { nodes: [...areas.values()], edges: [...conceptEdges.values()] },
       file: { nodes: [...files.values()], edges: [...fileEdges.values()] },
-      function: { nodes: [...functions.values()], edges: [...calls.values()].filter((c) => functions.has(c.from) && functions.has(c.to)).map((c) => edge("function", c.from, c.to)) },
+      function: { nodes: [...functions.values()], edges: [...calls.values()].filter((c) => functions.has(c.from) && functions.has(c.to)).map((c) => edge("function", c.from, c.to, c.resolution)) },
     },
+    graphify: baseLinks ? { tool: `Graphify ${baseLinks.graphifyVersion}`, revision: baseLinks.revision, full: baseLinks.full } : null,
   };
 }
 

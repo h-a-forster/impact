@@ -1,0 +1,2734 @@
+{
+ "revision": "9007cee1163c4a274fd60c3cc20c21ae63622786",
+ "tool": "graphify",
+ "graphifyVersion": "0.9.108",
+ "schemaVersion": 1,
+ "command": "GRAPHIFY_BACKEND=none graphify extract . --code-only --out <outside the tree>",
+ "repo": "te-industry-tech-office/junction26-messagepack-csharp",
+ "pr": "ju26-issue-2234",
+ "slice": {
+  "note": "A slice of Graphify's graph.json, not the whole file. Nodes and links are copied as Graphify wrote them.",
+  "rule": "Every node in a changed C# code file (unit test files left out), plus every function one 'calls' link away from a function in those files, plus every link between kept nodes.",
+  "seedFiles": [
+   "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+  ],
+  "kept": {
+   "nodes": 47,
+   "links": 88
+  },
+  "full": {
+   "nodes": 9566,
+   "links": 22852
+  }
+ },
+ "adapter": {
+  "note": "Added by scripts/graphify-tieto.mjs, not by Graphify. Graphify gives a start line only; the end line is found by matching braces in the file at this commit.",
+  "endLines": {
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_checkvalidmessagepackformatterattribute": 698,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collect": 273,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collect_da39a3": 303,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectarray": 480,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectcore": 379,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectenum": 384,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectgeneric": 674,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectgenericunion": 441,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectobject": 683,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectunion": 421,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_findnonpartialtypes": 1439,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getgenericformatterclassname": 1450,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getidentifierlocation": 1441,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getlocation": 1443,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getminimallyqualifiedclassname": 1462,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getobjectinfo": 1432,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getparameterlistlocation": 1445,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_isallowaccessibility": 1499,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_isopengenerictyperecursively": 1504,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_ispartialtyperequired": 1483,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_resetworkspace": 283,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_totupleunderlyingtype": 502,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_trygetnextconstructor": 1481,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_typecollector": 261,
+   "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_messagepackgeneratorresolvefailedexception_messagepackgeneratorresolvefailedexception": 21,
+   "src_messagepack_sourcegenerator_codeanalysis_genericserializationinfo_messagepack_sourcegenerator_codeanalysis_genericserializationinfo_create": 25,
+   "src_messagepack_sourcegenerator_codeanalysis_objectserializationinfo_messagepack_sourcegenerator_codeanalysis_objectserializationinfo_equals": 169,
+   "src_messagepack_sourcegenerator_codeanalysis_objectserializationinfo_messagepack_sourcegenerator_codeanalysis_objectserializationinfo_getconstructorstring": 140,
+   "src_messagepack_sourcegenerator_codeanalysis_objectserializationinfo_messagepack_sourcegenerator_codeanalysis_objectserializationinfo_getmember": 95,
+   "src_messagepack_sourcegenerator_codeanalysis_objectserializationinfo_messagepack_sourcegenerator_codeanalysis_objectserializationinfo_create": 90,
+   "src_messagepack_sourcegenerator_codeanalysis_objectserializationinfo_messagepack_sourcegenerator_codeanalysis_objectserializationinfo_gethashcode": 184,
+   "src_messagepack_sourcegenerator_codeanalysis_resolverregisterinfo_messagepack_sourcegenerator_codeanalysis_resolverregisterinfo_create": 49,
+   "src_messagepack_sourcegenerator_codeanalysis_resolverregisterinfo_messagepack_sourcegenerator_codeanalysis_resolverregisterinfo_createarray": 71,
+   "src_messagepack_sourcegenerator_codeanalysis_resolverregisterinfo_messagepack_sourcegenerator_codeanalysis_resolverregisterinfo_getformatterinstanceforresolver": 98,
+   "src_messagepack_sourcegenerator_codeanalysis_resolverregisterinfo_messagepack_sourcegenerator_codeanalysis_resolverregisterinfo_getformatternameforresolver": 93,
+   "src_messagepack_sourcegenerator_codeanalysis_resolverregisterinfo_messagepack_sourcegenerator_codeanalysis_resolverregisterinfo_gethashcode": 143,
+   "src_messagepack_sourcegenerator_codeanalysis_resolverregisterinfo_messagepack_sourcegenerator_codeanalysis_resolverregisterinfo_getnestingtypeforformatterunderresolver": 141,
+   "src_messagepack_sourcegenerator_codeanalysis_unionserializationinfo_messagepack_sourcegenerator_codeanalysis_unionserializationinfo_create": 22,
+   "src_messagepack_sourcegenerator_codeanalysis_unionserializationinfo_messagepack_sourcegenerator_codeanalysis_unionserializationinfo_equals": 38,
+   "src_messagepack_sourcegenerator_codeanalysis_unionserializationinfo_messagepack_sourcegenerator_codeanalysis_unionserializationinfo_gethashcode": 40,
+   "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_getsanitizedfilename": 40,
+   "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_enumeratetypeandcontainingtypes": 72,
+   "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_findinaccessibletypes": 47,
+   "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_geteffectiveaccessibility": 62,
+   "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_appendnametonamespace": 30,
+   "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_getarity": 81,
+   "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_gettypearguments": 99,
+   "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_gettypeparameters": 90,
+   "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_qualifywithoptionalnamespace": 25,
+   "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_codeanalysisutilities": 20,
+   "src_messagepack_sourcegenerator_codeanalysis_enumserializationinfo_messagepack_sourcegenerator_codeanalysis_enumserializationinfo_create": 34,
+   "src_messagepack_sourcegenerator_utils_roslynanalyzerextensions_messagepack_sourcegenerator_roslynanalyzerextensions_approximatelyequal": 22,
+   "src_messagepack_sourcegenerator_utils_roslynanalyzerextensions_messagepack_sourcegenerator_roslynanalyzerextensions_enumeratebasetype": 52,
+   "src_messagepack_sourcegenerator_utils_roslynanalyzerextensions_messagepack_sourcegenerator_roslynanalyzerextensions_findattribute": 59,
+   "src_messagepack_sourcegenerator_utils_roslynanalyzerextensions_messagepack_sourcegenerator_roslynanalyzerextensions_findattributeincludebasepropertyshortname": 84,
+   "src_messagepack_sourcegenerator_utils_roslynanalyzerextensions_messagepack_sourcegenerator_roslynanalyzerextensions_findattributeshortname": 66,
+   "src_messagepack_sourcegenerator_utils_roslynanalyzerextensions_messagepack_sourcegenerator_roslynanalyzerextensions_findbasetargettype": 99,
+   "src_messagepack_sourcegenerator_utils_roslynanalyzerextensions_messagepack_sourcegenerator_roslynanalyzerextensions_getallinterfacemembers": 150,
+   "src_messagepack_sourcegenerator_utils_roslynanalyzerextensions_messagepack_sourcegenerator_roslynanalyzerextensions_getallmembers": 144,
+   "src_messagepack_sourcegenerator_utils_roslynanalyzerextensions_messagepack_sourcegenerator_roslynanalyzerextensions_isapproximatelyequalorderivedfrom": 42,
+   "src_messagepack_sourcegenerator_utils_roslynanalyzerextensions_messagepack_sourcegenerator_roslynanalyzerextensions_isnullable": 125,
+   "src_messagepack_sourcegenerator_utils_roslynanalyzerextensions_messagepack_sourcegenerator_roslynanalyzerextensions_getsinglenamedargumentvalue": 112,
+   "src_messagepack_sourcegenerator_utils_roslynanalyzerextensions_messagepack_sourcegenerator_roslynanalyzerextensions_findattribute_d7a04e": 92,
+   "src_messagepack_sourcegenerator_codeanalysis_analyzeroptions_messagepack_sourcegenerator_codeanalysis_formatterdescriptor_equals": 273,
+   "src_messagepack_sourcegenerator_codeanalysis_analyzeroptions_messagepack_sourcegenerator_codeanalysis_formatterdescriptor_gethashcode": 275,
+   "src_messagepack_sourcegenerator_codeanalysis_analyzeroptions_messagepack_sourcegenerator_codeanalysis_analyzeroptions_equals": 143,
+   "src_messagepack_sourcegenerator_codeanalysis_analyzeroptions_messagepack_sourcegenerator_codeanalysis_analyzeroptions_getcollidingformatterdatatypes": 120,
+   "src_messagepack_sourcegenerator_codeanalysis_analyzeroptions_messagepack_sourcegenerator_codeanalysis_analyzeroptions_gethashcode": 159,
+   "src_messagepack_sourcegenerator_codeanalysis_analyzeroptions_messagepack_sourcegenerator_codeanalysis_analyzeroptions_withassemblyattributes": 118,
+   "src_messagepack_sourcegenerator_codeanalysis_analyzeroptions_messagepack_sourcegenerator_codeanalysis_analyzeroptions_withformattertypes": 105,
+   "src_messagepack_sourcegenerator_codeanalysis_analyzeroptions_messagepack_sourcegenerator_codeanalysis_formatterdescriptor_trycreate": 254,
+   "src_messagepack_sourcegenerator_codeanalysis_analyzeroptions_messagepack_sourcegenerator_codeanalysis_formattabletype_formattabletype": 289,
+   "src_messagepack_sourcegenerator_codeanalysis_analyzeroptions_messagepack_sourcegenerator_codeanalysis_formatterdescriptor_formatterdescriptor": 276,
+   "src_messagepack_sourcegenerator_codeanalysis_analyzeroptions_messagepack_sourcegenerator_codeanalysis_formattabletype_formattabletype_4290d6": 288,
+   "src_messagepack_sourcegenerator_messagepackgenerator_messagepack_sourcegenerator_generatorcontext_addsource": 143,
+   "src_messagepack_sourcegenerator_messagepackgenerator_messagepack_sourcegenerator_generatorcontext_reportdiagnostic": 145,
+   "src_messagepack_sourcegenerator_messagepackgenerator_messagepack_sourcegenerator_comparer_equals": 124,
+   "src_messagepack_sourcegenerator_messagepackgenerator_messagepack_sourcegenerator_comparer_gethashcode": 129,
+   "src_messagepack_sourcegenerator_messagepackgenerator_messagepack_sourcegenerator_messagepackgenerator_initialize": 115,
+   "src_messagepack_sourcegenerator_messagepackgenerator_messagepack_sourcegenerator_generatorcontext_generatorcontext": 139,
+   "src_messagepack_sourcegenerator_codeanalysis_generictypeparameterinfo_messagepack_sourcegenerator_codeanalysis_generictypeparameterinfo_compareto": 56,
+   "src_messagepack_sourcegenerator_codeanalysis_generictypeparameterinfo_messagepack_sourcegenerator_codeanalysis_generictypeparameterinfo_constructconstraintstring": 90,
+   "src_messagepack_sourcegenerator_codeanalysis_generictypeparameterinfo_messagepack_sourcegenerator_codeanalysis_generictypeparameterinfo_create": 36,
+   "src_messagepack_sourcegenerator_codeanalysis_generictypeparameterinfo_messagepack_sourcegenerator_codeanalysis_generictypeparameterinfo_generictypeparameterinfo": 91,
+   "src_messagepack_sourcegenerator_codeanalysis_generictypeparameterinfo_messagepack_sourcegenerator_codeanalysis_generictypeparameterinfo_generictypeparameterinfo_472f4f": 26,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_compare": 94,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_compareto": 56,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_create": 28,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_create_7fa2bf": 31,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_getqualifiedname": 47,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_gettypeparametersorargs": 54,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_tostring": 58,
+   "src_messagepack_sourcegenerator_codeanalysis_memberserializationinfo_messagepack_sourcegenerator_codeanalysis_memberserializationinfo_getdeserializemethodstring": 71,
+   "src_messagepack_sourcegenerator_codeanalysis_memberserializationinfo_messagepack_sourcegenerator_codeanalysis_memberserializationinfo_getmemberaccess": 73,
+   "src_messagepack_sourcegenerator_codeanalysis_memberserializationinfo_messagepack_sourcegenerator_codeanalysis_memberserializationinfo_getserializemethodstring": 48,
+   "src_messagepack_sourcegenerator_codeanalysis_memberserializationinfo_messagepack_sourcegenerator_codeanalysis_memberserializationinfo_memberserializationinfo": 74,
+   "src_messagepack_sourcegenerator_codeanalysis_unionsubtypeinfo_messagepack_sourcegenerator_codeanalysis_unionsubtypeinfo_unionsubtypeinfo": 6,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_messagepack_sourcegenerator_codeanalysis_namespacetypecontainer_compareto": 287,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_messagepack_sourcegenerator_codeanalysis_namespacetypecontainer_from": 278,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_messagepack_sourcegenerator_codeanalysis_namespacetypecontainer_tostring": 280,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_messagepack_sourcegenerator_codeanalysis_nestingtypecontainer_compareto": 272,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_messagepack_sourcegenerator_codeanalysis_nestingtypecontainer_from": 263,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_messagepack_sourcegenerator_codeanalysis_nestingtypecontainer_tostring": 265,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_compareto": 172,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_equals": 123,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_gethashcode": 109,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_messagepack_sourcegenerator_codeanalysis_typecontainer_compareto": 257,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_getqualifiedname": 240,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_gettypeparametersorargs": 252,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_tostring": 125,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_messagepack_sourcegenerator_codeanalysis_nestingtypecontainer_nestingtypecontainer": 273,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_qualifiednamedtypename": 37,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_qualifiednamedtypename_238d04": 51,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_qualifiednamedtypename_c85a27": 59,
+   "src_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_messagepack_sourcegenerator_codeanalysis_namespacetypecontainer_namespacetypecontainer": 288
+  }
+ },
+ "graph": {
+  "directed": false,
+  "multigraph": false,
+  "graph": {
+   "schema_version": 1,
+   "graphify_version": "0.9.108"
+  },
+  "nodes": [
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "label": "TypeCollector",
+    "_callable": true,
+    "_callable_class": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ]
+    },
+    "norm_label": "typecollector",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L24"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_messagepackgeneratorresolvefailedexception",
+    "label": "MessagePackGeneratorResolveFailedException",
+    "_callable": true,
+    "_callable_class": true,
+    "_origin": "ast",
+    "community": 55,
+    "file_type": "code",
+    "metadata": {
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ]
+    },
+    "norm_label": "messagepackgeneratorresolvefailedexception",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L16"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_genericserializationinfo_messagepack_sourcegenerator_codeanalysis_genericserializationinfo_create",
+    "label": "GenericSerializationInfo.Create()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 32,
+    "file_type": "code",
+    "metadata": {
+     "arity": 3,
+     "min_arity": 2,
+     "signature": "INamedTypeSymbol,ResolverOptions,FormatterPosition",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s6:0"
+     ]
+    },
+    "norm_label": "genericserializationinfo.create()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/GenericSerializationInfo.cs",
+    "source_location": "L17"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_objectserializationinfo_messagepack_sourcegenerator_codeanalysis_objectserializationinfo_create",
+    "label": "ObjectSerializationInfo.Create()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 32,
+    "file_type": "code",
+    "metadata": {
+     "arity": 11,
+     "signature": "INamedTypeSymbol,bool,bool,GenericTypeParameterInfo[],MemberSerializationInfo[],bool,MemberSerializationInfo[],bool,bool,bool,ResolverOptions",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s6:0"
+     ]
+    },
+    "norm_label": "objectserializationinfo.create()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/ObjectSerializationInfo.cs",
+    "source_location": "L59"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_resolverregisterinfo_messagepack_sourcegenerator_codeanalysis_resolverregisterinfo_createarray",
+    "label": "ResolverRegisterInfo.CreateArray()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 32,
+    "file_type": "code",
+    "metadata": {
+     "arity": 3,
+     "min_arity": 2,
+     "signature": "IArrayTypeSymbol,ResolverOptions,FormatterPosition",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s6:0"
+     ]
+    },
+    "norm_label": "resolverregisterinfo.createarray()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/ResolverRegisterInfo.cs",
+    "source_location": "L58"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_unionserializationinfo_messagepack_sourcegenerator_codeanalysis_unionserializationinfo_create",
+    "label": "UnionSerializationInfo.Create()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 32,
+    "file_type": "code",
+    "metadata": {
+     "arity": 3,
+     "signature": "INamedTypeSymbol,ImmutableArray&lt;UnionSubTypeInfo&gt;,ResolverOptions",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s6:0"
+     ]
+    },
+    "norm_label": "unionserializationinfo.create()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/UnionSerializationInfo.cs",
+    "source_location": "L13"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_enumeratetypeandcontainingtypes",
+    "label": "CodeAnalysisUtilities.EnumerateTypeAndContainingTypes()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 1,
+     "signature": "ITypeSymbol",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s7:0"
+     ]
+    },
+    "norm_label": "codeanalysisutilities.enumeratetypeandcontainingtypes()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/CodeAnalysisUtilities.cs",
+    "source_location": "L64"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_findinaccessibletypes",
+    "label": "CodeAnalysisUtilities.FindInaccessibleTypes()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 1,
+     "signature": "ITypeSymbol",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s7:0"
+     ]
+    },
+    "norm_label": "codeanalysisutilities.findinaccessibletypes()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/CodeAnalysisUtilities.cs",
+    "source_location": "L42"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_enumserializationinfo_messagepack_sourcegenerator_codeanalysis_enumserializationinfo_create",
+    "label": "EnumSerializationInfo.Create()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 3,
+     "signature": "INamedTypeSymbol,ISymbol,ResolverOptions",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s5:0"
+     ],
+     "unresolved_calls": [
+      {
+       "callee": "ToDisplayString",
+       "receiver_type": "ISymbol",
+       "lang": "csharp",
+       "line": "L32",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/EnumSerializationInfo.cs"
+      }
+     ]
+    },
+    "norm_label": "enumserializationinfo.create()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/EnumSerializationInfo.cs",
+    "source_location": "L25"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_checkvalidmessagepackformatterattribute",
+    "label": "TypeCollector.CheckValidMessagePackFormatterAttribute()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 1,
+     "signature": "AttributeData",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ],
+     "unresolved_calls": [
+      {
+       "callee": "Create",
+       "receiver_type": "ImmutableDictionary",
+       "lang": "csharp",
+       "line": "L694",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "ToDisplayString",
+       "receiver_type": "ITypeSymbol",
+       "lang": "csharp",
+       "line": "L694",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Invoke",
+       "receiver_type": "Action",
+       "lang": "csharp",
+       "line": "L695",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Create",
+       "receiver_type": "Diagnostic",
+       "lang": "csharp",
+       "line": "L695",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      }
+     ]
+    },
+    "norm_label": "typecollector.checkvalidmessagepackformatterattribute()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L685"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collect",
+    "label": "TypeCollector.Collect()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 6,
+     "signature": "Compilation,AnalyzerOptions,ReferenceSymbols,Action&lt;Diagnostic&gt;?,ITypeSymbol,CancellationToken",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ]
+    },
+    "norm_label": "typecollector.collect()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L263"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collect_da39a3",
+    "label": "TypeCollector.Collect()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 0,
+     "signature": "",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ],
+     "unresolved_calls": [
+      {
+       "callee": "ToImmutable",
+       "receiver_type": "Builder",
+       "lang": "csharp",
+       "line": "L296",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      }
+     ]
+    },
+    "norm_label": "typecollector.collect()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L286"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectarray",
+    "label": "TypeCollector.CollectArray()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 2,
+     "signature": "IArrayTypeSymbol,ISymbol?",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ],
+     "unresolved_calls": [
+      {
+       "callee": "Create",
+       "receiver_type": "ImmutableArray",
+       "lang": "csharp",
+       "line": "L475",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Add",
+       "receiver_type": "Builder",
+       "lang": "csharp",
+       "line": "L479",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      }
+     ]
+    },
+    "norm_label": "typecollector.collectarray()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L443"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectcore",
+    "label": "TypeCollector.CollectCore()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 2,
+     "min_arity": 1,
+     "signature": "ITypeSymbol,ISymbol?",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ],
+     "unresolved_calls": [
+      {
+       "callee": "ThrowIfCancellationRequested",
+       "receiver_type": "CancellationToken",
+       "lang": "csharp",
+       "line": "L308",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Add",
+       "receiver_type": "HashSet",
+       "lang": "csharp",
+       "line": "L310",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "WithNullableAnnotation",
+       "receiver_type": "ITypeSymbol",
+       "lang": "csharp",
+       "line": "L315",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Contains",
+       "receiver_type": "HashSet",
+       "lang": "csharp",
+       "line": "L316",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "GetAttributes",
+       "receiver_type": "ITypeSymbol",
+       "lang": "csharp",
+       "line": "L348",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      }
+     ]
+    },
+    "norm_label": "typecollector.collectcore()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L306"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectenum",
+    "label": "TypeCollector.CollectEnum()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 2,
+     "signature": "INamedTypeSymbol,ISymbol",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ],
+     "unresolved_calls": [
+      {
+       "callee": "Add",
+       "receiver_type": "Builder",
+       "lang": "csharp",
+       "line": "L383",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      }
+     ]
+    },
+    "norm_label": "typecollector.collectenum()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L381"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectgeneric",
+    "label": "TypeCollector.CollectGeneric()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 2,
+     "signature": "INamedTypeSymbol,ISymbol?",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ],
+     "unresolved_calls": [
+      {
+       "callee": "ConstructUnboundGenericType",
+       "receiver_type": "INamedTypeSymbol",
+       "lang": "csharp",
+       "line": "L506",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "ToDisplayString",
+       "receiver_type": "INamedTypeSymbol",
+       "lang": "csharp",
+       "line": "L507",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Contains",
+       "receiver_type": "HashSet",
+       "lang": "csharp",
+       "line": "L519",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Add",
+       "receiver_type": "Builder",
+       "lang": "csharp",
+       "line": "L537",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "TryGetValue",
+       "receiver_type": "Dictionary",
+       "lang": "csharp",
+       "line": "L545",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Create",
+       "receiver_type": "ImmutableArray",
+       "lang": "csharp",
+       "line": "L605",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      }
+     ]
+    },
+    "norm_label": "typecollector.collectgeneric()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L504"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectgenericunion",
+    "label": "TypeCollector.CollectGenericUnion()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 1,
+     "signature": "INamedTypeSymbol",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ],
+     "unresolved_calls": [
+      {
+       "callee": "GetAttributes",
+       "receiver_type": "INamedTypeSymbol",
+       "lang": "csharp",
+       "line": "L425",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Contains",
+       "receiver_type": "HashSet",
+       "lang": "csharp",
+       "line": "L435",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      }
+     ]
+    },
+    "norm_label": "typecollector.collectgenericunion()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L423"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectobject",
+    "label": "TypeCollector.CollectObject()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 2,
+     "signature": "INamedTypeSymbol,ISymbol?",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ],
+     "unresolved_calls": [
+      {
+       "callee": "Add",
+       "receiver_type": "Builder",
+       "lang": "csharp",
+       "line": "L681",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      }
+     ]
+    },
+    "norm_label": "typecollector.collectobject()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L676"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectunion",
+    "label": "TypeCollector.CollectUnion()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 1,
+     "signature": "INamedTypeSymbol",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ],
+     "unresolved_calls": [
+      {
+       "callee": "GetAttributes",
+       "receiver_type": "INamedTypeSymbol",
+       "lang": "csharp",
+       "line": "L394",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Invoke",
+       "receiver_type": "Action",
+       "lang": "csharp",
+       "line": "L397",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Create",
+       "receiver_type": "Diagnostic",
+       "lang": "csharp",
+       "line": "L397",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "ToDisplayString",
+       "receiver_type": "ITypeSymbol",
+       "lang": "csharp",
+       "line": "L411",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Select",
+       "receiver_type": "ImmutableArray",
+       "lang": "csharp",
+       "line": "L417",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Add",
+       "receiver_type": "Builder",
+       "lang": "csharp",
+       "line": "L420",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      }
+     ]
+    },
+    "norm_label": "typecollector.collectunion()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L386"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_findnonpartialtypes",
+    "label": "TypeCollector.FindNonPartialTypes()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 1,
+     "signature": "ITypeSymbol",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ]
+    },
+    "norm_label": "typecollector.findnonpartialtypes()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1434"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getgenericformatterclassname",
+    "label": "TypeCollector.GetGenericFormatterClassName()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 1,
+     "signature": "INamedTypeSymbol",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ]
+    },
+    "norm_label": "typecollector.getgenericformatterclassname()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1447"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getidentifierlocation",
+    "label": "TypeCollector.GetIdentifierLocation()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 1,
+     "signature": "INamedTypeSymbol",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ]
+    },
+    "norm_label": "typecollector.getidentifierlocation()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1441"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getlocation",
+    "label": "TypeCollector.GetLocation()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 1,
+     "signature": "IParameterSymbol",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ]
+    },
+    "norm_label": "typecollector.getlocation()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1443"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getminimallyqualifiedclassname",
+    "label": "TypeCollector.GetMinimallyQualifiedClassName()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 1,
+     "signature": "INamedTypeSymbol",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ],
+     "unresolved_calls": [
+      {
+       "callee": "ToDisplayString",
+       "receiver_type": "INamedTypeSymbol",
+       "lang": "csharp",
+       "line": "L1455",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Replace",
+       "receiver_type": "Regex",
+       "lang": "csharp",
+       "line": "L1459",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      }
+     ]
+    },
+    "norm_label": "typecollector.getminimallyqualifiedclassname()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1452"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getobjectinfo",
+    "label": "TypeCollector.GetObjectInfo()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 2,
+     "signature": "INamedTypeSymbol,ISymbol?",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ],
+     "unresolved_calls": [
+      {
+       "callee": "GetAttributes",
+       "receiver_type": "INamedTypeSymbol",
+       "lang": "csharp",
+       "line": "L706",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "GetAttributes",
+       "receiver_type": "ISymbol",
+       "lang": "csharp",
+       "line": "L734",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "GetAllMembers",
+       "receiver_type": "INamedTypeSymbol",
+       "lang": "csharp",
+       "line": "L752",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Add",
+       "receiver_type": "HashSet",
+       "lang": "csharp",
+       "line": "L765",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Contains",
+       "receiver_type": "HashSet",
+       "lang": "csharp",
+       "line": "L771",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "TryGetValue",
+       "receiver_type": "Dictionary",
+       "lang": "csharp",
+       "line": "L778",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "GetLocation",
+       "receiver_type": "SyntaxToken",
+       "lang": "csharp",
+       "line": "L783",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "GetLocation",
+       "receiver_type": "SyntaxNode",
+       "lang": "csharp",
+       "line": "L785",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Invoke",
+       "receiver_type": "Action",
+       "lang": "csharp",
+       "line": "L789",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Create",
+       "receiver_type": "Diagnostic",
+       "lang": "csharp",
+       "line": "L789",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Any",
+       "receiver_type": "ImmutableArray",
+       "lang": "csharp",
+       "line": "L809",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "FirstOrDefault",
+       "receiver_type": "ImmutableArray",
+       "lang": "csharp",
+       "line": "L823",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "ContainsKey",
+       "receiver_type": "Dictionary",
+       "lang": "csharp",
+       "line": "L834",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Add",
+       "receiver_type": "Dictionary",
+       "lang": "csharp",
+       "line": "L836",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "OfType",
+       "receiver_type": "IEnumerable",
+       "lang": "csharp",
+       "line": "L886",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "GetAttributes",
+       "receiver_type": "IPropertySymbol",
+       "lang": "csharp",
+       "line": "L893",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "GetSyntax",
+       "receiver_type": "SyntaxReference",
+       "lang": "csharp",
+       "line": "L929",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "ToDisplayString",
+       "receiver_type": "INamedTypeSymbol",
+       "lang": "csharp",
+       "line": "L930",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Add",
+       "receiver_type": "List",
+       "lang": "csharp",
+       "line": "L937",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Empty",
+       "receiver_type": "Array",
+       "lang": "csharp",
+       "line": "L943",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "GetSemanticModel",
+       "receiver_type": "Compilation",
+       "lang": "csharp",
+       "line": "L944",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "GetLocation",
+       "receiver_type": "BaseTypeSyntax",
+       "lang": "csharp",
+       "line": "L948",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "GetLocation",
+       "receiver_type": "EqualsValueClauseSyntax",
+       "lang": "csharp",
+       "line": "L994",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "GetAttributes",
+       "receiver_type": "IFieldSymbol",
+       "lang": "csharp",
+       "line": "L1062",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "ToLookup",
+       "receiver_type": "Dictionary",
+       "lang": "csharp",
+       "line": "L1234",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "OrderBy",
+       "receiver_type": "Dictionary",
+       "lang": "csharp",
+       "line": "L1235",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Clear",
+       "receiver_type": "List",
+       "lang": "csharp",
+       "line": "L1240",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "TryGetValue",
+       "receiver_type": "IReadOnlyDictionary",
+       "lang": "csharp",
+       "line": "L1246",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "ClassifyConversion",
+       "receiver_type": "Compilation",
+       "lang": "csharp",
+       "line": "L1248",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "GetEnumerator",
+       "receiver_type": "IEnumerable",
+       "lang": "csharp",
+       "line": "L1283",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "GetMembers",
+       "receiver_type": "INamedTypeSymbol",
+       "lang": "csharp",
+       "line": "L1347",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Create",
+       "receiver_type": "ImmutableDictionary",
+       "lang": "csharp",
+       "line": "L1358",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "GetEffectiveAccessibility",
+       "receiver_type": "INamedTypeSymbol",
+       "lang": "csharp",
+       "line": "L1366",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "GetLocation",
+       "receiver_type": "AttributeSyntax",
+       "lang": "csharp",
+       "line": "L1370",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Any",
+       "receiver_type": "List",
+       "lang": "csharp",
+       "line": "L1393",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Where",
+       "receiver_type": "BaseTypeDeclarationSyntax",
+       "lang": "csharp",
+       "line": "L1406",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "ConstructUnboundGenericType",
+       "receiver_type": "INamedTypeSymbol",
+       "lang": "csharp",
+       "line": "L1417",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "ToArray",
+       "receiver_type": "List",
+       "lang": "csharp",
+       "line": "L1423",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      }
+     ]
+    },
+    "norm_label": "typecollector.getobjectinfo()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L700"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getparameterlistlocation",
+    "label": "TypeCollector.GetParameterListLocation()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 1,
+     "signature": "IMethodSymbol?",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ]
+    },
+    "norm_label": "typecollector.getparameterlistlocation()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1445"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_isallowaccessibility",
+    "label": "TypeCollector.IsAllowAccessibility()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 1,
+     "signature": "ITypeSymbol",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ]
+    },
+    "norm_label": "typecollector.isallowaccessibility()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1485"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_isopengenerictyperecursively",
+    "label": "TypeCollector.IsOpenGenericTypeRecursively()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 1,
+     "signature": "INamedTypeSymbol",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ]
+    },
+    "norm_label": "typecollector.isopengenerictyperecursively()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1501"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_ispartialtyperequired",
+    "label": "TypeCollector.IsPartialTypeRequired()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 1,
+     "signature": "Accessibility",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ]
+    },
+    "norm_label": "typecollector.ispartialtyperequired()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1483"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_resetworkspace",
+    "label": "TypeCollector.ResetWorkspace()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 0,
+     "signature": "",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ],
+     "unresolved_calls": [
+      {
+       "callee": "Clear",
+       "receiver_type": "HashSet",
+       "lang": "csharp",
+       "line": "L277",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Clear",
+       "receiver_type": "Builder",
+       "lang": "csharp",
+       "line": "L278",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      }
+     ]
+    },
+    "norm_label": "typecollector.resetworkspace()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L275"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_totupleunderlyingtype",
+    "label": "TypeCollector.ToTupleUnderlyingType()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 1,
+     "signature": "ITypeSymbol",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ],
+     "unresolved_calls": [
+      {
+       "callee": "CreateArrayTypeSymbol",
+       "receiver_type": "Compilation",
+       "lang": "csharp",
+       "line": "L486",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      }
+     ]
+    },
+    "norm_label": "typecollector.totupleunderlyingtype()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L482"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_trygetnextconstructor",
+    "label": "TypeCollector.TryGetNextConstructor()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 2,
+     "signature": "IEnumerator&lt;IMethodSymbol&gt;?,ref IMethodSymbol?",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ],
+     "unresolved_calls": [
+      {
+       "callee": "MoveNext",
+       "receiver_type": "IEnumerator",
+       "lang": "csharp",
+       "line": "L1471",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      }
+     ]
+    },
+    "norm_label": "typecollector.trygetnextconstructor()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1464"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_utils_roslynanalyzerextensions_messagepack_sourcegenerator_roslynanalyzerextensions_approximatelyequal",
+    "label": "RoslynAnalyzerExtensions.ApproximatelyEqual()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 2,
+     "min_arity": 1,
+     "extension": true,
+     "extended_type": "INamedTypeSymbol",
+     "extended_type_arity": 0,
+     "signature": "this INamedTypeSymbol?,INamedTypeSymbol?",
+     "namespace": "MessagePack.SourceGenerator",
+     "scope_chain": [
+      "s7:0"
+     ],
+     "unresolved_calls": [
+      {
+       "callee": "ToDisplayString",
+       "receiver_type": "INamedTypeSymbol",
+       "lang": "csharp",
+       "line": "L16",
+       "file": "src/MessagePack.SourceGenerator/Utils/RoslynAnalyzerExtensions.cs"
+      }
+     ]
+    },
+    "norm_label": "roslynanalyzerextensions.approximatelyequal()",
+    "source_file": "src/MessagePack.SourceGenerator/Utils/RoslynAnalyzerExtensions.cs",
+    "source_location": "L12"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_utils_roslynanalyzerextensions_messagepack_sourcegenerator_roslynanalyzerextensions_isapproximatelyequalorderivedfrom",
+    "label": "RoslynAnalyzerExtensions.IsApproximatelyEqualOrDerivedFrom()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 2,
+     "min_arity": 1,
+     "extension": true,
+     "extended_type": "INamedTypeSymbol",
+     "extended_type_arity": 0,
+     "signature": "this INamedTypeSymbol?,INamedTypeSymbol?",
+     "namespace": "MessagePack.SourceGenerator",
+     "scope_chain": [
+      "s7:0"
+     ],
+     "unresolved_calls": [
+      {
+       "callee": "ToDisplayString",
+       "receiver_type": "INamedTypeSymbol",
+       "lang": "csharp",
+       "line": "L28",
+       "file": "src/MessagePack.SourceGenerator/Utils/RoslynAnalyzerExtensions.cs"
+      },
+      {
+       "callee": "EnumerateBaseType",
+       "receiver_type": "INamedTypeSymbol",
+       "lang": "csharp",
+       "line": "L34",
+       "file": "src/MessagePack.SourceGenerator/Utils/RoslynAnalyzerExtensions.cs"
+      }
+     ]
+    },
+    "norm_label": "roslynanalyzerextensions.isapproximatelyequalorderivedfrom()",
+    "source_file": "src/MessagePack.SourceGenerator/Utils/RoslynAnalyzerExtensions.cs",
+    "source_location": "L24"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_analyzeroptions_messagepack_sourcegenerator_codeanalysis_formatterdescriptor_trycreate",
+    "label": "FormatterDescriptor.TryCreate()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 39,
+    "file_type": "code",
+    "metadata": {
+     "arity": 2,
+     "signature": "INamedTypeSymbol,out FormatterDescriptor?",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s9:0"
+     ],
+     "unresolved_calls": [
+      {
+       "callee": "GetMembers",
+       "receiver_type": "INamedTypeSymbol",
+       "lang": "csharp",
+       "line": "L237",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/AnalyzerOptions.cs"
+      },
+      {
+       "callee": "GetAttributes",
+       "receiver_type": "INamedTypeSymbol",
+       "lang": "csharp",
+       "line": "L250",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/AnalyzerOptions.cs"
+      }
+     ]
+    },
+    "norm_label": "formatterdescriptor.trycreate()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/AnalyzerOptions.cs",
+    "source_location": "L219"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_messagepackgenerator_messagepack_sourcegenerator_messagepackgenerator_initialize",
+    "label": "MessagePackGenerator.Initialize()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 39,
+    "file_type": "code",
+    "metadata": {
+     "arity": 1,
+     "signature": "IncrementalGeneratorInitializationContext",
+     "namespace": "MessagePack.SourceGenerator",
+     "scope_chain": [
+      "s9:0"
+     ],
+     "unresolved_calls": [
+      {
+       "callee": "Add",
+       "receiver_type": "List",
+       "lang": "csharp",
+       "line": "L49",
+       "file": "src/MessagePack.SourceGenerator/MessagePackGenerator.cs"
+      },
+      {
+       "callee": "ToImmutableArray",
+       "receiver_type": "List",
+       "lang": "csharp",
+       "line": "L80",
+       "file": "src/MessagePack.SourceGenerator/MessagePackGenerator.cs"
+      },
+      {
+       "callee": "AddRange",
+       "receiver_type": "List",
+       "lang": "csharp",
+       "line": "L92",
+       "file": "src/MessagePack.SourceGenerator/MessagePackGenerator.cs"
+      },
+      {
+       "callee": "Create",
+       "receiver_type": "ImmutableSortedSet",
+       "lang": "csharp",
+       "line": "L92",
+       "file": "src/MessagePack.SourceGenerator/MessagePackGenerator.cs"
+      },
+      {
+       "callee": "RegisterSourceOutput",
+       "receiver_type": "IncrementalGeneratorInitializationContext",
+       "lang": "csharp",
+       "line": "L100",
+       "file": "src/MessagePack.SourceGenerator/MessagePackGenerator.cs"
+      }
+     ]
+    },
+    "norm_label": "messagepackgenerator.initialize()",
+    "source_file": "src/MessagePack.SourceGenerator/MessagePackGenerator.cs",
+    "source_location": "L15"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_gettypearguments",
+    "label": "CodeAnalysisUtilities.GetTypeArguments()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 59,
+    "file_type": "code",
+    "metadata": {
+     "arity": 2,
+     "min_arity": 1,
+     "signature": "ITypeSymbol,ImmutableStack&lt;GenericTypeParameterInfo&gt;?",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s7:0"
+     ]
+    },
+    "norm_label": "codeanalysisutilities.gettypearguments()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/CodeAnalysisUtilities.cs",
+    "source_location": "L92"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_gettypeparameters",
+    "label": "CodeAnalysisUtilities.GetTypeParameters()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 59,
+    "file_type": "code",
+    "metadata": {
+     "arity": 2,
+     "min_arity": 1,
+     "signature": "ITypeSymbol,ImmutableStack&lt;GenericTypeParameterInfo&gt;?",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s7:0"
+     ]
+    },
+    "norm_label": "codeanalysisutilities.gettypeparameters()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/CodeAnalysisUtilities.cs",
+    "source_location": "L83"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_generictypeparameterinfo_messagepack_sourcegenerator_codeanalysis_generictypeparameterinfo_create",
+    "label": "GenericTypeParameterInfo.Create()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 59,
+    "file_type": "code",
+    "metadata": {
+     "arity": 2,
+     "min_arity": 1,
+     "signature": "ITypeParameterSymbol,ImmutableStack&lt;GenericTypeParameterInfo&gt;?",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s7:0"
+     ],
+     "unresolved_calls": [
+      {
+       "callee": "FirstOrDefault",
+       "receiver_type": "ImmutableStack",
+       "lang": "csharp",
+       "line": "L30",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/GenericTypeParameterInfo.cs"
+      }
+     ]
+    },
+    "norm_label": "generictypeparameterinfo.create()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/GenericTypeParameterInfo.cs",
+    "source_location": "L28"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_create",
+    "label": "QualifiedTypeName.Create()",
+    "_callable": true,
+    "_origin": "ast",
+    "community": 65,
+    "file_type": "code",
+    "metadata": {
+     "arity": 2,
+     "min_arity": 1,
+     "signature": "ITypeSymbol,ImmutableStack&lt;GenericTypeParameterInfo&gt;?",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s6:0"
+     ]
+    },
+    "norm_label": "qualifiedtypename.create()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedTypeName.cs",
+    "source_location": "L19"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_memberserializationinfo_messagepack_sourcegenerator_codeanalysis_memberserializationinfo_memberserializationinfo",
+    "label": "MemberSerializationInfo.MemberSerializationInfo()",
+    "_origin": "ast",
+    "community": 101,
+    "file_type": "code",
+    "metadata": {
+     "arity": 11,
+     "signature": "bool,bool,bool,bool,bool,int,string,string,string,string,FormatterDescriptor?",
+     "kind": "constructor",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s3:0"
+     ]
+    },
+    "norm_label": "memberserializationinfo.memberserializationinfo()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/MemberSerializationInfo.cs",
+    "source_location": "L6"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "label": "TypeCollector.cs",
+    "_origin": "ast",
+    "community": 29,
+    "file_type": "code",
+    "norm_label": "typecollector.cs",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_unionsubtypeinfo_messagepack_sourcegenerator_codeanalysis_unionsubtypeinfo_unionsubtypeinfo",
+    "label": "UnionSubTypeInfo.UnionSubTypeInfo()",
+    "_origin": "ast",
+    "community": 32,
+    "file_type": "code",
+    "metadata": {
+     "arity": 2,
+     "signature": "int,string",
+     "kind": "constructor",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s3:0"
+     ]
+    },
+    "norm_label": "unionsubtypeinfo.unionsubtypeinfo()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/UnionSubTypeInfo.cs",
+    "source_location": "L6"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_messagepack_sourcegenerator_codeanalysis_namespacetypecontainer_namespacetypecontainer",
+    "label": "NamespaceTypeContainer.NamespaceTypeContainer()",
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 1,
+     "signature": "string",
+     "kind": "constructor",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s11:0"
+     ]
+    },
+    "norm_label": "namespacetypecontainer.namespacetypecontainer()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedNamedTypeName.cs",
+    "source_location": "L275"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_typecollector",
+    "label": "TypeCollector.TypeCollector()",
+    "_origin": "ast",
+    "community": 34,
+    "file_type": "code",
+    "metadata": {
+     "arity": 6,
+     "signature": "Compilation,AnalyzerOptions,ReferenceSymbols,ITypeSymbol,Action&lt;Diagnostic&gt;?,CancellationToken",
+     "kind": "constructor",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ],
+     "unresolved_calls": [
+      {
+       "callee": "Invoke",
+       "receiver_type": "Action",
+       "lang": "csharp",
+       "line": "L248",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "Create",
+       "receiver_type": "Diagnostic",
+       "lang": "csharp",
+       "line": "L248",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      },
+      {
+       "callee": "GetAttributes",
+       "receiver_type": "ITypeSymbol",
+       "lang": "csharp",
+       "line": "L253",
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+      }
+     ]
+    },
+    "norm_label": "typecollector.typecollector()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L236"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_messagepackgeneratorresolvefailedexception_messagepackgeneratorresolvefailedexception",
+    "label": "MessagePackGeneratorResolveFailedException.MessagePackGeneratorResolveFailedException()",
+    "_origin": "ast",
+    "community": 55,
+    "file_type": "code",
+    "metadata": {
+     "arity": 1,
+     "signature": "string",
+     "kind": "constructor",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s13:0"
+     ]
+    },
+    "norm_label": "messagepackgeneratorresolvefailedexception.messagepackgeneratorresolvefailedexception()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L18"
+   },
+   {
+    "id": "src_messagepack_sourcegenerator_codeanalysis_generictypeparameterinfo_messagepack_sourcegenerator_codeanalysis_generictypeparameterinfo_generictypeparameterinfo",
+    "label": "GenericTypeParameterInfo.GenericTypeParameterInfo()",
+    "_origin": "ast",
+    "community": 59,
+    "file_type": "code",
+    "metadata": {
+     "arity": 1,
+     "signature": "string",
+     "kind": "constructor",
+     "namespace": "MessagePack.SourceGenerator.CodeAnalysis",
+     "scope_chain": [
+      "s7:0"
+     ]
+    },
+    "norm_label": "generictypeparameterinfo.generictypeparameterinfo()",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/GenericTypeParameterInfo.cs",
+    "source_location": "L10"
+   }
+  ],
+  "links": [
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_analyzeroptions_messagepack_sourcegenerator_codeanalysis_formatterdescriptor_trycreate",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_create",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/AnalyzerOptions.cs",
+    "source_location": "L241",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_analyzeroptions_messagepack_sourcegenerator_codeanalysis_formatterdescriptor_trycreate",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_findinaccessibletypes",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/AnalyzerOptions.cs",
+    "source_location": "L246",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_findinaccessibletypes",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_enumeratetypeandcontainingtypes",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/CodeAnalysisUtilities.cs",
+    "source_location": "L44",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_gettypearguments",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_create",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/CodeAnalysisUtilities.cs",
+    "source_location": "L95",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_gettypearguments",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_gettypearguments",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/CodeAnalysisUtilities.cs",
+    "source_location": "L96",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_gettypeparameters",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_generictypeparameterinfo_messagepack_sourcegenerator_codeanalysis_generictypeparameterinfo_create",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/CodeAnalysisUtilities.cs",
+    "source_location": "L86",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_gettypeparameters",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_gettypeparameters",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/CodeAnalysisUtilities.cs",
+    "source_location": "L87",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collect_da39a3",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_resetworkspace",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L288",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collect_da39a3",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectcore",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L292",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectarray",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectcore",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L447",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectarray",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_isopengenerictyperecursively",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L449",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectarray",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_create",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L454",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectarray",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_resolverregisterinfo_messagepack_sourcegenerator_codeanalysis_resolverregisterinfo_createarray",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L469",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectcore",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_totupleunderlyingtype",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L329",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectcore",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_isallowaccessibility",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L338",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectcore",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_checkvalidmessagepackformatterattribute",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L351",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectcore",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectenum",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L357",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectcore",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectgeneric",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L363",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectcore",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectunion",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L374",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectcore",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectobject",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L378",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectenum",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_enumserializationinfo_messagepack_sourcegenerator_codeanalysis_enumserializationinfo_create",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L383",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectgeneric",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_isopengenerictyperecursively",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L510",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectgeneric",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_genericserializationinfo_messagepack_sourcegenerator_codeanalysis_genericserializationinfo_create",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L529",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectgeneric",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_messagepack_sourcegenerator_codeanalysis_qualifiedtypename_create",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L631",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectgeneric",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectgenericunion",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L643",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectgeneric",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectobject",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L644",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectgeneric",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getobjectinfo",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L651",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectgenericunion",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectcore",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L437",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectobject",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getobjectinfo",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L678",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectunion",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getidentifierlocation",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L405",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectunion",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_unionserializationinfo_messagepack_sourcegenerator_codeanalysis_unionserializationinfo_create",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L415",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_findnonpartialtypes",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_enumeratetypeandcontainingtypes",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1436",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getminimallyqualifiedclassname",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getminimallyqualifiedclassname",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1454",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getobjectinfo",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getidentifierlocation",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1225",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getobjectinfo",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getlocation",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1261",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getobjectinfo",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getparameterlistlocation",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1275",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getobjectinfo",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_trygetnextconstructor",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1334",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getobjectinfo",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_findnonpartialtypes",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1401",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getobjectinfo",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_objectserializationinfo_messagepack_sourcegenerator_codeanalysis_objectserializationinfo_create",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1418",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getobjectinfo",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_generictypeparameterinfo_messagepack_sourcegenerator_codeanalysis_generictypeparameterinfo_create",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1422",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getobjectinfo",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_analyzeroptions_messagepack_sourcegenerator_codeanalysis_formatterdescriptor_trycreate",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L737",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getobjectinfo",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_ispartialtyperequired",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L827",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getobjectinfo",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectcore",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L841",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_isopengenerictyperecursively",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_isopengenerictyperecursively",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1503",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_findinaccessibletypes",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L245",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_unionserializationinfo_messagepack_sourcegenerator_codeanalysis_unionserializationinfo_create",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_unionserializationinfo_messagepack_sourcegenerator_codeanalysis_unionserializationinfo_create",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/UnionSerializationInfo.cs",
+    "source_location": "L15",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_messagepackgeneratorresolvefailedexception",
+    "relation": "contains",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L16",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "relation": "contains",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L24",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_messagepackgeneratorresolvefailedexception",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_messagepackgeneratorresolvefailedexception_messagepackgeneratorresolvefailedexception",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L18",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_findnonpartialtypes",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1434",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getidentifierlocation",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1441",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getlocation",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1443",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getparameterlistlocation",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1445",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getgenericformatterclassname",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1447",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getminimallyqualifiedclassname",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1452",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_trygetnextconstructor",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1464",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_ispartialtyperequired",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1483",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_isallowaccessibility",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1485",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_isopengenerictyperecursively",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1501",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_typecollector",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L236",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collect",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L263",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_resetworkspace",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L275",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collect_da39a3",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L286",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectcore",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L306",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectenum",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L381",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectunion",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L386",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectgenericunion",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L423",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectarray",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L443",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_totupleunderlyingtype",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L482",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectgeneric",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L504",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectobject",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L676",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_checkvalidmessagepackformatterattribute",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L685",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getobjectinfo",
+    "relation": "method",
+    "_origin": "ast",
+    "confidence": "EXTRACTED",
+    "confidence_score": 1,
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L700",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectcore",
+    "target": "src_messagepack_sourcegenerator_utils_roslynanalyzerextensions_messagepack_sourcegenerator_roslynanalyzerextensions_approximatelyequal",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "INFERRED",
+    "confidence_score": 0.75,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L348",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectgenericunion",
+    "target": "src_messagepack_sourcegenerator_utils_roslynanalyzerextensions_messagepack_sourcegenerator_roslynanalyzerextensions_approximatelyequal",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "INFERRED",
+    "confidence_score": 0.75,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L425",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectunion",
+    "target": "src_messagepack_sourcegenerator_utils_roslynanalyzerextensions_messagepack_sourcegenerator_roslynanalyzerextensions_approximatelyequal",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "INFERRED",
+    "confidence_score": 0.75,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L394",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getobjectinfo",
+    "target": "src_messagepack_sourcegenerator_utils_roslynanalyzerextensions_messagepack_sourcegenerator_roslynanalyzerextensions_approximatelyequal",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "INFERRED",
+    "confidence_score": 0.75,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L706",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getobjectinfo",
+    "target": "src_messagepack_sourcegenerator_utils_roslynanalyzerextensions_messagepack_sourcegenerator_roslynanalyzerextensions_isapproximatelyequalorderivedfrom",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "INFERRED",
+    "confidence_score": 0.75,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L919",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_typecollector",
+    "target": "src_messagepack_sourcegenerator_utils_roslynanalyzerextensions_messagepack_sourcegenerator_roslynanalyzerextensions_approximatelyequal",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "INFERRED",
+    "confidence_score": 0.75,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L253",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collect",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collect_da39a3",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "INFERRED",
+    "confidence_score": 0.85,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L271",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectarray",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_messagepack_sourcegenerator_codeanalysis_namespacetypecontainer_namespacetypecontainer",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "INFERRED",
+    "confidence_score": 0.85,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L473",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectarray",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_generictypeparameterinfo_messagepack_sourcegenerator_codeanalysis_generictypeparameterinfo_generictypeparameterinfo",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "INFERRED",
+    "confidence_score": 0.85,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L475",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectgeneric",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_qualifiednamedtypename_messagepack_sourcegenerator_codeanalysis_namespacetypecontainer_namespacetypecontainer",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "INFERRED",
+    "confidence_score": 0.85,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L534",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectgeneric",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_gettypeparameters",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "INFERRED",
+    "confidence_score": 0.85,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L568",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectgeneric",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_messagepack_sourcegenerator_codeanalysis_codeanalysisutilities_gettypearguments",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "INFERRED",
+    "confidence_score": 0.85,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L569",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collectunion",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_unionsubtypeinfo_messagepack_sourcegenerator_codeanalysis_unionsubtypeinfo_unionsubtypeinfo",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "INFERRED",
+    "confidence_score": 0.85,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L412",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_getobjectinfo",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_memberserializationinfo_messagepack_sourcegenerator_codeanalysis_memberserializationinfo_memberserializationinfo",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "INFERRED",
+    "confidence_score": 0.85,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "source_location": "L1019",
+    "weight": 1
+   },
+   {
+    "source": "src_messagepack_sourcegenerator_messagepackgenerator_messagepack_sourcegenerator_messagepackgenerator_initialize",
+    "target": "src_messagepack_sourcegenerator_codeanalysis_typecollector_messagepack_sourcegenerator_codeanalysis_typecollector_collect",
+    "relation": "calls",
+    "_origin": "ast",
+    "confidence": "INFERRED",
+    "confidence_score": 0.85,
+    "context": "call",
+    "source_file": "src/MessagePack.SourceGenerator/MessagePackGenerator.cs",
+    "source_location": "L55",
+    "weight": 1
+   }
+  ],
+  "hyperedges": []
+ }
+}

@@ -119,41 +119,30 @@ button.primary { background: var(--accent); color: var(--card); border-color: va
 
 /* Graph */
 .graph-wrap { border: 1px solid var(--line); border-radius: 8px; background: var(--bg); overflow: auto; }
-.graph-wrap svg { display: block; width: 100%; height: auto; min-width: 760px; }
-.node { cursor: pointer; }
-.node rect.box { fill: var(--card); stroke: var(--line); stroke-width: 1.2; }
-.node text { font-size: 12.5px; fill: var(--ink); pointer-events: none; }
-.node text.sub { font-size: 10px; fill: var(--muted); font-family: var(--mono); }
-.node text.badge { font-size: 9px; font-weight: 700; letter-spacing: .05em; fill: var(--muted); }
-.node text.badge.ok { fill: var(--ok); } .node text.badge.bad { fill: var(--bad); } .node text.badge.warn { fill: var(--warn); }
-.node text.badge.info { fill: var(--down); } .node text.badge.edited { fill: var(--edited); }
-.node.dim { opacity: .4; }
-.node.edited rect.box { fill: var(--edited-bg); stroke: var(--edited); stroke-width: 2; }
-.node.downstream rect.box { fill: var(--down-bg); stroke: var(--down); stroke-width: 1.6; }
-.node.failing rect.box { fill: var(--bad-bg); stroke: var(--bad); stroke-width: 2.4; }
-.node.test rect.box, .node.testfile rect.box, .node[data-node="concept:tests"] rect.box { fill: var(--test-bg); stroke: var(--test); }
-.node.pr rect.box { fill: var(--ink); stroke: var(--ink); }
-.node.pr text { fill: var(--card); }
-.node.pr text.sub { fill: var(--card); opacity: .7; }
-.node.requirement rect.box { fill: var(--req-bg); stroke: var(--req); }
-.node.selected rect.box { stroke: var(--ink); stroke-width: 3; stroke-dasharray: none; }
-.arrowhead { fill: var(--muted); }
-.edge path.vis { fill: none; stroke: var(--muted); stroke-width: 1.4; }
-.edge.tests path.vis { stroke: var(--test); stroke-dasharray: 2 4; }
-.edge.edits path.vis { stroke: var(--edited); stroke-width: 2; }
-.edge.may-affect path.vis { stroke: var(--down); stroke-dasharray: 7 4; }
-.edge.implements path.vis { stroke: var(--req); }
-.edge.inferred path.vis { stroke-dasharray: 7 4; }
-.edge.added path.vis { stroke-width: 2.6; }
-.edge.selected path.vis { stroke: var(--ink); stroke-width: 3; }
-.edge path.hit { fill: none; stroke: transparent; stroke-width: 14; cursor: pointer; }
-.edge.dim { opacity: .3; }
+.graph-wrap { position: relative; overflow: hidden; }
+.gfy-canvas { height: 560px; }
+.gfy-zoom { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; }
+.gfy-zoom button { min-width: 30px; padding: 2px 8px; }
+.gfy-note { margin-top: 10px; font-size: 12.5px; }
+.gfy-note details { margin-top: 6px; }
+.gfy-note summary { cursor: pointer; color: var(--accent); }
+.gfy-note ul { margin: 6px 0 0; padding-left: 18px; max-height: 180px; overflow: auto; }
+div.vis-tooltip { position: absolute; white-space: pre-line; max-width: 420px; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: 12px/1.45 system-ui, "Segoe UI", sans-serif; box-shadow: 0 4px 14px rgba(0, 0, 0, .18); pointer-events: none; z-index: 5; }
 .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; }
 .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; border: 1.5px solid; }
 .sw-edited { background: var(--edited-bg); border-color: var(--edited); }
 .sw-downstream { background: var(--down-bg); border-color: var(--down); }
 .sw-failing { background: var(--bad-bg); border-color: var(--bad); }
-.sw-test { background: var(--test-bg); border-color: var(--test); }
+.sw-test { background: var(--card); border-color: var(--test); }
+.sw.dot { border-radius: 50%; }
+.sw.dot.sw-edited { background: var(--edited); }
+.sw.dot.sw-downstream { background: var(--down); }
+.sw.dot.sw-failing { background: var(--bad); }
+.sw-none { background: var(--line); border-color: var(--muted); }
+.sw-pr { background: var(--ink); border-color: var(--ink); transform: rotate(45deg) scale(.8); }
+.ln { display: inline-block; width: 26px; height: 0; vertical-align: 4px; border-top: 2px solid var(--muted); }
+.ln-dashed { border-top-style: dashed; border-top-width: 1.5px; }
+.ln-dotted { border-top-style: dotted; border-top-width: 1.5px; opacity: .8; }
 
 /* AI review */
 .finding { border-left: 3px solid var(--line); padding: 2px 0 2px 12px; margin: 12px 0; display: flex; flex-direction: column; gap: 4px; }

@@ -1,0 +1,3454 @@
+{
+ "revision": "32258fdbee4bcd653c79f51b4376b5103c6f4d27",
+ "tool": "graphify",
+ "graphifyVersion": "0.9.108",
+ "schemaVersion": 1,
+ "command": "GRAPHIFY_BACKEND=none graphify extract . --code-only --out <outside the tree>",
+ "repo": "te-industry-tech-office/junction26-messagepack-csharp",
+ "note": "Rolled up from Graphify's graph.json for the base commit: for each pair of files, the number of 'calls' links between functions, split by Graphify's EXTRACTED / INFERRED label.",
+ "full": {
+  "nodes": 9549,
+  "links": 22811,
+  "calls": 4508
+ },
+ "fileLinks": [
+  {
+   "from": "benchmark/CollectionsMarshalBenchmark/OldListFormatter`1.cs",
+   "to": "src/MessagePack/MessagePackSecurity.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "benchmark/CollectionsMarshalBenchmark/OldListFormatter`1.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/CollectionsMarshalBenchmark/RandomByteBenchmark.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 3,
+   "inferred": 0
+  },
+  {
+   "from": "benchmark/CollectionsMarshalBenchmark/RandomByteBenchmark.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "benchmark/CollectionsMarshalBenchmark/RandomMatrix4x4Benchmark.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 3,
+   "inferred": 0
+  },
+  {
+   "from": "benchmark/CollectionsMarshalBenchmark/RandomMatrix4x4Benchmark.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "benchmark/ExperimentalBenchmark/BoolDeserializeTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "benchmark/ExperimentalBenchmark/BoolSerializeTest.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/ExperimentalBenchmark/DoubleTest.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/ExperimentalBenchmark/IntTest.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/ExperimentalBenchmark/SByteTest.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/ExperimentalBenchmark/ShortTest.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/ExperimentalBenchmark/SingleTest.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Fixture/ExpressionTreeFixture.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Fixture/ExpressionTreeFixture.cs",
+   "to": "benchmark/SerializerBenchmark/Fixture/EnumValueFixture.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/AccessToken.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/Answer.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 4
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/Answer.cs",
+   "to": "benchmark/SerializerBenchmark/Models/ShallowUser.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/Badge.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/Badge.cs",
+   "to": "benchmark/SerializerBenchmark/Models/ShallowUser.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/Comment.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 4
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/Comment.cs",
+   "to": "benchmark/SerializerBenchmark/Models/ShallowUser.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/Error.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/Event.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/FlagOption.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/InboxItem.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/InboxItem.cs",
+   "to": "benchmark/SerializerBenchmark/Models/Info.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/Info.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 8
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/NetworkUser.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/NetworkUser.cs",
+   "to": "benchmark/SerializerBenchmark/Models/User.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/Notification.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/Notification.cs",
+   "to": "benchmark/SerializerBenchmark/Models/Info.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/Post.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/Post.cs",
+   "to": "benchmark/SerializerBenchmark/Models/ShallowUser.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/Privilege.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/Question.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 8
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/Question.cs",
+   "to": "benchmark/SerializerBenchmark/Models/Info.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/Question.cs",
+   "to": "benchmark/SerializerBenchmark/Models/ShallowUser.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/QuestionTimeline.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/QuestionTimeline.cs",
+   "to": "benchmark/SerializerBenchmark/Models/ShallowUser.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/Reputation.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/Revision.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/Revision.cs",
+   "to": "benchmark/SerializerBenchmark/Models/ShallowUser.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/SearchExcerpt.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/SearchExcerpt.cs",
+   "to": "benchmark/SerializerBenchmark/Models/ShallowUser.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/ShallowUser.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 4
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/ShallowUser.cs",
+   "to": "benchmark/SerializerBenchmark/Models/User.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/SuggestedEdit.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/SuggestedEdit.cs",
+   "to": "benchmark/SerializerBenchmark/Models/ShallowUser.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/Tag.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/TagScore.cs",
+   "to": "benchmark/SerializerBenchmark/Models/ShallowUser.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/TagSynonym.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/TagWiki.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/TagWiki.cs",
+   "to": "benchmark/SerializerBenchmark/Models/ShallowUser.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/TopTag.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/User.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/UserTimeline.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/Models/WritePermission.cs",
+   "to": "benchmark/SerializerBenchmark/ExtensionMethods.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "benchmark/SerializerBenchmark/SerializerBenchmark.cs",
+   "to": "benchmark/SerializerBenchmark/Serializers/SerializerBase.cs",
+   "extracted": 266,
+   "inferred": 0
+  },
+  {
+   "from": "sandbox/DynamicCodeDumper/Program.cs",
+   "to": "src/MessagePack/IFormatterResolver.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "sandbox/DynamicCodeDumper/Program.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "sandbox/DynamicCodeDumper/Program.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 4
+  },
+  {
+   "from": "sandbox/PerfBenchmarkDotNet/DictionaryLookupCompare.cs",
+   "to": "src/MessagePack/Internal/AutomataDictionary.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "sandbox/PerfBenchmarkDotNet/DictionaryLookupCompare.cs",
+   "to": "src/MessagePack/Internal/ByteArrayStringHashTable.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "sandbox/PerfBenchmarkDotNet/GeneratedFormatter.cs",
+   "to": "src/MessagePack/Internal/AutomataDictionary.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "sandbox/PerfBenchmarkDotNet/GeneratedFormatter.cs",
+   "to": "src/MessagePack/Internal/ByteArrayStringHashTable.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "sandbox/PerfBenchmarkDotNet/GeneratedFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 8
+  },
+  {
+   "from": "sandbox/PerfBenchmarkDotNet/Lz4Benchmark.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "sandbox/PerfBenchmarkDotNet/Lz4Benchmark.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 6,
+   "inferred": 0
+  },
+  {
+   "from": "sandbox/PerfBenchmarkDotNet/Lz4PrimitiveBenchmark.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "sandbox/PerfBenchmarkDotNet/Lz4PrimitiveBenchmark.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 6,
+   "inferred": 0
+  },
+  {
+   "from": "sandbox/PerfBenchmarkDotNet/MessagePackWriterBenchmark.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 0,
+   "inferred": 5
+  },
+  {
+   "from": "sandbox/PerfBenchmarkDotNet/MessagePackWriterBenchmark.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 5
+  },
+  {
+   "from": "sandbox/PerfBenchmarkDotNet/StringKeyDeserializeCompare.cs",
+   "to": "sandbox/PerfBenchmarkDotNet/GeneratedFormatter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "sandbox/PerfBenchmarkDotNet/StringKeyDeserializeCompare.cs",
+   "to": "sandbox/PerfBenchmarkDotNet/Resolver.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "sandbox/PerfNetFramework/Program.cs",
+   "to": "sandbox/PerfNetFramework/Measure.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "sandbox/PerfNetFramework/Program.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "sandbox/PerfNetFramework/Program.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "sandbox/PerfNetFramework/Program.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "sandbox/Sandbox/Program.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "sandbox/Sandbox/Program.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 3,
+   "inferred": 0
+  },
+  {
+   "from": "sandbox/Sandbox/Program.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "sandbox/SharedData/Class1.cs",
+   "to": "src/MessagePack/IFormatterResolver.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "sandbox/SharedData/Class1.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.AspNetCoreMvcFormatter/MessagePackInputFormatter.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.AspNetCoreMvcFormatter/MessagePackOutputFormatter.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.Experimental/HardwareIntrinsics/Formatters.cs",
+   "to": "src/MessagePack.Experimental/HardwareIntrinsics/UnsafeMemoryAlignmentUtility.cs",
+   "extracted": 5,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.Experimental/HardwareIntrinsics/Formatters.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.Experimental/HardwareIntrinsics/Formatters.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 27
+  },
+  {
+   "from": "src/MessagePack.Experimental/HardwareIntrinsics/PrimitiveArrayResolver.cs",
+   "to": "src/MessagePack.Experimental/HardwareIntrinsics/PrimitiveArrayGetFormatterHelper.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.Experimental/UnsafeUnmanagedStructFormatter/UnsafeUnmanagedStructArrayFormatter.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.Experimental/UnsafeUnmanagedStructFormatter/UnsafeUnmanagedStructArrayFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 4
+  },
+  {
+   "from": "src/MessagePack.Experimental/UnsafeUnmanagedStructFormatter/UnsafeUnmanagedStructFormatter.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.Experimental/UnsafeUnmanagedStructFormatter/UnsafeUnmanagedStructFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "src/MessagePack.Experimental/UnsafeUnmanagedStructFormatter/UnsafeUnmanagedStructMemoryFormatter.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.Experimental/UnsafeUnmanagedStructFormatter/UnsafeUnmanagedStructMemoryFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "src/MessagePack.Experimental/UnsafeUnmanagedStructFormatter/UnsafeUnmanagedStructReadOnlyMemoryFormatter.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.Experimental/UnsafeUnmanagedStructFormatter/UnsafeUnmanagedStructReadOnlyMemoryFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "src/MessagePack.Experimental/UnsafeUnmanagedStructFormatter/UnsafeUnmanagedStructReadOnlySequenceFormatter.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.Experimental/UnsafeUnmanagedStructFormatter/UnsafeUnmanagedStructReadOnlySequenceFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "src/MessagePack.ReactiveProperty/Formatters.cs",
+   "to": "src/MessagePack/IFormatterResolver.cs",
+   "extracted": 0,
+   "inferred": 4
+  },
+  {
+   "from": "src/MessagePack.ReactiveProperty/Formatters.cs",
+   "to": "src/MessagePack/MessagePackCode.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.ReactiveProperty/Formatters.cs",
+   "to": "src/MessagePack/MessagePackSecurity.cs",
+   "extracted": 0,
+   "inferred": 4
+  },
+  {
+   "from": "src/MessagePack.ReactiveProperty/Formatters.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 10
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator.Unity/CompositeResolverGenerator.cs",
+   "to": "src/MessagePack.SourceGenerator/Transforms/CompositeResolverTemplate.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator.Unity/CompositeResolverGenerator.cs",
+   "to": "src/MessagePack.SourceGenerator/Utils/AnalyzerUtilities.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Analyzers/MsgPack00xMessagePackAnalyzer.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/AnalyzerOptions.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Analyzers/MsgPack00xMessagePackAnalyzer.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/ReferenceSymbols.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/AnalyzerOptions.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/CodeAnalysisUtilities.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/AnalyzerOptions.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedNamedTypeName.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/AnalyzerOptions.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedTypeName.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/AnalyzerOptions.cs",
+   "to": "src/MessagePack.SourceGenerator/Utils/AnalyzerUtilities.cs",
+   "extracted": 3,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/CodeAnalysisUtilities.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/GenericTypeParameterInfo.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/CodeAnalysisUtilities.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedTypeName.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/CustomFormatterRegisterInfo.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/ResolverRegisterInfo.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/EnumSerializationInfo.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/ResolverRegisterInfo.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/FullModel.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/AnalyzerOptions.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/GenericSerializationInfo.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/ResolverRegisterInfo.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/GenericTypeParameterInfo.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedNamedTypeName.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/GenericTypeParameterInfo.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedTypeName.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/GenericTypeParameterInfo.cs",
+   "to": "src/MessagePack.SourceGenerator/Utils/ImmutableEquatableArray.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/MemberSerializationInfo.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedNamedTypeName.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/ObjectSerializationInfo.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/ResolverRegisterInfo.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedArrayTypeName.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedTypeName.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedNamedTypeName.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/CodeAnalysisUtilities.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedTypeName.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedArrayTypeName.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedTypeName.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedNamedTypeName.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedTypeName.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeParameter.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/ResolverRegisterInfo.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedNamedTypeName.cs",
+   "extracted": 2,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/ResolverRegisterInfoComparer.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedTypeName.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/AnalyzerOptions.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/CodeAnalysisUtilities.cs",
+   "extracted": 2,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/EnumSerializationInfo.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/GenericSerializationInfo.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/GenericTypeParameterInfo.cs",
+   "extracted": 1,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/MemberSerializationInfo.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/ObjectSerializationInfo.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedNamedTypeName.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedTypeName.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/ResolverRegisterInfo.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/UnionSerializationInfo.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/UnionSubTypeInfo.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+   "to": "src/MessagePack.SourceGenerator/Utils/RoslynAnalyzerExtensions.cs",
+   "extracted": 0,
+   "inferred": 6
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CodeAnalysis/UnionSerializationInfo.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/ResolverRegisterInfo.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CompositeResolverGenerator.cs",
+   "to": "src/MessagePack.SourceGenerator/Transforms/CompositeResolverTemplate.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/CompositeResolverGenerator.cs",
+   "to": "src/MessagePack.SourceGenerator/Utils/AnalyzerUtilities.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/GeneratorUtilities.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/AnalyzerOptions.cs",
+   "extracted": 1,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/GeneratorUtilities.cs",
+   "to": "src/MessagePack.SourceGenerator/Utils/AnalyzerUtilities.cs",
+   "extracted": 3,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/MessagePackGenerator.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/AnalyzerOptions.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/MessagePackGenerator.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/FullModel.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/MessagePackGenerator.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/ReferenceSymbols.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/MessagePackGenerator.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/MessagePackGenerator.cs",
+   "to": "src/MessagePack.SourceGenerator/GeneratorUtilities.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/MessagePackGenerator.cs",
+   "to": "src/MessagePack.SourceGenerator/MessagePackGenerator.Emit.cs",
+   "extracted": 1,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/MessagePackGenerator.Emit.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/CodeAnalysisUtilities.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/MessagePackGenerator.Emit.cs",
+   "to": "src/MessagePack.SourceGenerator/IGeneratorContext.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/MessagePackGenerator.Emit.cs",
+   "to": "src/MessagePack.SourceGenerator/Transforms/EnumTemplate.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/MessagePackGenerator.Emit.cs",
+   "to": "src/MessagePack.SourceGenerator/Transforms/IFormatterTemplate.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/MessagePackGenerator.Emit.cs",
+   "to": "src/MessagePack.SourceGenerator/Transforms/ResolverTemplate.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/MessagePackGenerator.Emit.cs",
+   "to": "src/MessagePack.SourceGenerator/Transforms/TemplatePartials.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/MessagePackGenerator.Emit.cs",
+   "to": "src/MessagePack.SourceGenerator/Transforms/UnionTemplate.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Transforms/CompositeResolverTemplate.cs",
+   "to": "src/MessagePack.SourceGenerator/Shims/System.CodeDom.cs",
+   "extracted": 2,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Transforms/CompositeResolverTemplate.cs",
+   "to": "src/MessagePack.SourceGenerator/Transforms/TransformUtilities.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Transforms/EnumTemplate.cs",
+   "to": "src/MessagePack.SourceGenerator/Shims/System.CodeDom.cs",
+   "extracted": 2,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Transforms/EnumTemplate.cs",
+   "to": "src/MessagePack.SourceGenerator/Transforms/TransformUtilities.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Transforms/FormatterTemplate.cs",
+   "to": "src/MessagePack.SourceGenerator/Shims/System.CodeDom.cs",
+   "extracted": 2,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Transforms/FormatterTemplate.cs",
+   "to": "src/MessagePack.SourceGenerator/Transforms/GeneratorUtilities.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Transforms/FormatterTemplate.cs",
+   "to": "src/MessagePack.SourceGenerator/Transforms/TransformUtilities.cs",
+   "extracted": 1,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Transforms/ResolverTemplate.cs",
+   "to": "src/MessagePack.SourceGenerator/Shims/System.CodeDom.cs",
+   "extracted": 2,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Transforms/ResolverTemplate.cs",
+   "to": "src/MessagePack.SourceGenerator/Transforms/TransformUtilities.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Transforms/StringKey/StringKeyFormatterDeserializeHelper.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/MemberSerializationInfo.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Transforms/StringKey/StringKeyFormatterDeserializeHelper.cs",
+   "to": "src/MessagePack.SourceGenerator/Transforms/StringKey/EmbedStringHelper.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Transforms/StringKey/StringKeyFormatterDeserializeHelper.cs",
+   "to": "src/MessagePack/Internal/AutomataKeyGen.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Transforms/StringKey/StringKeyFormatterTemplate.cs",
+   "to": "src/MessagePack.SourceGenerator/Shims/System.CodeDom.cs",
+   "extracted": 2,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Transforms/StringKey/StringKeyFormatterTemplate.cs",
+   "to": "src/MessagePack.SourceGenerator/Transforms/GeneratorUtilities.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Transforms/StringKey/StringKeyFormatterTemplate.cs",
+   "to": "src/MessagePack.SourceGenerator/Transforms/StringKey/EmbedStringHelper.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Transforms/StringKey/StringKeyFormatterTemplate.cs",
+   "to": "src/MessagePack.SourceGenerator/Transforms/StringKey/StringKeyFormatterDeserializeHelper.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Transforms/StringKey/StringKeyFormatterTemplate.cs",
+   "to": "src/MessagePack.SourceGenerator/Transforms/TransformUtilities.cs",
+   "extracted": 1,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Transforms/UnionTemplate.cs",
+   "to": "src/MessagePack.SourceGenerator/Shims/System.CodeDom.cs",
+   "extracted": 2,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Transforms/UnionTemplate.cs",
+   "to": "src/MessagePack.SourceGenerator/Transforms/TransformUtilities.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Utils/AnalyzerUtilities.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/AnalyzerOptions.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Utils/AnalyzerUtilities.cs",
+   "to": "src/MessagePack.SourceGenerator/Utils/RoslynAnalyzerExtensions.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.SourceGenerator/Utils/ImmutableEquatableArray.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/FullModel.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack.UnityClient/Assets/Scenes/SandboxBehaviour.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.UnityClient/Assets/Scripts/MessagePack/Extension/UnsafeBlitFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 1,
+   "inferred": 4
+  },
+  {
+   "from": "src/MessagePack.UnityClient/Assets/Scripts/MessagePack/Formatters.cs",
+   "to": "src/MessagePack/IFormatterResolver.cs",
+   "extracted": 0,
+   "inferred": 7
+  },
+  {
+   "from": "src/MessagePack.UnityClient/Assets/Scripts/MessagePack/Formatters.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 43
+  },
+  {
+   "from": "src/MessagePack.UnityClient/Assets/Scripts/Tests/IL2CPPTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack.UnityClient/Assets/Scripts/Tests/IL2CPPTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 6,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/BufferWriter.cs",
+   "to": "src/MessagePack/SequencePool.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/BufferWriter.cs",
+   "to": "src/MessagePack/Utilities.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Formatters/CollectionFormatter.cs",
+   "to": "src/MessagePack/MessagePackSecurity.cs",
+   "extracted": 0,
+   "inferred": 16
+  },
+  {
+   "from": "src/MessagePack/Formatters/CollectionFormatter.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 1,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Formatters/CollectionFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 37
+  },
+  {
+   "from": "src/MessagePack/Formatters/CollectionFormatter.cs",
+   "to": "src/MessagePack/SequencePool.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Formatters/CollectionFormatter.cs",
+   "to": "src/MessagePack/Utilities.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Formatters/DateTimeFormatters.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 6
+  },
+  {
+   "from": "src/MessagePack/Formatters/DictionaryFormatter.cs",
+   "to": "src/MessagePack/IFormatterResolver.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Formatters/DictionaryFormatter.cs",
+   "to": "src/MessagePack/MessagePackSecurity.cs",
+   "extracted": 0,
+   "inferred": 8
+  },
+  {
+   "from": "src/MessagePack/Formatters/DictionaryFormatter.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Formatters/DictionaryFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Formatters/DynamicObjectTypeFallbackFormatter.cs",
+   "to": "src/MessagePack/Formatters/PrimitiveObjectFormatter.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Formatters/DynamicObjectTypeFallbackFormatter.cs",
+   "to": "src/MessagePack/Internal/ThreadsafeTypeKeyHashTable.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Formatters/DynamicObjectTypeFallbackFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Formatters/EnumAsStringFormatter`1.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Formatters/EnumAsStringFormatter`1.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Formatters/ExpandoObjectFormatter.cs",
+   "to": "src/MessagePack/IFormatterResolver.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Formatters/ExpandoObjectFormatter.cs",
+   "to": "src/MessagePack/MessagePackSecurity.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Formatters/ExpandoObjectFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Formatters/ForceSizePrimitiveFormatter.cs",
+   "to": "src/MessagePack/MessagePackSecurity.cs",
+   "extracted": 0,
+   "inferred": 7
+  },
+  {
+   "from": "src/MessagePack/Formatters/ForceSizePrimitiveFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 45
+  },
+  {
+   "from": "src/MessagePack/Formatters/FrozenCollectionFormatters.cs",
+   "to": "src/MessagePack/IFormatterResolver.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Formatters/FrozenCollectionFormatters.cs",
+   "to": "src/MessagePack/MessagePackSecurity.cs",
+   "extracted": 0,
+   "inferred": 4
+  },
+  {
+   "from": "src/MessagePack/Formatters/FrozenCollectionFormatters.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 4
+  },
+  {
+   "from": "src/MessagePack/Formatters/GenericEnumFormatter`1.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Formatters/IgnoreFormatter`1.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Formatters/ImmutableCollectionFormatters.cs",
+   "to": "src/MessagePack/MessagePackSecurity.cs",
+   "extracted": 0,
+   "inferred": 5
+  },
+  {
+   "from": "src/MessagePack/Formatters/ImmutableCollectionFormatters.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Formatters/MultiDimensionalArrayFormatter.cs",
+   "to": "src/MessagePack/MessagePackSecurity.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "src/MessagePack/Formatters/MultiDimensionalArrayFormatter.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "src/MessagePack/Formatters/MultiDimensionalArrayFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 9
+  },
+  {
+   "from": "src/MessagePack/Formatters/NilFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Formatters/NullableFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Formatters/PrimitiveFormatter.cs",
+   "to": "src/MessagePack/Internal/UnsafeRefDeserializeHelper.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Formatters/PrimitiveFormatter.cs",
+   "to": "src/MessagePack/Internal/UnsafeRefSerializeHelper.cs",
+   "extracted": 22,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Formatters/PrimitiveFormatter.cs",
+   "to": "src/MessagePack/MessagePackCode.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Formatters/PrimitiveFormatter.cs",
+   "to": "src/MessagePack/MessagePackSecurity.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Formatters/PrimitiveFormatter.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Formatters/PrimitiveFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 88
+  },
+  {
+   "from": "src/MessagePack/Formatters/PrimitiveObjectFormatter.cs",
+   "to": "src/MessagePack/IFormatterResolver.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Formatters/PrimitiveObjectFormatter.cs",
+   "to": "src/MessagePack/MessagePackCode.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Formatters/PrimitiveObjectFormatter.cs",
+   "to": "src/MessagePack/MessagePackSecurity.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Formatters/PrimitiveObjectFormatter.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Formatters/PrimitiveObjectFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 12
+  },
+  {
+   "from": "src/MessagePack/Formatters/PrimitiveObjectFormatter.cs",
+   "to": "src/MessagePack/Utilities.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Formatters/StandardClassLibraryFormatter.cs",
+   "to": "src/MessagePack/IFormatterResolver.cs",
+   "extracted": 0,
+   "inferred": 4
+  },
+  {
+   "from": "src/MessagePack/Formatters/StandardClassLibraryFormatter.cs",
+   "to": "src/MessagePack/Internal/GuidBits.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Formatters/StandardClassLibraryFormatter.cs",
+   "to": "src/MessagePack/MessagePackCode.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Formatters/StandardClassLibraryFormatter.cs",
+   "to": "src/MessagePack/MessagePackSecurity.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "src/MessagePack/Formatters/StandardClassLibraryFormatter.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 2,
+   "inferred": 11
+  },
+  {
+   "from": "src/MessagePack/Formatters/StandardClassLibraryFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 43
+  },
+  {
+   "from": "src/MessagePack/Formatters/StringInterningFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Formatters/TupleFormatter.cs",
+   "to": "src/MessagePack/IFormatterResolver.cs",
+   "extracted": 0,
+   "inferred": 16
+  },
+  {
+   "from": "src/MessagePack/Formatters/TupleFormatter.cs",
+   "to": "src/MessagePack/MessagePackSecurity.cs",
+   "extracted": 0,
+   "inferred": 8
+  },
+  {
+   "from": "src/MessagePack/Formatters/TupleFormatter.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 0,
+   "inferred": 8
+  },
+  {
+   "from": "src/MessagePack/Formatters/TupleFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 16
+  },
+  {
+   "from": "src/MessagePack/Formatters/TypelessFormatter.cs",
+   "to": "src/MessagePack/Internal/AsymmetricKeyHashTable.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Formatters/TypelessFormatter.cs",
+   "to": "src/MessagePack/Internal/ReflectionExtensions.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Formatters/TypelessFormatter.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Formatters/TypelessFormatter.cs",
+   "to": "src/MessagePack/Internal/ThreadsafeTypeKeyHashTable.cs",
+   "extracted": 5,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Formatters/TypelessFormatter.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Formatters/TypelessFormatter.cs",
+   "to": "src/MessagePack/MessagePackSerializerOptions.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Formatters/TypelessFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 5
+  },
+  {
+   "from": "src/MessagePack/Formatters/TypelessFormatter.cs",
+   "to": "src/MessagePack/SequencePool.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Formatters/TypelessFormatter.cs",
+   "to": "src/MessagePack/StringEncoding.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Formatters/UnsafeBinaryFormatters.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 2,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Formatters/UnsafeBinaryFormatters.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Formatters/ValueTupleFormatter.cs",
+   "to": "src/MessagePack/IFormatterResolver.cs",
+   "extracted": 0,
+   "inferred": 16
+  },
+  {
+   "from": "src/MessagePack/Formatters/ValueTupleFormatter.cs",
+   "to": "src/MessagePack/MessagePackSecurity.cs",
+   "extracted": 0,
+   "inferred": 8
+  },
+  {
+   "from": "src/MessagePack/Formatters/ValueTupleFormatter.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 8,
+   "inferred": 8
+  },
+  {
+   "from": "src/MessagePack/Formatters/ValueTupleFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 8
+  },
+  {
+   "from": "src/MessagePack/HashCode.cs",
+   "to": "src/MessagePack/BitOperations.cs",
+   "extracted": 3,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/IFormatterResolver.cs",
+   "to": "src/MessagePack/Internal/ThreadsafeTypeKeyHashTable.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/IFormatterResolver.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Internal/AsymmetricKeyHashTable.cs",
+   "to": "src/MessagePack/Internal/FarmHash.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Internal/AutomataDictionary.cs",
+   "to": "src/MessagePack/Internal/AutomataKeyGen.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Internal/AutomataDictionary.cs",
+   "to": "src/MessagePack/Internal/ILGeneratorExtensions.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "src/MessagePack/Internal/AutomataKeyGen.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Internal/AutomataKeyGen.cs",
+   "to": "src/MessagePack/SafeBitConverter.cs",
+   "extracted": 3,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Internal/ByteArrayStringHashTable.cs",
+   "to": "src/MessagePack/Internal/CodeGenHelpers.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Internal/ByteArrayStringHashTable.cs",
+   "to": "src/MessagePack/Internal/FarmHash.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Internal/ByteArrayStringHashTable.cs",
+   "to": "src/MessagePack/StringEncoding.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Internal/DynamicAssembly.cs",
+   "to": "src/MessagePack/Resolvers/SkipClrVisibilityChecks.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Internal/DynamicAssemblyFactory.cs",
+   "to": "src/MessagePack/Resolvers/SkipClrVisibilityChecks.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Internal/GuidBits.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Internal/TinyJsonReader.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 1,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Internal/UnsafeRefSerializeHelper.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 31
+  },
+  {
+   "from": "src/MessagePack/LZ4/LZ4Codec.Unsafe.cs",
+   "to": "src/MessagePack/LZ4/LZ4Codec.Helper.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/LZ4/LZ4Codec.Unsafe.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/MessagePackPrimitives.Readers.cs",
+   "to": "src/MessagePack/MessagePackPrimitives.Readers.Integers.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/MessagePackPrimitives.Readers.Integers.cs",
+   "to": "src/MessagePack/MessagePackPrimitives.Readers.cs",
+   "extracted": 4,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/MessagePackReader.cs",
+   "to": "src/MessagePack/MessagePackCode.cs",
+   "extracted": 6,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/MessagePackReader.cs",
+   "to": "src/MessagePack/MessagePackPrimitives.Readers.cs",
+   "extracted": 8,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/MessagePackReader.cs",
+   "to": "src/MessagePack/MessagePackPrimitives.Readers.Integers.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/MessagePackReader.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/MessagePackReader.cs",
+   "to": "src/MessagePack/StringEncoding.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/MessagePackSecurity.cs",
+   "to": "src/MessagePack/Internal/ThreadsafeTypeKeyHashTable.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/MessagePackSecurity.cs",
+   "to": "src/MessagePack/SipHash.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/MessagePackSerializer.cs",
+   "to": "src/MessagePack/LZ4/LZ4Codec.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/MessagePackSerializer.cs",
+   "to": "src/MessagePack/LZ4/LZ4Codec.Unsafe.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/MessagePackSerializer.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/MessagePackSerializer.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 13
+  },
+  {
+   "from": "src/MessagePack/MessagePackSerializer.cs",
+   "to": "src/MessagePack/SequencePool.cs",
+   "extracted": 0,
+   "inferred": 6
+  },
+  {
+   "from": "src/MessagePack/MessagePackSerializer.cs",
+   "to": "src/MessagePack/StreamPolyfillExtensions.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "to": "src/MessagePack/Internal/TinyJsonReader.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "to": "src/MessagePack/MessagePackCode.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "to": "src/MessagePack/MessagePackSecurity.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 13
+  },
+  {
+   "from": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "to": "src/MessagePack/SequencePool.cs",
+   "extracted": 0,
+   "inferred": 5
+  },
+  {
+   "from": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "to": "src/MessagePack/Internal/ThreadsafeTypeKeyHashTable.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/MessagePackSerializerOptions.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/MessagePackStreamReader.Arrays.cs",
+   "to": "src/MessagePack/MessagePackStreamReader.cs",
+   "extracted": 5,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/MessagePackStreamReader.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 3,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/MessagePackStreamReader.cs",
+   "to": "src/MessagePack/SequencePool.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/MessagePackStreamReader.Maps.cs",
+   "to": "src/MessagePack/MessagePackStreamReader.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/MessagePackWriter.cs",
+   "to": "src/MessagePack/BufferWriter.cs",
+   "extracted": 0,
+   "inferred": 72
+  },
+  {
+   "from": "src/MessagePack/MessagePackWriter.cs",
+   "to": "src/MessagePack/MessagePackPrimitives.Writers.cs",
+   "extracted": 27,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Resolvers/AttributeFormatterResolver.cs",
+   "to": "src/MessagePack/Resolvers/ResolverUtilities.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Resolvers/CachingFormatterResolver.cs",
+   "to": "src/MessagePack/Internal/ThreadsafeTypeKeyHashTable.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Resolvers/CompositeResolver.cs",
+   "to": "src/MessagePack/IFormatterResolver.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Resolvers/CompositeResolver.cs",
+   "to": "src/MessagePack/Internal/ThreadsafeTypeKeyHashTable.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicEnumAsStringIgnoreCaseResolver.cs",
+   "to": "src/MessagePack/Internal/ReflectionExtensions.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicEnumAsStringResolver.cs",
+   "to": "src/MessagePack/IFormatterResolver.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicEnumAsStringResolver.cs",
+   "to": "src/MessagePack/Internal/ReflectionExtensions.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicEnumResolver.cs",
+   "to": "src/MessagePack/IFormatterResolver.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicEnumResolver.cs",
+   "to": "src/MessagePack/Internal/DynamicAssemblyFactory.cs",
+   "extracted": 2,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicEnumResolver.cs",
+   "to": "src/MessagePack/Internal/ReflectionExtensions.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicEnumResolver.cs",
+   "to": "src/MessagePack/MonoProtection.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicGenericResolver.cs",
+   "to": "src/MessagePack/Internal/ReflectionExtensions.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicGenericResolver.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicObjectResolver.cs",
+   "to": "src/MessagePack/IFormatterResolver.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicObjectResolver.cs",
+   "to": "src/MessagePack/Internal/AutomataDictionary.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicObjectResolver.cs",
+   "to": "src/MessagePack/Internal/CodeGenHelpers.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicObjectResolver.cs",
+   "to": "src/MessagePack/Internal/DynamicAssembly.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicObjectResolver.cs",
+   "to": "src/MessagePack/Internal/DynamicAssemblyFactory.cs",
+   "extracted": 3,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicObjectResolver.cs",
+   "to": "src/MessagePack/Internal/ILGeneratorExtensions.cs",
+   "extracted": 0,
+   "inferred": 47
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicObjectResolver.cs",
+   "to": "src/MessagePack/Internal/ReflectionExtensions.cs",
+   "extracted": 0,
+   "inferred": 4
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicObjectResolver.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 1,
+   "inferred": 3
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicObjectResolver.cs",
+   "to": "src/MessagePack/MonoProtection.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicObjectResolver.cs",
+   "to": "src/MessagePack/Resolvers/ResolverUtilities.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicUnionResolver.cs",
+   "to": "src/MessagePack/IFormatterResolver.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicUnionResolver.cs",
+   "to": "src/MessagePack/Internal/DynamicAssemblyFactory.cs",
+   "extracted": 2,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicUnionResolver.cs",
+   "to": "src/MessagePack/Internal/ILGeneratorExtensions.cs",
+   "extracted": 0,
+   "inferred": 11
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicUnionResolver.cs",
+   "to": "src/MessagePack/Internal/ReflectionExtensions.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicUnionResolver.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Resolvers/DynamicUnionResolver.cs",
+   "to": "src/MessagePack/MonoProtection.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "src/MessagePack/Resolvers/NativeDateTimeResolver.cs",
+   "to": "src/MessagePack/Formatters/NullableFormatter.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Resolvers/NativeDecimalResolver.cs",
+   "to": "src/MessagePack/Formatters/NullableFormatter.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Resolvers/NativeGuidResolver.cs",
+   "to": "src/MessagePack/Formatters/NullableFormatter.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Resolvers/ResolverUtilities.cs",
+   "to": "src/MessagePack/MessagePackSerializationException.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Resolvers/SourceGeneratedFormatterResolver.cs",
+   "to": "src/MessagePack/IFormatterResolver.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Resolvers/StandardResolver.cs",
+   "to": "src/MessagePack/IFormatterResolver.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Resolvers/TypelessContractlessStandardResolver.cs",
+   "to": "src/MessagePack/IFormatterResolver.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Resolvers/TypelessContractlessStandardResolver.cs",
+   "to": "src/MessagePack/Resolvers/CachingFormatterResolver.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/SequencePool.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "src/MessagePack/Utilities.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "src/MessagePack/Utilities.cs",
+   "to": "src/MessagePack/SequencePool.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.AspNetCoreMvcFormatter.Tests/AspNetCoreMvcFormatterTest.cs",
+   "to": "src/MessagePack.AspNetCoreMvcFormatter/MessagePackInputFormatter.cs",
+   "extracted": 0,
+   "inferred": 5
+  },
+  {
+   "from": "tests/MessagePack.AspNetCoreMvcFormatter.Tests/AspNetCoreMvcFormatterTest.cs",
+   "to": "src/MessagePack.AspNetCoreMvcFormatter/MessagePackOutputFormatter.cs",
+   "extracted": 0,
+   "inferred": 5
+  },
+  {
+   "from": "tests/MessagePack.AspNetCoreMvcFormatter.Tests/AspNetCoreMvcFormatterTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.AspNetCoreMvcFormatter.Tests/AspNetCoreMvcFormatterTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.AspNetCoreMvcFormatter.Tests/AspNetCoreMvcFormatterTest.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 5
+  },
+  {
+   "from": "tests/MessagePack.Experimental.Tests/ArrayTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 44,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Experimental.Tests/UnsafeUnmanagedStruct/UnsafeUnmanagedStructTest.cs",
+   "to": "src/MessagePack.Experimental/UnsafeUnmanagedStructFormatter/UnsafeUnmanagedStructArrayFormatter.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.Experimental.Tests/UnsafeUnmanagedStruct/UnsafeUnmanagedStructTest.cs",
+   "to": "src/MessagePack.Experimental/UnsafeUnmanagedStructFormatter/UnsafeUnmanagedStructFormatter.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.Experimental.Tests/UnsafeUnmanagedStruct/UnsafeUnmanagedStructTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 10,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Experimental.Tests/UnsafeUnmanagedStruct/UnsafeUnmanagedStructTest.cs",
+   "to": "src/MessagePack/Resolvers/CompositeResolver.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.GeneratedCode.Tests/MissingPropertiesTest.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 0,
+   "inferred": 6
+  },
+  {
+   "from": "tests/MessagePack.GeneratedCode.Tests/MissingPropertiesTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 6,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.GeneratedCode.Tests/MissingPropertiesTest.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 22
+  },
+  {
+   "from": "tests/MessagePack.GeneratedCode.Tests/MissingPropertiesTest.cs",
+   "to": "src/MessagePack/Resolvers/CompositeResolver.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.ExecutionTests/CustomFormatterRecordFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.ExecutionTests/ExcludedCustomFormatter.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.ExecutionTests/ExcludedCustomFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.ExecutionTests/ExecutionTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.ExecutionTests/ExecutionTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.ExecutionTests/ExecutionTests.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 4
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.ExecutionTests/ExecutionTests.cs",
+   "to": "tests/MessagePack.SourceGenerator.ExecutionTests/DeserializingConstructorStartsWithIdx1.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.ExecutionTests/ExecutionTests.cs",
+   "to": "tests/MessagePack.SourceGenerator.ExecutionTests/HasPropertiesWithGetterAndCtor.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.ExecutionTests/UnserializableRecordFormatter.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.MapModeExecutionTests/MapModeExecutionTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.MapModeExecutionTests/MapModeExecutionTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.MapModeExecutionTests/MapModeExecutionTests.cs",
+   "to": "tests/MessagePack.SourceGenerator.MapModeExecutionTests/ClassWithUseMapAndMembersOfVariousVisibility.cs",
+   "extracted": 0,
+   "inferred": 5
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.MapModeExecutionTests/StringKeyOverrideTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.MapModeExecutionTests/StringKeyOverrideTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.Tests/CodeAnalysis/FullModelTests.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/FullModel.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.Tests/CodeAnalysis/FullModelTests.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedNamedTypeName.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.Tests/CodeAnalysis/UnionSerializationInfoTests.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/QualifiedNamedTypeName.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.Tests/CodeAnalysis/UnionSerializationInfoTests.cs",
+   "to": "src/MessagePack.SourceGenerator/CodeAnalysis/UnionSubTypeInfo.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.Tests/GenerationTests.cs",
+   "to": "tests/MessagePack.SourceGenerator.Tests/TestUtilities.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.Tests/Resources/FormatterForClassWithPrivateMembers_MapMode/Formatters.MyObject.MyObjectFormatter.g.cs",
+   "to": "src/MessagePack/MessagePackSecurity.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.Tests/Resources/FormatterForClassWithPrivateMembers_MapMode/Formatters.MyObject.MyObjectFormatter.g.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 4
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.Tests/Resources/InterfaceUnion/MessagePack.GeneratedMessagePackResolver.g.cs",
+   "to": "tests/MessagePack.SourceGenerator.Tests/Resources/InterfaceUnion/Formatters.MessagePack.GeneratedMessagePackResolver.IMyTypeFormatter.g.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.Tests/Resources/InterfaceUnionUsedWithNullableRefAnnotation/MessagePack.GeneratedMessagePackResolver.g.cs",
+   "to": "tests/MessagePack.SourceGenerator.Tests/Resources/InterfaceUnion/Formatters.MessagePack.GeneratedMessagePackResolver.IMyTypeFormatter.g.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.Tests/Resources/TwoTypes(True)/Formatters.MessagePack.GeneratedMessagePackResolver.Object1Formatter.g.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.Tests/Resources/TwoTypes(True)/Formatters.MessagePack.GeneratedMessagePackResolver.Object2Formatter.g.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.Tests/Resources/UnionFormatter(Namespace)/MessagePack.GeneratedMessagePackResolver.g.cs",
+   "to": "tests/MessagePack.SourceGenerator.Tests/Resources/InterfaceUnion/Formatters.MessagePack.GeneratedMessagePackResolver.IMyTypeFormatter.g.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.Tests/Resources/UnionFormatter(NestingClass)/MessagePack.GeneratedMessagePackResolver.g.cs",
+   "to": "tests/MessagePack.SourceGenerator.Tests/Resources/InterfaceUnion/Formatters.MessagePack.GeneratedMessagePackResolver.IMyTypeFormatter.g.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.Tests/Resources/UnionFormatter(None)/MessagePack.GeneratedMessagePackResolver.g.cs",
+   "to": "tests/MessagePack.SourceGenerator.Tests/Resources/InterfaceUnion/Formatters.MessagePack.GeneratedMessagePackResolver.IMyTypeFormatter.g.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.Tests/Verifiers/CSharpCodeFixVerifier`2+Test.cs",
+   "to": "tests/MessagePack.SourceGenerator.Tests/Verifiers/ReferencesHelper.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.Tests/Verifiers/CSharpSourceGeneratorCodeFixVerifier`2.cs",
+   "to": "tests/MessagePack.SourceGenerator.Tests/Verifiers/ReferencesHelper.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.Tests/Verifiers/CSharpSourceGeneratorVerifier`1+Test.cs",
+   "to": "tests/MessagePack.SourceGenerator.Tests/Verifiers/ReferencesHelper.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.SourceGenerator.Tests/Verifiers/VisualBasicCodeFixVerifier`2+Test.cs",
+   "to": "tests/MessagePack.SourceGenerator.Tests/Verifiers/ReferencesHelper.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/AllowPrivateTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/AllowPrivateTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 14,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/AnonymousTypeTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/AnonymousTypeTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/AssemblyLoadContextTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 8,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/AssemblyLoadContextTests.cs",
+   "to": "src/MessagePack/Resolvers/CompositeResolver.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/AutomataTests.cs",
+   "to": "src/MessagePack/Internal/AutomataDictionary.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "tests/MessagePack.Tests/AutomataTests.cs",
+   "to": "src/MessagePack/Internal/AutomataKeyGen.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/AutomataTests.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.Tests/ByteArrayComparerTest.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "tests/MessagePack.Tests/ByteArrayStringHashTableTest.cs",
+   "to": "src/MessagePack/Internal/ByteArrayStringHashTable.cs",
+   "extracted": 1,
+   "inferred": 2
+  },
+  {
+   "from": "tests/MessagePack.Tests/ByteArrayStringHashTableTest.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.Tests/CollectionTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/CollectionTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/CollectionTest.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 24
+  },
+  {
+   "from": "tests/MessagePack.Tests/ContractlessStandardResolverConstructorTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 8,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/ContractlessStandardResolverTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "extracted": 3,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/ContractlessStandardResolverTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 22,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/ContractlessStandardResolverTest.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 4
+  },
+  {
+   "from": "tests/MessagePack.Tests/DataContractTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 4,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DataContractTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "extracted": 6,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DataContractTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 10,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DataContractTest.cs",
+   "to": "src/MessagePack/Resolvers/CompositeResolver.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DictionaryTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DictionaryTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DictionaryTest.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "tests/MessagePack.Tests/DynamicObjectFallbackTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 3,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DynamicObjectFallbackTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DynamicObjectFallbackTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DynamicObjectResolverConstructorTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 10,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DynamicObjectResolverConstructorTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 11,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DynamicObjectResolverDerivedAttributeInheritanceTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DynamicObjectResolverDerivedAttributeInheritanceTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DynamicObjectResolverInterfaceTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DynamicObjectResolverInterfaceTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DynamicObjectResolverInterfaceTest.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "tests/MessagePack.Tests/DynamicObjectResolverOrderTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DynamicObjectResolverOrderTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DynamicObjectResolverOrderTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DynamicObjectResolverOrderTest.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.Tests/DynamicObjectResolverRecordsTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DynamicObjectResolverTests.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 0,
+   "inferred": 12
+  },
+  {
+   "from": "tests/MessagePack.Tests/DynamicObjectResolverTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 10,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DynamicObjectResolverTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DynamicObjectResolverTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 28,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/DynamicObjectResolverTests.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 46
+  },
+  {
+   "from": "tests/MessagePack.Tests/DynamicObjectResolverTests.cs",
+   "to": "tests/MessagePack.SourceGenerator.MapModeExecutionTests/ClassWithUseMapAndMembersOfVariousVisibility.cs",
+   "extracted": 0,
+   "inferred": 7
+  },
+  {
+   "from": "tests/MessagePack.Tests/EnumAsStringIgnoreCaseTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 4,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/EnumAsStringTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/EnumAsStringTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 4,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/ExpandoObjectTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "extracted": 4,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/ExpandoObjectTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 8,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/ExtensionHeaderTests.cs",
+   "to": "src/MessagePack/ExtensionHeader.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.Tests/ExtensionTests/FrozenCollectionTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/ExtensionTests/FrozenCollectionTest.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 4
+  },
+  {
+   "from": "tests/MessagePack.Tests/ExtensionTests/ImmutableCollectionTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/ExtensionTests/ImmutableCollectionTest.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 7
+  },
+  {
+   "from": "tests/MessagePack.Tests/ExtensionTests/LZ4Test.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 13,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/ExtensionTests/LZ4Test.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 4
+  },
+  {
+   "from": "tests/MessagePack.Tests/ExtensionTests/ReactivePropertyTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/ExtensionTests/ReactivePropertyTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/ExtensionTests/ReactivePropertyTest.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.Tests/ExtensionTests/UnityShimTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 5,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/ExtensionTests/UnityShimTest.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "tests/MessagePack.Tests/FloatConversionTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/FloatConversionTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/FormatterTest.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.Tests/FormatterTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 3,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/FormatterTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 3,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/FormatterTest.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "tests/MessagePack.Tests/FormatterTest.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "tests/MessagePack.Tests/GenericFormatters.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/GenericFormatters.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/GenericFormatters.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 5
+  },
+  {
+   "from": "tests/MessagePack.Tests/IgnoreTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/IgnoreTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/IgnoreTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/LZ4Test.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackBinaryTest.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 0,
+   "inferred": 22
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackBinaryTest.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 8,
+   "inferred": 65
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackBinaryTest.cs",
+   "to": "src/MessagePack/StringEncoding.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackBinaryTest.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 17
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackFormatterPerFieldTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackFormatterPerFieldTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackFormatterPerFieldTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackFormatterPerFieldTest.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackReaderTests.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 0,
+   "inferred": 13
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackReaderTests.cs",
+   "to": "src/MessagePack/MessagePackCode.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackReaderTests.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 46
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackReaderTests.ReadInt.cs",
+   "to": "src/MessagePack/MessagePackCode.cs",
+   "extracted": 8,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackSerializerOptionsTests.cs",
+   "to": "src/MessagePack/MessagePackSecurity.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackSerializerOptionsTests.cs",
+   "to": "src/MessagePack/MessagePackSerializerOptions.cs",
+   "extracted": 7,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackSerializerTest.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 3,
+   "inferred": 3
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackSerializerTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 5,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackSerializerTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackSerializerTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 15,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackSerializerTest.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 8
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackSerializerTest.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackSerializerTypelessTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackSerializerTypelessTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "extracted": 4,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackSerializerTypelessTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 4,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackSerializerTypelessTests.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackStreamReaderArrayTests.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackStreamReaderArrayTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 4,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackStreamReaderArrayTests.cs",
+   "to": "src/MessagePack/MessagePackStreamReader.Arrays.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackStreamReaderArrayTests.cs",
+   "to": "src/MessagePack/MessagePackStreamReader.cs",
+   "extracted": 0,
+   "inferred": 4
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackStreamReaderArrayTests.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackStreamReaderArrayTests.cs",
+   "to": "tests/MessagePack.Tests/OneByteAtATimeStream.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackStreamReaderMapTests.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackStreamReaderMapTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackStreamReaderMapTests.cs",
+   "to": "src/MessagePack/MessagePackStreamReader.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackStreamReaderMapTests.cs",
+   "to": "src/MessagePack/MessagePackStreamReader.Maps.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackStreamReaderMapTests.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackStreamReaderTests.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackStreamReaderTests.cs",
+   "to": "src/MessagePack/MessagePackStreamReader.cs",
+   "extracted": 0,
+   "inferred": 15
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackStreamReaderTests.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 5
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackStreamReaderTests.cs",
+   "to": "tests/MessagePack.Tests/OneByteAtATimeStream.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackWriterTests.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 0,
+   "inferred": 10
+  },
+  {
+   "from": "tests/MessagePack.Tests/MessagePackWriterTests.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 11,
+   "inferred": 22
+  },
+  {
+   "from": "tests/MessagePack.Tests/MultibyteCharPropertyTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/MultibyteCharPropertyTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/MultibyteCharPropertyTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/MultiDimensionalArrayTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/MultiDimensionalArrayTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/NewGuidFormatterTest.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.Tests/NewGuidFormatterTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/NewGuidFormatterTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/NewGuidFormatterTest.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "tests/MessagePack.Tests/NonGenericCollectionTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/NonGenericCollectionTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/ObjectResolverTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 8,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/ObjectResolverTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "extracted": 3,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/ObjectResolverTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 16,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/ObjectResolverTest.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 10
+  },
+  {
+   "from": "tests/MessagePack.Tests/OldSpecBinaryFormatterTest.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "tests/MessagePack.Tests/OldSpecBinaryFormatterTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/OldSpecBinaryFormatterTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 5,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/OldSpecBinaryFormatterTest.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 4
+  },
+  {
+   "from": "tests/MessagePack.Tests/PrimitiveCollectionTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/PrimitiveCollectionTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/PrimitiveCollectionTests.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.Tests/PrimitivelikeFormatterTest.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "tests/MessagePack.Tests/PrimitivelikeFormatterTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 7,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/PrimitivelikeFormatterTest.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 4
+  },
+  {
+   "from": "tests/MessagePack.Tests/PrimitiveObjectFormatterTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 6,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/PrimitiveResolverTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/PrimitiveResolverTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/SipHashTests.cs",
+   "to": "src/MessagePack/SipHash.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "tests/MessagePack.Tests/SpecifiedFormatterResolverTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/SpecifiedFormatterResolverTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/SpecifiedFormatterResolverTest.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 6
+  },
+  {
+   "from": "tests/MessagePack.Tests/StandardClassLibraryFormatterTests.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.Tests/StandardClassLibraryFormatterTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/StandardClassLibraryFormatterTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 12,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/StandardClassLibraryFormatterTests.cs",
+   "to": "tests/MessagePack.Tests/TestUtilities.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/StringInterningTests.cs",
+   "to": "src/MessagePack/Formatters/StringInterningFormatter.cs",
+   "extracted": 0,
+   "inferred": 1
+  },
+  {
+   "from": "tests/MessagePack.Tests/StringInterningTests.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "tests/MessagePack.Tests/StringInterningTests.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 4,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/StringInterningTests.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 9
+  },
+  {
+   "from": "tests/MessagePack.Tests/StringInterningTests.cs",
+   "to": "src/MessagePack/Resolvers/CompositeResolver.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/ToJsonTest.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "tests/MessagePack.Tests/ToJsonTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 2,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/ToJsonTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.Json.cs",
+   "extracted": 6,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/ToJsonTest.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 8
+  },
+  {
+   "from": "tests/MessagePack.Tests/UnionResolverTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 8,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/UnionResolverTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 7,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/UnionResolverTest.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 6
+  },
+  {
+   "from": "tests/MessagePack.Tests/UnsafeFormattersTest.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "tests/MessagePack.Tests/UnsafeFormattersTest.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 4
+  },
+  {
+   "from": "tests/MessagePack.Tests/UnsafeMemoryTest.cs",
+   "to": "src/MessagePack/Internal/CodeGenHelpers.cs",
+   "extracted": 3,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/UnsafeMemoryTest.cs",
+   "to": "src/MessagePack/Internal/Sequence`1.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "tests/MessagePack.Tests/UnsafeMemoryTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/UnsafeMemoryTest.cs",
+   "to": "src/MessagePack/MessagePackWriter.cs",
+   "extracted": 0,
+   "inferred": 5
+  },
+  {
+   "from": "tests/MessagePack.Tests/UnsafeMemoryTest.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 2
+  },
+  {
+   "from": "tests/MessagePack.Tests/Utils/ChainingAssertion.Ext.cs",
+   "to": "tests/MessagePack.Tests/Utils/ChainingAssertion.Xunit.cs",
+   "extracted": 0,
+   "inferred": 3
+  },
+  {
+   "from": "tests/MessagePack.Tests/ValueTupleTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.cs",
+   "extracted": 1,
+   "inferred": 0
+  },
+  {
+   "from": "tests/MessagePack.Tests/ValueTupleTest.cs",
+   "to": "src/MessagePack/MessagePackSerializer.NonGeneric.cs",
+   "extracted": 1,
+   "inferred": 0
+  }
+ ]
+}

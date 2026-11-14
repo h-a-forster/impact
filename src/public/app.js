@@ -151,60 +151,12 @@ function renderDescription() {
   };
 }
 
-// ---------- graph ----------
-const NODE_W = 196, NODE_H = 48, COL_GAP = 46, ROW_GAP = 14, PAD = 16;
-function layout(nodes, edges) {
-  const byId = new Map(nodes.map((n) => [n.id, n]));
-  const out = new Map();
-  for (const e of edges) if (e.kind === "calls" || e.kind === "tests") (out.get(e.from) ?? out.set(e.from, []).get(e.from)).push(e.to);
-  const depthMemo = new Map();
-  const depth = (id, seen = new Set()) => {
-    if (depthMemo.has(id)) return depthMemo.get(id);
-    if (seen.has(id)) return 0;
-    seen.add(id);
-    const d = Math.max(-1, ...(out.get(id) ?? []).filter((t) => byId.has(t)).map((t) => depth(t, seen))) + 1;
-    depthMemo.set(id, d);
-    return d;
-  };
-  const hasPr = nodes.some((n) => n.type === "pr");
-  const hasReq = nodes.some((n) => n.type === "requirement");
-  const offset = (hasPr ? 1 : 0) + (hasReq ? 1 : 0);
-  const cols = new Map();
-  for (const n of nodes) {
-    const col = n.type === "requirement" ? 0 : n.type === "pr" ? (hasReq ? 1 : 0) : offset + depth(n.id);
-    (cols.get(col) ?? cols.set(col, []).get(col)).push(n);
-  }
-  const pos = new Map();
-  const rank = { edited: 0, downstream: 1, none: 2 };
-  const colIds = [...cols.keys()].sort((a, b) => a - b);
-  for (const col of colIds) {
-    const list = cols.get(col);
-    const bary = (n) => {
-      const ys = (out.get(n.id) ?? []).map((t) => pos.get(t)?.row).filter((r) => r !== undefined);
-      return ys.length ? ys.reduce((a, b) => a + b, 0) / ys.length : null;
-    };
-    list.sort((a, b) => {
-      const ba = bary(a), bb = bary(b);
-      if (ba !== null && bb !== null && ba !== bb) return ba - bb;
-      if ((ba === null) !== (bb === null)) return ba === null ? 1 : -1;
-      return rank[a.state ?? "none"] - rank[b.state ?? "none"] || a.label.localeCompare(b.label);
-    });
-    list.forEach((n, row) => pos.set(n.id, { row, col }));
-  }
-  const maxRows = Math.max(...[...cols.values()].map((l) => l.length));
-  const height = PAD * 2 + maxRows * NODE_H + (maxRows - 1) * ROW_GAP;
-  for (const col of colIds) {
-    const list = cols.get(col);
-    const colH = list.length * NODE_H + (list.length - 1) * ROW_GAP;
-    const top = col < offset ? (height - colH) / 2 : PAD; // centre the PR and requirement
-    list.forEach((n, row) => {
-      const p = pos.get(n.id);
-      p.x = PAD + colIds.indexOf(col) * (NODE_W + COL_GAP);
-      p.y = top + row * (NODE_H + ROW_GAP);
-    });
-  }
-  return { pos, width: PAD * 2 + colIds.length * NODE_W + (colIds.length - 1) * COL_GAP, height };
-}
+// ---------- graph: drawn the Graphify way ----------
+// Graphify's own graph.html draws its graph.json with vis-network 9.1.6: dots sized by
+// how many links they have, a force layout (forceAtlas2Based), solid lines for links read
+// from the code (EXTRACTED) and dashed lines for links it guessed (INFERRED). This is the
+// same library (vendored, no CDN) with the same settings. One change: a dot's colour shows
+// its review state, not Graphify's community.
 const clip = (s, n) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
 function badgeFor(n) {
   if (n.badge !== undefined) return n.badge;
@@ -214,6 +166,133 @@ function badgeFor(n) {
   if (n.state === "edited") return ["EDITED", "edited"];
   if (n.state === "downstream") return ["AFFECTED", "info"];
   return null;
+}
+const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const gfy = { network: null, key: null, onNode: null, onEdge: null, nodeIds: new Set(), edgeIds: new Set() };
+const isUnitTest = (n) => n.type === "testfile" || n.type === "test" || n.id === "concept:tests";
+/** Show which dot or link is picked, without redrawing (so the layout and zoom stay put). */
+function markSelection() {
+  const sel = state.sel;
+  gfy.network.unselectAll();
+  if (["node", "fullnode"].includes(sel?.type) && gfy.nodeIds.has(sel.id)) gfy.network.selectNodes([sel.id], false);
+  else if (sel?.type === "edge" && gfy.edgeIds.has(sel.id)) gfy.network.selectEdges([sel.id]);
+}
+function drawGraph(el, nodes, allEdges, onNode, onEdge) {
+  const ids = new Set(nodes.map((n) => n.id));
+  const edges = allEdges.filter((e) => ids.has(e.from) && ids.has(e.to));
+  gfy.onNode = onNode;
+  gfy.onEdge = onEdge;
+  const key = JSON.stringify([document.documentElement.dataset.theme, nodes.map((n) => [n.id, n.state, n.evidence, n.badge]), edges.map((e) => [e.id, e.resolution])]);
+  if (gfy.network && gfy.key === key && el.querySelector(".gfy-canvas")) return markSelection();
+  gfy.network?.destroy();
+  gfy.key = key;
+  gfy.nodeIds = ids;
+  gfy.edgeIds = new Set(edges.map((e) => e.id));
+
+  const C = Object.fromEntries(["ink", "muted", "line", "card", "bg", "soft", "edited", "down", "bad", "req", "test"].map((k) => [k, cssVar(`--${k}`)]));
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const lit = (n) => n.state !== "none" || n.type === "pr" || n.type === "requirement";
+  const degree = new Map();
+  for (const e of edges) for (const id of [e.from, e.to]) degree.set(id, (degree.get(id) ?? 0) + 1);
+  const maxDeg = Math.max(1, ...degree.values());
+  const crowded = nodes.length > 40;
+
+  const visNodes = nodes.map((n, i) => {
+    const deg = degree.get(n.id) ?? 0;
+    const anchor = n.type === "pr" || n.type === "requirement";
+    const fill = n.evidence === "contradicted" ? C.bad : n.state === "edited" ? C.edited : n.state === "downstream" ? C.down : n.type === "pr" ? C.ink : n.type === "requirement" ? C.req : isUnitTest(n) ? C.card : C.line;
+    const border = lit(n) ? fill : isUnitTest(n) ? C.test : C.muted;
+    const badge = badgeFor(n);
+    return {
+      id: n.id,
+      label: clip(n.type === "pr" ? n.label.split(":")[0] : n.label, 30),
+      title: [n.label, n.sub, badge?.[0]].filter(Boolean).join("\n"),
+      shape: anchor ? "diamond" : "dot",
+      // Graphify's rule: a dot grows with the number of links it has.
+      size: anchor ? 13 : 9 + 19 * (deg / maxDeg),
+      color: { background: fill, border, highlight: { background: fill, border: C.ink }, hover: { background: fill, border: C.ink } },
+      borderWidth: lit(n) ? 1.5 : 1.2,
+      borderWidthSelected: 4,
+      // On a crowded map, Graphify only names the busy dots. The rest show their name on hover.
+      font: { size: crowded && !lit(n) && deg < maxDeg * 0.15 ? 0 : lit(n) ? 15 : 13, color: lit(n) ? C.ink : C.muted, face: "system-ui, Segoe UI, sans-serif", strokeWidth: 3, strokeColor: C.bg },
+      // Graphify's start positions: a spiral. The same graph always settles the same way.
+      x: 30 * Math.sqrt(i) * Math.cos(i * 2.4),
+      y: 30 * Math.sqrt(i) * Math.sin(i * 2.4),
+    };
+  });
+  const name = (id) => byId.get(id)?.label ?? id;
+  const visEdges = edges.map((e) => {
+    const call = e.kind === "calls" || e.kind === "tests";
+    const guessed = call && e.resolution === "inferred";
+    const faint = !(lit(byId.get(e.from)) || lit(byId.get(e.to)));
+    const title = call
+      ? [`${name(e.from)} uses ${name(e.to)}`, guessed ? `Guessed by Graphify${e.score ? ` (${Math.round(e.score * 100)}% sure)` : ""}` : "Read from the code", e.count > 1 ? `${e.count} links between functions${e.extracted !== undefined ? `: ${e.extracted} read from the code, ${e.count - e.extracted} guessed` : ""}` : "", e.site ?? ""].filter(Boolean).join("\n")
+      : e.kind === "edits" ? `This PR edits ${name(e.to)} (from the list of changed lines)` : "This PR is the fix for this issue";
+    return {
+      id: e.id, from: e.from, to: e.to, title,
+      // Graphify's rule: solid = read from the code, dashed = guessed.
+      dashes: guessed ? [7, 5] : call ? false : [2, 4],
+      width: guessed ? 1.3 : call ? 2 : 1.2,
+      color: { color: C.muted, opacity: faint ? 0.3 : guessed ? 0.8 : call ? 0.85 : 0.75, highlight: C.ink, hover: C.ink },
+      arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+    };
+  });
+
+  el.innerHTML = `<div class="gfy-canvas" role="img" aria-label="Impact map graph"></div>
+    <div class="gfy-zoom"><button type="button" data-zoom="in" aria-label="Zoom in">+</button><button type="button" data-zoom="out" aria-label="Zoom out">−</button><button type="button" data-zoom="fit">Fit</button></div>`;
+  const canvas = el.querySelector(".gfy-canvas");
+  const nodeSet = new vis.DataSet(visNodes);
+  const network = new vis.Network(canvas, { nodes: nodeSet, edges: new vis.DataSet(visEdges) }, {
+    physics: {
+      enabled: true,
+      solver: "forceAtlas2Based",
+      forceAtlas2Based: { gravitationalConstant: -60, centralGravity: 0.005, springLength: 95, springConstant: 0.08, damping: 0.4, avoidOverlap: 0.8 },
+      stabilization: { iterations: 300, fit: true },
+    },
+    // The mouse wheel scrolls the page, so zoom is on the buttons.
+    interaction: { hover: true, tooltipDelay: 100, zoomView: false, dragView: true, navigationButtons: false, keyboard: false, selectConnectedEdges: false },
+    nodes: { shape: "dot", borderWidth: 1.5 },
+    edges: { smooth: { type: "continuous", roundness: 0.2 }, selectionWidth: 2, hoverWidth: 1 },
+  });
+  gfy.network = network;
+  // Like Graphify: once the layout has settled, stop the physics so dots stay where you drag them.
+  network.once("stabilizationIterationsDone", () => {
+    network.setOptions({ physics: { enabled: false } });
+    network.fit();
+    // A big graph is zoomed out to fit. Grow the names so they can still be read.
+    const scale = network.getScale();
+    if (scale < 0.85) nodeSet.update(visNodes.filter((n) => n.font.size).map((n) => ({ id: n.id, font: { ...n.font, size: Math.min(30, Math.round(n.font.size / scale)) } })));
+  });
+  network.on("click", (p) => {
+    if (p.nodes.length) gfy.onNode(p.nodes[0]);
+    else if (p.edges.length && gfy.onEdge) gfy.onEdge(p.edges[0]);
+  });
+  network.on("hoverNode", () => (canvas.style.cursor = "pointer"));
+  network.on("blurNode", () => (canvas.style.cursor = ""));
+  for (const b of el.querySelectorAll("[data-zoom]")) b.onclick = () => (b.dataset.zoom === "fit" ? network.fit({ animation: true }) : network.moveTo({ scale: network.getScale() * (b.dataset.zoom === "in" ? 1.3 : 1 / 1.3), animation: true }));
+  markSelection();
+}
+/** Under the graph: where the links come from, and what Graphify missed. */
+function renderGraphNote(edges) {
+  const m = state.model, el = $("gfyNote"), full = state.mapScope === "full";
+  const g = full ? state.full.graphify : m.graphify;
+  if (!g) {
+    el.innerHTML = `<span class="tag warn">Recorded graph</span> No saved Graphify run for this view. The links come from the recorded data.`;
+    return;
+  }
+  const calls = edges.filter((e) => e.kind === "calls");
+  const guessed = calls.filter((e) => e.resolution === "inferred").length;
+  const count = `On this view: ${calls.length - guessed} link${calls.length - guessed === 1 ? "" : "s"} read from the code, ${guessed} guessed.`;
+  if (full) {
+    el.innerHTML = `<span class="tag info">Saved Graphify graph</span> The links come from ${esc(g.tool)}, a tool that reads the code and maps it. It was run on the repo earlier and saved. This is not a live run.
+      ${state.level === "concept" ? `Concepts use every call link in the whole repo (${g.full.calls.toLocaleString("en")} links at base commit <span class="mono">${short(g.revision)}</span>), plus the references in the project files.` : `This level joins the saved graphs of the 4 PRs.`} ${count}`;
+    return;
+  }
+  const li = (x, why) => `<li><code>${esc(x.label)}</code> <span class="mono muted">${esc(x.file.split("/").pop())}:${x.line}</span>${why ? ` · ${esc(why)}` : ""}</li>`;
+  el.innerHTML = `<span class="tag info">Saved Graphify graph</span> The links come from ${esc(g.tool)}, a tool that reads the code and maps it. It was run on the code of this PR (commit <span class="mono">${short(g.revision)}</span>) and saved. This is not a live run.
+    ${count} <a href="/api/graphify?pr=${encodeURIComponent(state.prId)}" target="_blank" rel="noopener">Open the saved graph.json</a>
+    ${g.missed.length ? `<details><summary>Graphify did not find ${g.missed.length} thing${g.missed.length === 1 ? "" : "s"} that the compiler data has</summary><div class="muted">The compiler data (Roslyn, recorded earlier) knows every use of every name. Graphify reads the text of the code, so it can miss some.</div><ul>${g.missed.map((x) => li(x, x.reason)).join("")}</ul></details>` : ""}
+    ${g.added.length ? `<details><summary>Graphify found ${g.added.length} caller${g.added.length === 1 ? "" : "s"} that the compiler data does not list</summary><ul>${g.added.map((x) => li(x)).join("")}</ul></details>` : ""}`;
 }
 function renderGraph() {
   const m = state.model;
@@ -236,50 +315,9 @@ function renderGraph() {
   $("legendPr").hidden = full;
   $("legendFull").hidden = !full;
   if (full) return renderFull();
-  drawGraph($("graphWrap"), m.graph.nodes.filter((n) => n.level === state.level), m.graph.edges.filter((e) => e.level === state.level), selectNode, (id) => select({ type: "edge", id }));
-}
-function drawGraph(el, nodes, edges, onNode, onEdge) {
-  const { pos, width, height } = layout(nodes, edges);
-  const affected = (n) => n.state !== "none" || n.type === "pr" || n.type === "requirement";
-  const nodeById = new Map(nodes.map((n) => [n.id, n]));
-  // A test is "in focus" when it reaches something affected.
-  const focusTests = new Set(edges.filter((e) => e.kind === "tests" && affected(nodeById.get(e.to) ?? {})).map((e) => e.from));
-  const lit = (n) => affected(n) || focusTests.has(n.id);
-
-  let svg = `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Impact map">
-    <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead" d="M0 0 L10 5 L0 10 z"/></marker></defs>`;
-  for (const e of edges) {
-    const a = pos.get(e.from), b = pos.get(e.to);
-    if (!a || !b) continue;
-    const leftToRight = a.x < b.x;
-    const x1 = leftToRight ? a.x + NODE_W : a.x, x2 = leftToRight ? b.x : b.x + NODE_W;
-    const y1 = a.y + NODE_H / 2, y2 = b.y + NODE_H / 2;
-    const dx = Math.max(30, Math.abs(x2 - x1) / 2) * (leftToRight ? 1 : -1);
-    const d = a.x === b.x ? `M${a.x} ${y1} C${a.x - 40} ${y1}, ${b.x - 40} ${y2}, ${b.x} ${y2}` : `M${x1} ${y1} C${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
-    const dim = !(lit(nodeById.get(e.from)) && lit(nodeById.get(e.to)));
-    const sel = state.sel?.type === "edge" && state.sel.id === e.id;
-    svg += `<g class="edge ${e.kind} ${e.resolution === "inferred" && e.kind === "calls" ? "inferred" : ""} ${e.change === "added" ? "added" : ""} ${dim ? "dim" : ""} ${sel ? "selected" : ""}" data-edge="${esc(e.id)}"><title>${esc(e.kind)}${e.change === "added" ? " · new in this PR" : ""}${e.anchor ? ` · ${esc(e.anchor.file)}:${e.anchor.line}` : ""}</title><path class="vis" d="${d}" marker-end="url(#arrow)"/><path class="hit" d="${d}"/></g>`;
-  }
-  for (const n of nodes) {
-    const p = pos.get(n.id);
-    const cls = ["node", n.type, n.state !== "none" ? n.state : "", n.evidence === "contradicted" ? "failing" : "", lit(n) ? "" : "dim", ["node", "fullnode"].includes(state.sel?.type) && state.sel.id === n.id ? "selected" : ""].join(" ");
-    const badge = badgeFor(n);
-    const extra = n.change === "added" ? "NEW" : null;
-    svg += `<g class="${cls}" data-node="${esc(n.id)}" transform="translate(${p.x},${p.y})" tabindex="0" role="button" aria-label="${esc(n.label)}"><title>${esc(n.label)}\n${esc(n.sub ?? "")}</title>
-      <rect class="box" width="${NODE_W}" height="${NODE_H}" rx="8"/>
-      <text x="10" y="${badge || extra ? 27 : 20}">${esc(clip(n.label, 29))}</text>
-      <text class="sub" x="10" y="${badge || extra ? 40 : 35}">${esc(clip(n.sub ?? "", 33))}</text>
-      ${badge ? `<text class="badge ${badge[1]}" x="10" y="13">${esc(badge[0])}</text>` : ""}
-      ${extra ? `<text class="badge ok" x="${NODE_W - 10}" y="13" text-anchor="end">${extra}</text>` : ""}
-    </g>`;
-  }
-  svg += `</svg>`;
-  el.innerHTML = svg;
-  for (const g of el.querySelectorAll("[data-node]")) {
-    g.onclick = () => onNode(g.dataset.node);
-    g.onkeydown = (ev) => (ev.key === "Enter" || ev.key === " ") && onNode(g.dataset.node);
-  }
-  if (onEdge) for (const g of el.querySelectorAll("[data-edge]")) g.onclick = () => onEdge(g.dataset.edge);
+  const edges = m.graph.edges.filter((e) => e.level === state.level);
+  drawGraph($("graphWrap"), m.graph.nodes.filter((n) => n.level === state.level), edges, selectNode, (id) => select({ type: "edge", id }));
+  renderGraphNote(edges);
 }
 
 // ---------- full map: the whole repo, with commits from every PR laid over it ----------
@@ -326,6 +364,7 @@ function renderFull() {
     return { ...n, state: editedBy ? "edited" : affected ? "downstream" : "none", badge: editedBy ? [`EDITED${editedBy > 1 ? ` · ${editedBy} COMMITS` : ""}`, "edited"] : affected ? ["AFFECTED", "info"] : null };
   });
   drawGraph($("graphWrap"), nodes, f.levels[level].edges, (id) => select({ type: "fullnode", id }), null);
+  renderGraphNote(f.levels[level].edges);
 }
 function fullNodeHtml(id) {
   const f = state.full, level = state.level;
@@ -679,6 +718,7 @@ function initTheme() {
   const apply = (t) => {
     root.dataset.theme = t;
     btn.textContent = t === "dark" ? "☀ Light" : "☾ Dark";
+    if (state.model) renderGraph(); // the graph's colours are set in code, so draw it again
   };
   apply(new URLSearchParams(location.search).get("theme") ?? saved ?? "light");
   btn.onclick = () => {
