@@ -25,7 +25,8 @@ async function getSource(sha, file) {
   return sourceCache.get(key);
 }
 const currentPr = () => state.revisions.prs.find((p) => p.id === state.prId);
-const revList = () => currentPr().commits.map((c) => ({ sha: c.sha, label: `Commit ${c.index}${c.madeUp ? " · made up" : ""}`, message: c.message, short: short(c.sha) }));
+// In a session a person reviews one commit: later commits do not exist yet, and no other pull request is open.
+const revList = () => currentPr().commits.filter((c) => !SESSION || c.sha === state.sha || c.index < currentPr().commits.find((x) => x.sha === state.sha)?.index).map((c) => ({ sha: c.sha, label: `Commit ${c.index}${c.madeUp ? " · made up" : ""}`, message: c.message, short: short(c.sha) }));
 const stepText = (m) => `commit ${m.selected.index} · ${m.selected.short}`;
 /** Escape, then turn `code` into a code span. */
 const rich = (s) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>');
@@ -94,7 +95,7 @@ function selectNode(id) {
 const GITHUB_URL = "http://localhost:3000"; // the GitHub replica
 function renderHeader() {
   // Left rail: one row per PR, like a list of chats.
-  $("prList").innerHTML = state.revisions.prs.map((p) => `<button type="button" class="rail-pr ${p.id === state.prId ? "active" : ""}" data-pr="${esc(p.id)}" title="${esc(p.title)}"><span class="rail-num">#${p.number}</span><span class="rail-title">${esc(p.title)}</span></button>`).join("");
+  $("prList").innerHTML = state.revisions.prs.filter((p) => !SESSION || p.id === state.prId).map((p) => `<button type="button" class="rail-pr ${p.id === state.prId ? "active" : ""}" data-pr="${esc(p.id)}" title="${esc(p.title)}"><span class="rail-num">#${p.number}</span><span class="rail-title">${esc(p.title)}</span></button>`).join("");
   for (const b of $("prList").querySelectorAll("button")) b.onclick = () => {
     const next = state.revisions.prs.find((p) => p.id === b.dataset.pr);
     state.notice = null;
@@ -713,7 +714,7 @@ function renderBlast() {
     el.dataset.stage = "idle";
     el.innerHTML = `<p class="blast-what">We give the same task to 3 agents: one careful, one normal, one that changes too much. What they touch is the "blast radius" of the task. Then we lay the real change over it.</p>
       <div class="swarm-controls"><button type="button" class="primary" id="blastGo">▶ Run blast radius</button>
-      <span class="muted swarm-rec">Replays 3 real runs of <code>${esc(b.model)}</code>, recorded ${esc(b.recordedAt.slice(0, 10))}. No agent runs now.</span></div>`;
+      <span class="muted swarm-rec">Replays 3 real runs${b.model ? ` of <code>${esc(b.model)}</code>` : ""}, recorded ${esc(b.recordedAt.slice(0, 10))}. No agent runs now.</span></div>`;
     $("blastGo").onclick = () => playBlast();
     return;
   }
@@ -784,7 +785,7 @@ function renderBlast() {
     </div>`)}
     ${fold("files", "Lines changed per file", `Real change: ${num(realCol.files)} files, +${num(realCol.added)} −${num(realCol.removed)}`, `
     <table class="blast-table files">${head}<tbody>${fileRows}${totalRow}</tbody></table>
-    <div class="blast-key muted"><span class="plus">+</span> lines added, <span class="minus">−</span> lines removed, · not touched. The real change is Tieto's AI-written branch, shown as a PR. ${esc(b.tests ? "The agents could not build the code; the unit tests were run afterwards on another machine (see above)." : b.notBuilt)}</div>`)}
+    <div class="blast-key muted"><span class="plus">+</span> lines added, <span class="minus">−</span> lines removed, · not touched. The real change is ${SESSION ? "the pull request under review" : "Tieto's AI-written branch, shown as a PR"}. ${esc(b.tests ? "The agents could not build the code; the unit tests were run afterwards on another machine (see above)." : b.notBuilt)}</div>`)}
     ${fold("numbers", "More numbers", "Functions, reach and overlap", `
       <table class="blast-table">${head}<tbody>
       ${row("Functions edited", (c) => num(c.functions) + (c.newFunctions ? note(`${c.newFunctions} of them new`) : ""), "in product code, not unit tests")}
@@ -797,14 +798,14 @@ function renderBlast() {
       ${wideRow("Every agent touched, the real change did not", things(o.agentsNotReal))}
       </tbody></table>`)}
     ${fold("how", "How it was done", "The 3 runs, their prompts, and the rule for the label", `
-      <p>Run on ${esc(b.recordedAt.slice(0, 10))} with the model <code>${esc(b.model)}</code>, once per agent. Each agent worked alone in its own copy of the code from before the fix (commit <code>${esc(short(b.base))}</code>). The real fix was not in those copies. This tab replays the saved result. No agent runs now.</p>
+      <p>Run on ${esc(b.recordedAt.slice(0, 10))}${b.model ? ` with the model <code>${esc(b.model)}</code>` : ""}, once per agent. Each agent worked alone in its own copy of the code from before the fix (commit <code>${esc(short(b.base))}</code>). The real fix was not in those copies. This tab replays the saved result. No agent runs now.</p>
       <p><b>Rule for the trust label.</b> We look at the product code files the real change touches (not docs, not unit tests). If no agent touched one of them: "Touches code no agent touched". Else, if only the agent that changes too much touched one of them: "Touches more than needed". Else: "Inside the expected zone".</p>
       <p><b>What every agent got.</b> ${b.given.kept.map(esc).join("; ")}.</p>
-      <p><b>What we left out of the AI PR text</b>, so the agents could not copy the real fix: ${b.given.leftOut.map(esc).join("; ")}. ${esc(b.given.note)}</p>
+      ${b.given.leftOut?.length ? `<p><b>What we left out of the AI PR text</b>, so the agents could not copy the real fix: ${b.given.leftOut.map(esc).join("; ")}. ${esc(b.given.note ?? "")}</p>` : ""}
       ${b.runs.filter((r) => r.id !== "real").map((r) => `<div class="blast-run"><b>${esc(r.label)}</b> <span class="muted">${secs(r) ? `· took ${secs(r)}` : ""}</span><div>Told: ${esc(r.instruction ?? "")}</div>
         <details><summary>What it said when it was done</summary><pre class="raw doc">${esc(r.reply ?? "No reply was saved.")}</pre></details>
-        <details><summary>The full prompt, word for word</summary><pre class="raw doc">${esc(r.prompt ?? "")}</pre></details></div>`).join("")}
-      <p class="muted">${esc(b.how.functions)} Callers come from ${esc(b.graphTool ?? "the recorded data")} (a saved run) and the recorded compiler data for this PR.</p>
+        ${r.prompt ? `<details><summary>The full prompt, word for word</summary><pre class="raw doc">${esc(r.prompt)}</pre></details>` : ""}</div>`).join("")}
+      <p class="muted">${esc(b.how.functions)} Callers come from ${esc(b.graphTool ?? "the recorded data")} (a saved run)${SESSION ? "" : " and the recorded compiler data for this PR"}.</p>
       <p class="muted">Trust score: each code file the real change edits gets 100 if the careful agent edited it too, 85 for the normal agent, 60 for only the agent that changes too much, 20 for no agent. We take the average, then 20 off for each of its unit tests that fails on every agent's fix. A fixed rule, no AI.</p>`)}
     </details>`;
   $("blastDetails").ontoggle = (ev) => (blastRun.details = ev.target.open);
@@ -1046,7 +1047,7 @@ function renderSwarmMatrix(runs) {
   const el = $("swarmMatrix"), s = swarmUI.data;
   if (!el) return;
   const measure = swarmUI.measure ?? "things";
-  const rows = [{ key: "real", name: "Real change", sub: "Tieto's AI-written branch", set: measure === "things" ? s.realThings : s.realLines }, ...runs.map((r, i) => ({ key: r.key, name: `Agent ${i + 1}`, sub: r.modelLabel + (r.madeUp ? " · made up" : ""), set: measure === "things" ? r.things : r.lines }))];
+  const rows = [{ key: "real", name: "Real change", sub: SESSION ? "the pull request under review" : "Tieto's AI-written branch", set: measure === "things" ? s.realThings : s.realLines }, ...runs.map((r, i) => ({ key: r.key, name: `Agent ${i + 1}`, sub: r.modelLabel + (r.madeUp ? " · made up" : ""), set: measure === "things" ? r.things : r.lines }))];
   const cell = (a, b) => {
     if (a.key === b.key) return `<td class="self">—</td>`;
     const v = swarmJac(a.set, b.set);
@@ -1480,7 +1481,7 @@ function introHtml() {
   ].join("");
   const prShort = d.ai?.tldr?.text ?? d.ai?.summary ?? d.author.text;
   return `<h1 class="pr-title">${esc(m.pr.title)}</h1>
-    <div class="pr-sub muted">PR #${m.pr.number} · Tieto's AI-written branch, shown as a PR · ${esc(stepText(m))}${m.selected.madeUp ? ` <span class="tag warn">made up</span>` : ""}</div>
+    <div class="pr-sub muted">PR #${m.pr.number} · ${SESSION ? "AI-written change, shown as a PR" : "Tieto's AI-written branch, shown as a PR"} · ${esc(stepText(m))}${m.selected.madeUp ? ` <span class="tag warn">made up</span>` : ""}</div>
     <div class="advice-live"></div>
     <div class="short ${esc(d.ai?.tldr?.tone ?? "plain")}"><span class="short-label">The PR in short</span><p>${rich(prShort)}</p>
       <button type="button" class="link" data-act="page" data-page="pr">Read the full PR description</button></div>
@@ -1681,6 +1682,7 @@ const nameForm = (lead) => `${lead}<p>Type your name to sign off. It is saved wi
   <form class="name-form" data-form="merge"><input name="name" type="text" placeholder="Your name" aria-label="Your name" autocomplete="name" /><button class="primary" type="submit">Sign off and merge</button><div class="error" role="alert"></div></form>`;
 function startMerge(said) {
   me(said ?? "Merge this PR");
+  if (SESSION) return bot(`<p>In this test you give your decision with the buttons below this screen.</p>`);
   const m = state.model, all = issueList(m), open = all.filter((x) => !acked(x.id)), hard = open.filter((x) => x.level === "block");
   if (m.decisions.signedOff) return bot(`<p><b>Already merged.</b> ${esc(m.decisions.signOff.name)} signed off ${esc(stepText(m))}.</p>`);
   if (hard.length) {
@@ -1742,7 +1744,7 @@ function askAgent(q) {
 /** Free text: a tool name or "merge" does that. Anything else is a question for the agent. */
 function handleText(q) {
   const s = q.toLowerCase();
-  if (!SESSION && /\b(merge|sign.?off|approve|ship it)\b/.test(s)) return startMerge(q); // in a session the runner records the decision
+  if (/\b(merge|sign.?off|approve|ship it)\b/.test(s)) return startMerge(q);
   if (/blast/.test(s)) return useTool("blast", q);
   if (/swarm|monte/.test(s)) return useTool("swarm", q);
   if (/whole repo|full map/.test(s)) return useTool("full", q);
@@ -1854,7 +1856,7 @@ async function init() {
   const h = readHash();
   // Link form used by the GitHub replica: /?repo=<owner/name>&pr=<number>&sha=<sha>&embed=1
   const q = new URLSearchParams(location.search);
-  if (q.get("embed") === "1") document.body.classList.add("embed");
+  if (q.get("embed") === "1" && !SESSION) document.body.classList.add("embed"); // a session shows the whole app
   if (SESSION) document.body.classList.add("session");
   initChat();
   // The right panel starts closed. ?map=<pr|full|blast|swarm> opens it on the Impact map card.
