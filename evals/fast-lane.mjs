@@ -45,6 +45,8 @@ const ATTEMPTS = [
   ["a CI workflow rides along", (c) => c.files.push(".github/workflows/ci.yml")],
   ["the package manifest rides along", (c) => c.files.push("package.json")],
   ["tests that always pass, in a folder not named like tests", (c) => c.files.push("src/backend/websocket/checks.mjs")],
+  ["a test runner config that skips a folder rides along", (c) => c.files.push("vitest.config.ts")],
+  ["a test project file that drops test files rides along", (c) => c.files.push("tests/Pricing.Tests.csproj")],
   // It is not really a document.
   ["code placed inside the docs folder", (c) => (c.files = ["docs/helper.ts"])],
   ["a script placed inside the docs folder", (c) => (c.files = ["docs/build.sh"])],
@@ -56,6 +58,8 @@ const ATTEMPTS = [
   ["a build file with a text extension", (c) => (c.files = ["docs/requirements.txt"])],
   ["a build script named like a text file", (c) => (c.files = ["docs/CMakeLists.txt"])],
   ["a hidden file", (c) => (c.files = ["docs/.hidden.md"])],
+  ["a test hook file placed inside the docs folder", (c) => (c.files = ["docs/conftest.py"])],
+  ["only deletions: a test file marked deleted", (c) => (c.changedFiles = [{ status: "D", file: "tests/pricing.test.mjs", oddity: null }])],
   ["a workflow folder inside the docs folder", (c) => (c.files = ["docs/.github/workflows/x.md"])],
   ["a name with two extensions", (c) => (c.files = ["docs/x.php.md"])],
   ["the diff says a file is not an ordinary file", (c) => (c.oddity = "a link, not a file")],
@@ -123,6 +127,9 @@ function pipelineRoute(alterReview, alterBrief) {
 }
 
 // Through git itself: a throwaway repository built with plumbing commands, so links and file modes work on every system.
+// add(null, null, file) deletes the file.
+const DOCTEST_CONFIG = "[pytest]\naddopts = --doctest-glob=\"*.md\"\n";
+const READS_NOTES = "import { readFileSync } from \"node:fs\";\nexport const notes = readFileSync(new URL(\"../docs/notes.md\", import.meta.url), \"utf8\");\n";
 const THROUGH_GIT = [
   ["a link to a code file, named like a document", (add) => add("120000", "../src/payments/ledger.ts", "docs/link.md")],
   ["a link to a secrets file, named like a document", (add) => add("120000", "../../.env", "docs/env.md")],
@@ -142,7 +149,27 @@ const THROUGH_GIT = [
   [
     "a document that the code reads its prices from",
     (add) => add("100644", "# Notes\n\n| Maximum discount | 120% |\n", "docs/notes.md"),
-    (add) => add("100644", "import { readFileSync } from \"node:fs\";\nexport const notes = readFileSync(new URL(\"../docs/notes.md\", import.meta.url), \"utf8\");\n", "src/limits.ts"),
+    (add) => add("100644", READS_NOTES, "src/limits.ts"),
+  ],
+  // Tests dropped from the build, next to a document edit.
+  [
+    "a test script that skips files, beside a document edit",
+    (add, text) => (add("100644", `${text}One more sentence.\n`, "docs/notes.md"), add("100644", "{ \"scripts\": { \"test\": \"node --test --test-skip-pattern=pricing\" } }\n", "package.json")),
+    (add) => add("100644", "{ \"scripts\": { \"test\": \"node --test\" } }\n", "package.json"),
+  ],
+  [
+    "a test project file that removes test files, beside a document edit",
+    (add, text) => (add("100644", `${text}One more sentence.\n`, "docs/notes.md"), add("100644", "<Project><ItemGroup><Compile Remove=\"Pricing/**\" /></ItemGroup></Project>\n", "tests/Tests.csproj")),
+    (add) => add("100644", "<Project><ItemGroup><Compile Include=\"**/*.cs\" /></ItemGroup></Project>\n", "tests/Tests.csproj"),
+  ],
+  // Only deletions: nothing is added, so there is nothing new to object to.
+  ["only deletions: a check removed from the code", (add) => add("100644", "export const limit = (d) => d;\n", "src/limits.ts"), (add) => add("100644", "export const limit = (d) => {\n  if (d > 1) throw new Error(\"discount over 100%\");\n  return d;\n};\n", "src/limits.ts")],
+  ["only deletions: a test file removed", (add) => add(null, null, "tests/limits.test.mjs"), (add) => add("100644", "import test from \"node:test\";\ntest(\"discount stays under 100%\", () => {});\n", "tests/limits.test.mjs")],
+  ["only deletions: a document the code reads, removed", (add) => add(null, null, "docs/notes.md"), (add) => add("100644", READS_NOTES, "src/limits.ts")],
+  [
+    "only deletions: an example the test runner runs, removed from a document",
+    (add, text) => add("100644", text, "docs/notes.md"),
+    (add, text) => (add("100644", `${text}\n>>> 1 + 1\n2\n`, "docs/notes.md"), add("100644", DOCTEST_CONFIG, "pytest.ini")),
   ],
 ];
 const PLAIN_EDIT = (add, text) => add("100644", `${text}One more sentence.\n`, "docs/notes.md");
@@ -158,6 +185,7 @@ function throughGit(cases) {
       const env = { GIT_INDEX_FILE: path.join(repo, `index-${Math.random().toString(16).slice(2)}`) };
       if (parent) git(["read-tree", parent], { env });
       edit((mode, content, file) => {
+        if (mode === null) return git(["update-index", "--index-info"], { env, input: `0 ${"0".repeat(40)}\t${file}\n` });
         const object = mode === "160000" ? "1".repeat(40) : git(["hash-object", "-w", "--stdin"], { input: content });
         git(["update-index", "--add", "--cacheinfo", `${mode},${object},${file}`], { env });
       }, text);

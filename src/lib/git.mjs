@@ -65,9 +65,11 @@ function oddityOf({ oldMode, newMode, status, file }, sha, binary, opts) {
     if (mode !== REGULAR_FILE && mode !== ABSENT) return OTHER_MODES[mode] ?? `file mode ${mode}`;
   }
   if (binary.has(file)) return "binary content";
-  if (newMode === ABSENT) return null;
-  if (Number(git(["cat-file", "-s", `${sha}:${file}`], opts)) > MAX_PLAIN_BYTES) return "larger than 1 MB";
-  if (ACTIVE_CONTENT.test(git(["show", `${sha}:${file}`], opts))) return "contains a script or an embedded page";
+  // A deleted file has no content to check, but code that reads it still breaks.
+  if (newMode !== ABSENT) {
+    if (Number(git(["cat-file", "-s", `${sha}:${file}`], opts)) > MAX_PLAIN_BYTES) return "larger than 1 MB";
+    if (ACTIVE_CONTENT.test(git(["show", `${sha}:${file}`], opts))) return "contains a script or an embedded page";
+  }
   const reader = codeThatReads(file, sha, opts);
   return reader ? `read by code (${reader}), so editing it can change what the code does` : null;
 }
@@ -79,10 +81,14 @@ const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
  * The review policy is left out: it names the allowlisted folders, and no code runs it.
  * A document that code loads at run time is configuration in disguise: editing a price table
  * in docs/pricing.md can change every total. Prose such as "see the docs" does not count.
+ * A glob on the file's extension counts too: a test runner set to run every *.md (doctests)
+ * makes each document a test.
  */
 function codeThatReads(file, sha, opts) {
   const slash = file.lastIndexOf("/");
   const patterns = [`[/\\\\"'\`]${escapeRegExp(file.slice(slash + 1))}`];
+  const dot = file.lastIndexOf(".");
+  if (dot > slash) patterns.push(`\\*${escapeRegExp(file.slice(dot))}([^A-Za-z0-9_]|$)`);
   if (slash > 0) {
     const folder = escapeRegExp(file.slice(0, slash));
     patterns.push(`${folder}[/\\\\]`, `["'\`]${folder}["'\`]`);
