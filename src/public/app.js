@@ -4,7 +4,8 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const short = (sha) => (sha ?? "").slice(0, 7);
 const chip = (text, cls) => `<span class="chip ${esc(cls ?? text)}">${esc(text)}</span>`;
 
-const state = { hidden: {}, revisions: null, prId: null, sha: null, level: "function", sel: null, model: null, notice: null, mapScope: "pr", full: null, fullStep: 0, fullRun: 0, fullTimer: null, blast: {} };
+// The AI PR, Impact map and Review steps cards start hidden. Hide / Show opens them.
+const state = { hidden: { intentCard: true, mapCard: true, reviewCard: true }, revisions: null, prId: null, sha: null, level: "function", sel: null, model: null, notice: null, mapScope: "pr", full: null, fullStep: 0, fullRun: 0, fullTimer: null, blast: {} };
 const sourceCache = new Map();
 
 // ---------- data ----------
@@ -126,7 +127,14 @@ function renderVerdict() {
   for (const b of el.querySelectorAll("[data-since]")) b.onclick = () => select({ type: "since" });
   for (const b of el.querySelectorAll("[data-run]")) b.onclick = () => select({ type: "run" });
   for (const b of el.querySelectorAll("[data-node]")) b.onclick = () => selectNode(b.dataset.node);
-  for (const b of el.querySelectorAll("[data-jump]")) b.onclick = () => $(b.dataset.jump).scrollIntoView({ behavior: "smooth", block: "start" });
+  for (const b of el.querySelectorAll("[data-jump]")) b.onclick = () => {
+    // Open a hidden card before jumping to it.
+    if (state.hidden[b.dataset.jump]) {
+      state.hidden = { ...state.hidden, [b.dataset.jump]: false };
+      applyCardToggles();
+    }
+    $(b.dataset.jump).scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 }
 
 // ---------- PR description: the author's, or the AI-written PR in the team's shape ----------
@@ -1247,7 +1255,9 @@ async function init() {
   const q = new URLSearchParams(location.search);
   if (q.get("embed") === "1") document.body.classList.add("embed");
   if (q.get("chat") === "1") chat.open = true;
-  // ?hide=intentCard,mapCard,reviewCard starts with those cards hidden.
+  // Cards start hidden. A link to a map view shows the Impact map card. ?show=intentCard,mapCard,reviewCard shows those; ?hide= hides them.
+  if (q.get("map")) state.hidden.mapCard = false;
+  for (const id of (q.get("show") ?? "").split(",").filter(Boolean)) state.hidden[id] = false;
   for (const id of (q.get("hide") ?? "").split(",").filter(Boolean)) state.hidden[id] = true;
   const linkedRepo = q.get("repo");
   const linkedPr = q.get("pr") ? state.revisions.prs.find((p) => String(p.number) === q.get("pr") && (!linkedRepo || p.repo === linkedRepo)) : null;

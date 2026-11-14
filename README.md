@@ -145,7 +145,7 @@ and land on a 0 to 100% similarity scale next to the real change. It replays rea
 ### Page layout
 
 - The description card shows only the AI PR (the author's commit message is no longer shown).
-- The AI PR, Impact map and Review steps cards each have a Hide / Show button. `?hide=intentCard,mapCard,reviewCard` starts with them hidden.
+- The AI PR, Impact map and Review steps cards each have a Hide / Show button and **start hidden**. A link with `?map=` shows the Impact map card; the "AI review" stamp opens Review steps. `?show=intentCard,mapCard,reviewCard` opens them, `?hide=` closes them.
 
 ## What is real, what is recorded, what is rule-based
 
