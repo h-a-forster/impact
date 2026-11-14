@@ -1,0 +1,250 @@
+{
+ "schema": "impact-map/swarm/v1",
+ "pr": "req-17",
+ "recordedAt": "2026-11-14T18:59:10.726Z",
+ "base": "2e22bc2b2fe422595d6030cac407032205406315",
+ "realFrom": {
+  "commit": "ae08cfbd40d82d45ac1dd7668a7e126acc194830",
+  "note": "The real change: the first commit of req-17 in the shop sample, against its base."
+ },
+ "real": {
+  "files": [
+   {
+    "file": "src/pricing/discount.ts",
+    "status": "M",
+    "kind": "code",
+    "added": 2,
+    "removed": 1,
+    "patch": "@@ -6,6 +6,7 @@ export function applyDiscount(subtotalCents: number, percent: number): number {\n   if (percent < 0 || percent > 100) {\n     throw new RangeError(\"percent must be between 0 and 100\");\n   }\n-  const discountCents = Math.floor((subtotalCents * percent) / 100);\n+  // REQ-17: round the discount to the nearest cent, half-cents up.\n+  const discountCents = Math.floor((subtotalCents * percent + 50) / 100);\n   return subtotalCents - discountCents;\n }",
+    "functions": []
+   },
+   {
+    "file": "tests/checkout.test.ts",
+    "status": "M",
+    "kind": "test",
+    "added": 10,
+    "removed": 0,
+    "patch": "@@ -6,3 +6,13 @@ test(\"checkout: 200 cents at 10% totals 180 cents\", () => {\n   const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: 10 };\n   assert.equal(checkoutTotal(cart), 180);\n });\n+\n+test(\"REQ-17 checkout: 105 cents at 10% totals 94 cents\", () => {\n+  const cart = { items: [{ priceCents: 105, quantity: 1 }], discountPercent: 10 };\n+  assert.equal(checkoutTotal(cart), 94);\n+});\n+\n+test(\"REQ-17 checkout: zero discount keeps the total at 105 cents\", () => {\n+  const cart = { items: [{ priceCents: 105, quantity: 1 }], discountPercent: 0 };\n+  assert.equal(checkoutTotal(cart), 105);\n+});",
+    "functions": []
+   }
+  ]
+ },
+ "prompt": {
+  "file": "data/shop/req-17/swarm-prompt.txt",
+  "text": "You are working in a copy of the shop-sample repository (TypeScript), at the commit just before the change. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- You cannot run commands, so you cannot run the unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nSolve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.\n\n## Requirements (from the pull request description)\n\nRequirement: REQ-17 in the shop sample (requirements/REQ-17.md).\n\nWhy: REQ-17 says discounts round to the nearest cent, with half-cents rounded up. The shared pricing function rounded the discount down.\n\nBefore and after: Before: a 105-cent order at 10% gets a 10-cent discount. Total 95 cents. After: a 105-cent order at 10% gets an 11-cent discount. Total 94 cents.\n\nMust preserve: At zero discount the total stays 105 cents.\n\n## The requirement the Requirement row points to (requirements/REQ-17.md, word for word)\n\n# REQ-17 Round discounts to the nearest cent\n\nCheckout and Order Import round discounts to the nearest cent, with\nhalf-cents rounded up.\n\n- With a 105-cent order and a 10% discount, the discount is 11 cents and the\n  total is 94 cents.\n- Behaviour to preserve: at zero discount the total stays 105 cents.\n\nAffected workflows: Checkout, Order Import.\n",
+  "note": "Every agent got this prompt, word for word: the normal agent's brief (own judgement, as for a normal pull request)."
+ },
+ "how": "Runs on the shop sample (pull request req-17), 2026-11-14. Each of 5 agents ran once with `claude -p --model claude-sonnet-5-5`, alone, in its own copy of the shop sample at the commit before req-17. Every agent got the same normal prompt (swarm-prompt.txt). No shell, no git, no web. All 5 ran at the same time.",
+ "notBuilt": "The agents had no shell. Nobody ran the unit tests on their changes. We do not know if any agent's change passes them.",
+ "models": {
+  "claude-sonnet-5-5": {
+   "label": "Sonnet 5.5",
+   "runs": [
+    {
+     "n": 1,
+     "startedAt": "2026-11-14T18:56:35.400Z",
+     "endedAt": "2026-11-14T18:57:06.407Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 15,
+     "reply": "I changed the shared discount rounding so a 105-cent order at 10% now gets an 11-cent discount (total 94). I couldn't run anything, so none of the tests have been run.\n\n- `src/pricing/discount.ts`: the discount was `Math.floor(x/100)`. It is now `Math.floor((x + 50)/100)`, which rounds to the nearest cent with half-cents up. This is integer maths, so there is no float error. Checkout and Order Import both use this function, so both get the fix. At 0% the total stays 105.\n- `docs/pricing.md`: added a line stating the rounding rule (REQ-17).\n- `tests/checkout.test.ts`: added a 105 at 10% → 94 case and a 105 at 0% → 105 case.\n- `tests/orderImport.test.ts`: added the same two cases using CSV rows.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "docs/pricing.md",
+       "status": "M",
+       "kind": "doc",
+       "added": 2,
+       "removed": 1,
+       "patch": "@@ -2,4 +2,5 @@\n \n All money is handled as whole cents.\n \n-Discounts are a whole-number percent of the order subtotal.\n+Discounts are a whole-number percent of the order subtotal. The discount is rounded to the nearest cent, with half-cents\n+rounded up (REQ-17).",
+       "functions": []
+      },
+      {
+       "file": "src/pricing/discount.ts",
+       "status": "M",
+       "kind": "code",
+       "added": 2,
+       "removed": 1,
+       "patch": "@@ -6,6 +6,7 @@ export function applyDiscount(subtotalCents: number, percent: number): number {\n   if (percent < 0 || percent > 100) {\n     throw new RangeError(\"percent must be between 0 and 100\");\n   }\n-  const discountCents = Math.floor((subtotalCents * percent) / 100);\n+  // Round to the nearest cent, half-cents up (REQ-17). Integer maths avoids float error.\n+  const discountCents = Math.floor((subtotalCents * percent + 50) / 100);\n   return subtotalCents - discountCents;\n }",
+       "functions": []
+      },
+      {
+       "file": "tests/checkout.test.ts",
+       "status": "M",
+       "kind": "test",
+       "added": 10,
+       "removed": 0,
+       "patch": "@@ -6,3 +6,13 @@ test(\"checkout: 200 cents at 10% totals 180 cents\", () => {\n   const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: 10 };\n   assert.equal(checkoutTotal(cart), 180);\n });\n+\n+test(\"checkout: 105 cents at 10% rounds the discount up to 11, total 94 (REQ-17)\", () => {\n+  const cart = { items: [{ priceCents: 105, quantity: 1 }], discountPercent: 10 };\n+  assert.equal(checkoutTotal(cart), 94);\n+});\n+\n+test(\"checkout: 105 cents at 0% stays 105 (REQ-17)\", () => {\n+  const cart = { items: [{ priceCents: 105, quantity: 1 }], discountPercent: 0 };\n+  assert.equal(checkoutTotal(cart), 105);\n+});",
+       "functions": []
+      },
+      {
+       "file": "tests/orderImport.test.ts",
+       "status": "M",
+       "kind": "test",
+       "added": 8,
+       "removed": 0,
+       "patch": "@@ -5,3 +5,11 @@ import { importOrder } from \"../src/import/orderImport.ts\";\n test(\"import: a row with the wrong column count is rejected\", () => {\n   assert.throws(() => importOrder(\"A-1,105\"), /expected 3 columns/);\n });\n+\n+test(\"import: 105 cents at 10% rounds the discount up to 11, total 94 (REQ-17)\", () => {\n+  assert.equal(importOrder(\"A-1,105,10\").totalCents, 94);\n+});\n+\n+test(\"import: 105 cents at 0% stays 105 (REQ-17)\", () => {\n+  assert.equal(importOrder(\"A-1,105,0\").totalCents, 105);\n+});",
+       "functions": []
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "startedAt": "2026-11-14T18:56:35.420Z",
+     "endedAt": "2026-11-14T18:56:56.395Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 8,
+     "reply": "I fixed the rounding, but I haven't run the tests, as instructed. A 105-cent order at 10% now gives an 11-cent discount and a 94-cent total, by my reading of the code. At zero discount the total stays 105 cents.\n\nFiles changed:\n- `src/pricing/discount.ts`: `applyDiscount` now computes `Math.floor((subtotal * percent + 50) / 100)` instead of `Math.floor((subtotal * percent) / 100)`. That rounds half-cents up using integer maths only. Checkout and Order Import both call this function, so one change covers both.\n- `tests/checkout.test.ts`: added two checkout tests, one for 105 cents at 10% totalling 94 and one for 105 cents at 0% totalling 105.\n- `docs/pricing.md`: added a line saying discounts round to the nearest cent, half-cents up (REQ-17).\n\nI didn't add an Order Import test, since it goes through the same function.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "docs/pricing.md",
+       "status": "M",
+       "kind": "doc",
+       "added": 1,
+       "removed": 1,
+       "patch": "@@ -2,4 +2,4 @@\n \n All money is handled as whole cents.\n \n-Discounts are a whole-number percent of the order subtotal.\n+Discounts are a whole-number percent of the order subtotal. The discount is rounded to the nearest cent, half-cents up (REQ-17).",
+       "functions": []
+      },
+      {
+       "file": "src/pricing/discount.ts",
+       "status": "M",
+       "kind": "code",
+       "added": 2,
+       "removed": 1,
+       "patch": "@@ -6,6 +6,7 @@ export function applyDiscount(subtotalCents: number, percent: number): number {\n   if (percent < 0 || percent > 100) {\n     throw new RangeError(\"percent must be between 0 and 100\");\n   }\n-  const discountCents = Math.floor((subtotalCents * percent) / 100);\n+  // Round to the nearest cent, half-cents up (REQ-17). Integer maths avoids float error.\n+  const discountCents = Math.floor((subtotalCents * percent + 50) / 100);\n   return subtotalCents - discountCents;\n }",
+       "functions": []
+      },
+      {
+       "file": "tests/checkout.test.ts",
+       "status": "M",
+       "kind": "test",
+       "added": 10,
+       "removed": 0,
+       "patch": "@@ -6,3 +6,13 @@ test(\"checkout: 200 cents at 10% totals 180 cents\", () => {\n   const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: 10 };\n   assert.equal(checkoutTotal(cart), 180);\n });\n+\n+test(\"checkout: REQ-17 rounds the discount half-up (105 cents at 10% totals 94)\", () => {\n+  const cart = { items: [{ priceCents: 105, quantity: 1 }], discountPercent: 10 };\n+  assert.equal(checkoutTotal(cart), 94);\n+});\n+\n+test(\"checkout: REQ-17 zero discount leaves 105 cents\", () => {\n+  const cart = { items: [{ priceCents: 105, quantity: 1 }], discountPercent: 0 };\n+  assert.equal(checkoutTotal(cart), 105);\n+});",
+       "functions": []
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "startedAt": "2026-11-14T18:56:35.426Z",
+     "endedAt": "2026-11-14T18:56:57.438Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 9,
+     "reply": "I changed three files. I couldn't run the tests, so none of this has been run. I checked the 105-cent cases by hand: at 10% the discount is 11 cents and the total is 94, and at 0% the total stays 105.\n\n- **`src/pricing/discount.ts`**: `applyDiscount` now rounds the discount to the nearest cent, with half-cents rounded up. It uses integer arithmetic, `floor((subtotal × percent × 2 + 100) / 200)`, so floating-point error can't affect the result. Checkout and Order Import both call this function, so both pick up the fix.\n- **`docs/pricing.md`**: I added the rounding rule and a reference to REQ-17.\n- **`tests/checkout.test.ts`**: I added two tests. One is the 105-cent order at 10%, expecting 94. The other is 105 cents at 0%, expecting 105.\n\nI didn't add an Order Import test.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "docs/pricing.md",
+       "status": "M",
+       "kind": "doc",
+       "added": 1,
+       "removed": 1,
+       "patch": "@@ -2,4 +2,4 @@\n \n All money is handled as whole cents.\n \n-Discounts are a whole-number percent of the order subtotal.\n+Discounts are a whole-number percent of the order subtotal, rounded to the nearest cent with half-cents rounded up (REQ-17).",
+       "functions": []
+      },
+      {
+       "file": "src/pricing/discount.ts",
+       "status": "M",
+       "kind": "code",
+       "added": 2,
+       "removed": 1,
+       "patch": "@@ -6,6 +6,7 @@ export function applyDiscount(subtotalCents: number, percent: number): number {\n   if (percent < 0 || percent > 100) {\n     throw new RangeError(\"percent must be between 0 and 100\");\n   }\n-  const discountCents = Math.floor((subtotalCents * percent) / 100);\n+  // Nearest cent, half-cents rounded up (REQ-17); integer maths avoids float error.\n+  const discountCents = Math.floor((subtotalCents * percent * 2 + 100) / 200);\n   return subtotalCents - discountCents;\n }",
+       "functions": []
+      },
+      {
+       "file": "tests/checkout.test.ts",
+       "status": "M",
+       "kind": "test",
+       "added": 10,
+       "removed": 0,
+       "patch": "@@ -6,3 +6,13 @@ test(\"checkout: 200 cents at 10% totals 180 cents\", () => {\n   const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: 10 };\n   assert.equal(checkoutTotal(cart), 180);\n });\n+\n+test(\"checkout: 105 cents at 10% rounds the discount up to 11, total 94 (REQ-17)\", () => {\n+  const cart = { items: [{ priceCents: 105, quantity: 1 }], discountPercent: 10 };\n+  assert.equal(checkoutTotal(cart), 94);\n+});\n+\n+test(\"checkout: 105 cents at 0% stays 105 cents\", () => {\n+  const cart = { items: [{ priceCents: 105, quantity: 1 }], discountPercent: 0 };\n+  assert.equal(checkoutTotal(cart), 105);\n+});",
+       "functions": []
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "startedAt": "2026-11-14T18:56:35.432Z",
+     "endedAt": "2026-11-14T18:57:02.403Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 10,
+     "reply": "I changed three files. I couldn't run the tests, so the fix is checked only by working through the numbers by hand.\n\n- [src/pricing/discount.ts](src/pricing/discount.ts:9) now rounds the discount to the nearest cent, with half-cents rounded up. It uses integer maths, `floor((subtotal*percent*2 + 100) / 200)`, so there is no float error. Checkout and Order Import both call this shared function, so one fix covers both. By hand, 105 cents at 10% gives an 11-cent discount and a 94-cent total, and 0% still gives 105 cents.\n- [tests/checkout.test.ts](tests/checkout.test.ts) has two new tests: 105 cents at 10% totals 94, and 105 cents at 0% stays 105.\n- [docs/pricing.md](docs/pricing.md) now states the rounding rule and points to REQ-17.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "docs/pricing.md",
+       "status": "M",
+       "kind": "doc",
+       "added": 2,
+       "removed": 1,
+       "patch": "@@ -2,4 +2,5 @@\n \n All money is handled as whole cents.\n \n-Discounts are a whole-number percent of the order subtotal.\n+Discounts are a whole-number percent of the order subtotal. The discount is rounded to the nearest cent, with half-cents\n+rounded up (REQ-17).",
+       "functions": []
+      },
+      {
+       "file": "src/pricing/discount.ts",
+       "status": "M",
+       "kind": "code",
+       "added": 2,
+       "removed": 1,
+       "patch": "@@ -6,6 +6,7 @@ export function applyDiscount(subtotalCents: number, percent: number): number {\n   if (percent < 0 || percent > 100) {\n     throw new RangeError(\"percent must be between 0 and 100\");\n   }\n-  const discountCents = Math.floor((subtotalCents * percent) / 100);\n+  // REQ-17: round to the nearest cent, half-cents up (integer maths, no float error).\n+  const discountCents = Math.floor((subtotalCents * percent * 2 + 100) / 200);\n   return subtotalCents - discountCents;\n }",
+       "functions": []
+      },
+      {
+       "file": "tests/checkout.test.ts",
+       "status": "M",
+       "kind": "test",
+       "added": 10,
+       "removed": 0,
+       "patch": "@@ -6,3 +6,13 @@ test(\"checkout: 200 cents at 10% totals 180 cents\", () => {\n   const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: 10 };\n   assert.equal(checkoutTotal(cart), 180);\n });\n+\n+test(\"checkout: 105 cents at 10% rounds the discount half-up to 11, total 94 (REQ-17)\", () => {\n+  const cart = { items: [{ priceCents: 105, quantity: 1 }], discountPercent: 10 };\n+  assert.equal(checkoutTotal(cart), 94);\n+});\n+\n+test(\"checkout: 105 cents at 0% stays 105 cents (REQ-17)\", () => {\n+  const cart = { items: [{ priceCents: 105, quantity: 1 }], discountPercent: 0 };\n+  assert.equal(checkoutTotal(cart), 105);\n+});",
+       "functions": []
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "startedAt": "2026-11-14T18:56:35.438Z",
+     "endedAt": "2026-11-14T18:56:57.879Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 9,
+     "reply": "I changed three files. I couldn't run the tests, so none of this has been run.\n\n- `src/pricing/discount.ts`: `applyDiscount` now computes the discount as `Math.floor((subtotal * percent + 50) / 100)`, which rounds to the nearest cent with half-cents rounded up. A 105-cent order at 10% now gets an 11-cent discount, so the total is 94. At 0% the total stays 105. Checkout and Order Import both call this function, so both pick up the change.\n- `tests/checkout.test.ts`: added two tests, 105 cents at 10% giving 94, and 105 cents at 0% giving 105.\n- `docs/pricing.md`: added a line saying the discount rounds to the nearest cent, half-cents up (REQ-17).\n\nI didn't add an Order Import test, since the shared function covers it.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "docs/pricing.md",
+       "status": "M",
+       "kind": "doc",
+       "added": 2,
+       "removed": 1,
+       "patch": "@@ -2,4 +2,5 @@\n \n All money is handled as whole cents.\n \n-Discounts are a whole-number percent of the order subtotal.\n+Discounts are a whole-number percent of the order subtotal. The discount amount is rounded to the nearest cent, with\n+half-cents rounded up (REQ-17): 10% of 105 cents is 11 cents.",
+       "functions": []
+      },
+      {
+       "file": "src/pricing/discount.ts",
+       "status": "M",
+       "kind": "code",
+       "added": 1,
+       "removed": 1,
+       "patch": "@@ -6,6 +6,6 @@ export function applyDiscount(subtotalCents: number, percent: number): number {\n   if (percent < 0 || percent > 100) {\n     throw new RangeError(\"percent must be between 0 and 100\");\n   }\n-  const discountCents = Math.floor((subtotalCents * percent) / 100);\n+  const discountCents = Math.floor((subtotalCents * percent + 50) / 100); // nearest cent, half-cents up (REQ-17)\n   return subtotalCents - discountCents;\n }",
+       "functions": []
+      },
+      {
+       "file": "tests/checkout.test.ts",
+       "status": "M",
+       "kind": "test",
+       "added": 10,
+       "removed": 0,
+       "patch": "@@ -6,3 +6,13 @@ test(\"checkout: 200 cents at 10% totals 180 cents\", () => {\n   const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: 10 };\n   assert.equal(checkoutTotal(cart), 180);\n });\n+\n+test(\"checkout: 105 cents at 10% rounds the discount half-up to 11, total 94 (REQ-17)\", () => {\n+  const cart = { items: [{ priceCents: 105, quantity: 1 }], discountPercent: 10 };\n+  assert.equal(checkoutTotal(cart), 94);\n+});\n+\n+test(\"checkout: zero discount leaves 105 cents unchanged (REQ-17)\", () => {\n+  const cart = { items: [{ priceCents: 105, quantity: 1 }], discountPercent: 0 };\n+  assert.equal(checkoutTotal(cart), 105);\n+});",
+       "functions": []
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

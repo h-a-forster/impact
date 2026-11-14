@@ -1,0 +1,32 @@
+You are working in a copy of the shop-sample repository (TypeScript), at the commit just before the change. Solve the problem described below by editing files in this folder.
+
+Rules for this run:
+- You cannot run commands, so you cannot run the unit tests. Do not try. Reason from the code.
+- Work only inside this folder. Do not use the web. Do not use git.
+- When you are done, reply with a short list of the files you changed and why.
+
+How to work:
+Solve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.
+
+## Requirements (from the pull request description)
+
+Requirement: REQ-17 in the shop sample (requirements/REQ-17.md).
+
+Why: REQ-17 says discounts round to the nearest cent, with half-cents rounded up. The shared pricing function rounded the discount down.
+
+Before and after: Before: a 105-cent order at 10% gets a 10-cent discount. Total 95 cents. After: a 105-cent order at 10% gets an 11-cent discount. Total 94 cents.
+
+Must preserve: At zero discount the total stays 105 cents.
+
+## The requirement the Requirement row points to (requirements/REQ-17.md, word for word)
+
+# REQ-17 Round discounts to the nearest cent
+
+Checkout and Order Import round discounts to the nearest cent, with
+half-cents rounded up.
+
+- With a 105-cent order and a 10% discount, the discount is 11 cents and the
+  total is 94 cents.
+- Behaviour to preserve: at zero discount the total stays 105 cents.
+
+Affected workflows: Checkout, Order Import.

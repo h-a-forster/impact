@@ -1,5 +1,6 @@
 // Monte Carlo swarm: N agents of one model got the same task. How often did they end up close to the real change?
 // Recorded by scripts/record-swarm.mjs into data/tieto/<pr>/swarm.json. This file only does the maths.
+// The shop sample's runs live in data/shop/<pr>/swarm.json, which carries its own real change (it has no blast.json).
 //
 // THE SIMILARITY RULE (the README says the same):
 //   Each change is a set of "things": the product code files it touches, plus the functions
@@ -19,6 +20,7 @@ import { DATA } from "./paths.mjs";
 
 export const SIMILAR_AT = 0.5;
 const file = (prId, name) => path.join(DATA, "tieto", prId, name);
+const shopFile = (prId) => path.join(DATA, "shop", prId, "swarm.json");
 
 /** The set of things a change touches. Keys: file path, or "file#function". */
 export function thingsOf(files) {
@@ -55,10 +57,11 @@ export function similarity(a, b) {
 }
 
 export function buildSwarm(prId) {
-  if (!fs.existsSync(file(prId, "swarm.json")) || !fs.existsSync(file(prId, "blast.json"))) return { pr: prId, recorded: false, message: "No swarm runs recorded for this PR yet." };
-  const rec = JSON.parse(fs.readFileSync(file(prId, "swarm.json"), "utf8"));
-  const blast = JSON.parse(fs.readFileSync(file(prId, "blast.json"), "utf8"));
-  const realFiles = blast.real.files;
+  const demoRecorded = fs.existsSync(file(prId, "swarm.json")) && fs.existsSync(file(prId, "blast.json"));
+  if (!demoRecorded && !fs.existsSync(shopFile(prId))) return { pr: prId, recorded: false, message: "No swarm runs recorded for this PR yet." };
+  const rec = JSON.parse(fs.readFileSync(demoRecorded ? file(prId, "swarm.json") : shopFile(prId), "utf8"));
+  const blast = demoRecorded ? JSON.parse(fs.readFileSync(file(prId, "blast.json"), "utf8")) : { runs: [] };
+  const realFiles = demoRecorded ? blast.real.files : rec.real.files;
   const real = thingsOf(realFiles);
   const realLines = linesOf(realFiles);
   const pct = (x) => Math.round(x * 100);
