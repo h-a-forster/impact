@@ -1,0 +1,20 @@
+{
+  "pr": "docs-example",
+  "generatedBy": "AI-written (Claude), saved for this demo",
+  "revisions": {
+    "1": {
+      "tags": [
+        { "label": "Docs only", "tone": "ok" },
+        { "label": "No behaviour change", "tone": "ok" },
+        { "label": "Reaches 0 workflows", "tone": "info" }
+      ],
+      "summary": "Adds one worked example to the pricing notes. No code is touched.",
+      "sections": [
+        { "title": "What changes", "text": "`docs/pricing.md` gains a sentence with a 200-cent example." },
+        { "title": "Why", "text": "The notes explained the rule but showed no example." },
+        { "title": "What it reaches", "text": "Nothing. No function is edited or called." },
+        { "title": "What is tested", "text": "The full suite passes on this commit. Nothing new needs a test." }
+      ]
+    }
+  }
+}

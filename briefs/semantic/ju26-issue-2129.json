@@ -1,0 +1,264 @@
+{
+  "pr": "ju26-issue-2129",
+  "author": {
+    "by": "Stelian Vultur (vultuste) · commit message on branch ju26-issue-2129. Tieto's repo has branches, not pull requests.",
+    "text": "Agentic implementation of #2129 Feature Request: Allow generation of Formatter for a type in a referenced assembly"
+  },
+  "generatedBy": "AI-written (Claude), saved for this demo",
+  "verdict": {
+    "classifier1": "3 changed project files (.csproj) are on the team's risky list.",
+    "reason": "Two parts of the request have no proof yet.",
+    "blockers": [
+      "No proof yet: the save-and-load code is made inside the project that uses the type.",
+      "No proof yet: a marked class with no body is accepted."
+    ]
+  },
+  "reviewSummary": "The working case was not run by any unit test. There are also a few smaller bugs and some wrong docs.",
+  "plainReview": {
+    "findings": [
+      {
+        "match": "success path",
+        "title": "The working case was never tested",
+        "detail": "All 6 new unit tests that ran end with an error on purpose. None of them reaches the code that makes the output. So the main promise of the feature is unproven."
+      },
+      {
+        "match": "IMessagePackSerializationCallbackReceiver",
+        "title": "One kind of type gets generated code that does not build",
+        "detail": "Some types run extra steps before saving and after loading. If the type sets those up in one specific way, the generated code calls a method that does not exist. The build then fails."
+      },
+      {
+        "match": "UseMapMode",
+        "title": "The new code ignores a project setting",
+        "detail": "A project can ask for all data to be saved in map form. The new code ignores that. So one type is saved as a list while the rest are saved as maps."
+      },
+      {
+        "match": "silently dropped",
+        "title": "Generated code can vanish without a warning",
+        "detail": "If two pieces of generated code cover the same type, only the first one is kept. The user is not told."
+      },
+      {
+        "match": "MsgPack019-022",
+        "title": "The README lists too few warnings",
+        "detail": "The README says the feature uses warnings MsgPack019 to MsgPack022. The code also raises MsgPack004, MsgPack005 and MsgPack007."
+      },
+      {
+        "match": "Nesting types",
+        "title": "A rule in the docs is not checked",
+        "detail": "The docs say outer classes must be marked partial. The code does not check this. The user gets a confusing compiler error, not the promised warning."
+      }
+    ],
+    "questions": [
+      {
+        "question": "Does a type from another project get working generated code?",
+        "help": "Run the unit tests that save and load such a type. They already exist."
+      },
+      {
+        "question": "Is the short form with no class body accepted?",
+        "help": "A unit test that uses the short form."
+      },
+      {
+        "question": "Is this the design the maintainers want? None of the three ideas in the request was built.",
+        "help": "The maintainers decide."
+      },
+      {
+        "question": "Is the default way of saving such a type the right one?",
+        "help": "The maintainers decide. Then a unit test locks it in."
+      },
+      {
+        "question": "Does the app find and use the generated code?",
+        "help": "Run the unit test for this."
+      },
+      {
+        "question": "Must the output stay the same for projects that do not use the feature?",
+        "help": "The maintainers confirm. The existing unit tests then check it."
+      }
+    ]
+  },
+  "agent": {
+    "model": "claude-sonnet-5-5",
+    "snapshot": "snap-2129-083afd9",
+    "context": "feature request #2129 and the 28 files this PR changes",
+    "chat": [
+      {
+        "q": "Why a new marker?",
+        "keys": "approach attribute collector chose design marker",
+        "a": "The request asks for exactly this: mark a class and get the code made for you. The type itself cannot carry MessagePack marks, because its project cannot use MessagePack. So I read the type as it is. I added `SurrogateType` for when you want to pick the keys yourself."
+      },
+      {
+        "q": "What were you least sure about?",
+        "keys": "unsure risk worried doubt confident",
+        "a": "The project files. I added one project and edited two others. Your team treats those files as risky. I also did not handle map mode."
+      },
+      {
+        "q": "What did you not test?",
+        "keys": "tests tested missing cover coverage",
+        "a": "The unit tests that ran only cover the 4 new warnings. The working case, where code is really generated, was not run."
+      }
+    ]
+  },
+  "revisions": {
+    "1": {
+      "tags": [
+        {
+          "label": "New feature",
+          "tone": "info"
+        },
+        {
+          "label": "New option for users",
+          "tone": "warn"
+        },
+        {
+          "label": "Project files changed",
+          "tone": "bad"
+        },
+        {
+          "label": "28 files",
+          "tone": "info"
+        },
+        {
+          "label": "Unit tests: 173 of 173 pass",
+          "tone": "ok"
+        },
+        {
+          "label": "Main case not tested",
+          "tone": "bad"
+        }
+      ],
+      "summary": "Adds a new marker, `[GeneratedMessagePackFormatter]`. With it, a project can generate save-and-load code for a type that lives in another project. The unit tests that ran only cover the error cases. The normal, working case was not run.",
+      "sections": [
+        {
+          "title": "Requirement",
+          "text": "Feature request #2129 in MessagePack-CSharp."
+        },
+        {
+          "title": "Why",
+          "text": "Project A cannot use MessagePack. So Project B needs to make the save-and-load code for Project A's type."
+        },
+        {
+          "title": "Before → after",
+          "text": "Before: no way to do this. After: mark a class with `[GeneratedMessagePackFormatter]` and the code is made for you."
+        },
+        {
+          "title": "Must preserve",
+          "text": "Projects that do not use the new marker must get the same output as before."
+        },
+        {
+          "title": "Approach",
+          "text": "A new marker, new code that finds the marked classes, 4 new warnings (`MsgPack019` to `MsgPack022`), and edits to the code templates."
+        },
+        {
+          "title": "Alternatives",
+          "text": "The author wrote none."
+        },
+        {
+          "title": "Checks run",
+          "text": "Unit tests (`dotnet test`, a saved run on one machine, not the automatic server run): 173 of 173 pass. The 6 new unit tests that ran all stop before any code is generated."
+        },
+        {
+          "title": "Open gaps",
+          "text": "No unit test that ran covers the working case. Also, 3 project files (`.csproj`) changed. The team treats those as risky."
+        },
+        {
+          "title": "Rollback",
+          "text": "Undo the commit. Do it before a release, because users can see the new marker."
+        }
+      ]
+    },
+    "2": {
+      "tags": [
+        {
+          "label": "New feature",
+          "tone": "info"
+        },
+        {
+          "label": "New option for users",
+          "tone": "warn"
+        },
+        {
+          "label": "Project files changed",
+          "tone": "bad"
+        },
+        {
+          "label": "29 files",
+          "tone": "info"
+        },
+        {
+          "label": "Unit tests: 176 of 176 pass",
+          "tone": "ok"
+        },
+        {
+          "label": "Main case now tested",
+          "tone": "ok"
+        }
+      ],
+      "summary": "Adds a new marker, `[GeneratedMessagePackFormatter]`. With it, a project can generate save-and-load code for a type that lives in another project. Commit 2 adds unit tests for the normal, working case.",
+      "sections": [
+        {
+          "title": "Requirement",
+          "text": "Feature request #2129 in MessagePack-CSharp."
+        },
+        {
+          "title": "Why",
+          "text": "Project A cannot use MessagePack. So Project B needs to make the save-and-load code for Project A's type."
+        },
+        {
+          "title": "Before → after",
+          "text": "Before: no way to do this. After: mark a class with `[GeneratedMessagePackFormatter]` and the code is made for you."
+        },
+        {
+          "title": "Must preserve",
+          "text": "Projects that do not use the new marker must get the same output as before."
+        },
+        {
+          "title": "Approach",
+          "text": "A new marker, new code that finds the marked classes, 4 new warnings (`MsgPack019` to `MsgPack022`), and edits to the code templates."
+        },
+        {
+          "title": "Alternatives",
+          "text": "The author wrote none."
+        },
+        {
+          "title": "Checks run",
+          "text": "Unit tests (`dotnet test`, made-up result for the demo): 176 of 176 pass. 3 new unit tests generate the code for a type from another project and check that the app can find it."
+        },
+        {
+          "title": "Open gaps",
+          "text": "3 project files (`.csproj`) changed. The team treats those as risky. Map mode is not covered."
+        },
+        {
+          "title": "Rollback",
+          "text": "Undo the commit. Do it before a release, because users can see the new marker."
+        }
+      ],
+      "model": {
+        "route": "Human review required",
+        "rule": "T-human-review",
+        "reason": "The unit tests passed and the missing proof is in. A named person decides.",
+        "unitTests": 176,
+        "reviewSummary": "The working case now has unit tests. A few smaller bugs and some wrong docs are left.",
+        "dropFindings": [
+          "The success path (generating a formatter body"
+        ],
+        "since": [
+          "Route: Waiting → Human review required",
+          "Working case: not tested → tested by 3 new unit tests",
+          "Unit tests: 173 → 176, all pass",
+          "1 file changed"
+        ],
+        "files": [
+          {
+            "file": "tests/MessagePack.SourceGenerator.Tests/GeneratedMessagePackFormatterTests.cs",
+            "status": "M",
+            "patch": "@@ -118,3 +118,31 @@ public class GeneratedMessagePackFormatterTests\n+    [Fact]\n+    public async Task ExternalType_GetsAGeneratedFormatter()\n+    {\n+        // The success path: a formatter body is generated for a type from another assembly.\n+        await this.VerifyGeneratedFormatterAsync(ExternalPersonSource, FormatterForExternalPerson);\n+    }\n+\n+    [Fact]\n+    public async Task BodylessFormatterClass_IsAccepted()\n+    {\n+        await this.VerifyGeneratedFormatterAsync(ExternalPointSource, \"[GeneratedMessagePackFormatter] partial class PointFormatter : IMessagePackFormatter<ExternalPoint>;\");\n+    }\n+\n+    [Fact]\n+    public async Task GeneratedFormatter_IsRegisteredInTheResolver()\n+    {\n+        await this.VerifyResolverContainsAsync(ExternalPersonSource, FormatterForExternalPerson, \"ExternalPersonFormatter\");\n+    }"
+          }
+        ]
+      }
+    }
+  },
+  "commits": [
+    {
+      "sha": "7c3d5f2000000000000000000000000000002129",
+      "message": "Add unit tests that generate and register a formatter for an external type"
+    }
+  ]
+}

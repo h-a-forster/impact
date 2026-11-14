@@ -2,11 +2,11 @@ import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { readFileAt, revisionExists } from "./lib/git.mjs";
-import { buildModel, loadRevisions } from "./lib/model.mjs";
+import { buildFullMap, buildModel, demoRevisions } from "./lib/model.mjs";
+import { ledgerSource } from "./lib/ledger.mjs";
 import { decisionView, recordDecision } from "./lib/decisions.mjs";
 import { findPr, prSummary } from "./lib/github.mjs";
-import { ledgerSource } from "./lib/ledger.mjs";
-import { REVISIONS_FILE, ROOT, SAMPLE_REPO } from "./lib/paths.mjs";
+import { DEMO, REVISIONS_FILE, ROOT, SAMPLE_REPO } from "./lib/paths.mjs";
 
 const PORT = Number(process.env.PORT ?? 4317);
 const PUBLIC = path.join(ROOT, "src", "public");
@@ -32,24 +32,43 @@ const readBody = (req) =>
     req.on("error", reject);
   });
 
+// Eval test cases: PRs a person marked as "merged, then broke the system".
+// They become test cases for the AI review agent. Saved per PR.
+const EVAL_CASES_FILE = path.join(DEMO, "eval-cases.json");
+const loadEvalCases = () => (fs.existsSync(EVAL_CASES_FILE) ? JSON.parse(fs.readFileSync(EVAL_CASES_FILE, "utf8")) : {});
+function setEvalCase(prId, on) {
+  const cases = loadEvalCases();
+  if (on) cases[prId] = { markedAt: new Date().toISOString() };
+  else delete cases[prId];
+  fs.mkdirSync(DEMO, { recursive: true });
+  fs.writeFileSync(EVAL_CASES_FILE, JSON.stringify(cases, null, 2) + "\n");
+  return cases[prId] ?? null;
+}
+
 function modelFor(prId, sha) {
-  const revisions = loadRevisions();
+  const revisions = demoRevisions();
   const model = buildModel(revisions, prId, sha);
-  return { ...model, decisions: decisionView(model) };
+  return { ...model, decisions: decisionView(model), evalCase: loadEvalCases()[prId] ?? null };
 }
 
 const handler = async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   try {
     if (url.pathname === "/api/revisions") {
-      return json(res, 200, loadRevisions());
+      return json(res, 200, demoRevisions());
+    }
+    if (url.pathname === "/api/evalcase" && req.method === "POST") {
+      const input = JSON.parse(await readBody(req));
+      if (!demoRevisions().prs.some((p) => p.id === input.pr)) return json(res, 404, { error: `Unknown PR ${input.pr}` });
+      return json(res, 200, { ok: true, evalCase: setEvalCase(input.pr, Boolean(input.on)) });
     }
     if (url.pathname === "/api/model") {
       return json(res, 200, modelFor(url.searchParams.get("pr"), url.searchParams.get("sha")));
     }
+    if (url.pathname === "/api/fullmap") return json(res, 200, buildFullMap(demoRevisions()));
     if (url.pathname === "/api/summary") {
       // Used by the GitHub replica: live state for the Impact review check, per commit.
-      const revisions = loadRevisions();
+      const revisions = demoRevisions();
       const pr = findPr(revisions, url.searchParams.get("repo"), url.searchParams.get("pr"));
       if (!pr) return json(res, 404, { error: `No Impact Map analysis for ${url.searchParams.get("repo")} PR #${url.searchParams.get("pr")}`, analysedRepo: revisions.github.fullName });
       return json(res, 200, prSummary(revisions, pr));
@@ -57,9 +76,9 @@ const handler = async (req, res) => {
     if (url.pathname === "/api/source") {
       const sha = url.searchParams.get("sha");
       const file = url.searchParams.get("file");
-      const owner = loadRevisions().prs.find((p) => p.id === url.searchParams.get("pr"));
-      if (owner?.source === "ledger") {
-        // Recorded PR: the text comes from the pack (changed files at the head commit only).
+      const owner = demoRevisions().prs.find((p) => p.id === url.searchParams.get("pr"));
+      if (owner?.source === "tieto") {
+        // The text comes from the recorded pack (changed files at the head commit only).
         const r = ledgerSource(owner.id, file);
         return r.error ? json(res, 404, { error: r.error }) : json(res, 200, { sha, file, text: r.text });
       }
@@ -70,7 +89,7 @@ const handler = async (req, res) => {
     }
     if (url.pathname === "/api/decisions" && req.method === "POST") {
       const input = JSON.parse(await readBody(req));
-      const revisions = loadRevisions();
+      const revisions = demoRevisions();
       const model = buildModel(revisions, input.pr, input.sha);
       const result = recordDecision(model, input);
       return json(res, result.ok ? 200 : 400, result);

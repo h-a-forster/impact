@@ -1,0 +1,146 @@
+{
+  "pr": "ju26-issue-2297",
+  "author": {
+    "by": "Stelian Vultur (vultuste) · commit message on branch ju26-issue-2297. Tieto's repo has branches, not pull requests.",
+    "text": "implement issue #2297 : Add ExcludeFromCodeCoverage attribute to generated code"
+  },
+  "generatedBy": "AI-written (Claude), saved for this demo",
+  "verdict": {
+    "classifier1": "The changed code is used in 6 other places that this PR does not edit.",
+    "reason": "The unit tests passed and nothing is missing. A named person decides."
+  },
+  "reviewSummary": "The mark also lands on classes that users write. That can break their build. Older project types get no mark at all.",
+  "plainReview": {
+    "findings": [
+      {
+        "match": "user-declared partial resolver",
+        "title": "The mark can break a user's build",
+        "detail": "The mark is put on a class that the user also writes part of. If the user already added the same mark, it appears twice and the build fails. It also hides the user's own code from coverage."
+      },
+      {
+        "match": "Guard leaves",
+        "title": "Older project types get no change",
+        "detail": "The mark is switched off for netstandard2.0 and .NET Framework projects. For those users nothing changes, so the request is not met for them."
+      },
+      {
+        "match": "New test checks per file",
+        "title": "The new unit test is weak",
+        "detail": "It passes if a file has the mark once, even when the file holds three classes. It runs only one of the two generators. It ignores build errors."
+      },
+      {
+        "match": "Shared nesting-type emitter",
+        "title": "A shared helper now writes an extra line break",
+        "detail": "This is needed for the new mark. But it changes the output text for some types that are not part of this request."
+      }
+    ],
+    "questions": [
+      {
+        "question": "Is the mark really not available on older project types?",
+        "help": "Build two tiny test projects and see."
+      },
+      {
+        "question": "Should the mark go on a class the user also writes?",
+        "help": "The maintainers decide. Then a unit test locks it in."
+      },
+      {
+        "question": "Should there be a setting to turn this off?",
+        "help": "The maintainers decide."
+      },
+      {
+        "question": "Do older project types still build the generated code?",
+        "help": "A build test for those project types."
+      },
+      {
+        "question": "What happens in Unity projects?",
+        "help": "Build a Unity project and look at the output."
+      }
+    ]
+  },
+  "agent": {
+    "model": "claude-sonnet-5-5",
+    "snapshot": "snap-2297-a0aa5ab",
+    "context": "feature request #2297 and the templates and saved test output files this PR changes",
+    "chat": [
+      {
+        "q": "Why is the mark off for older project types?",
+        "keys": "approach guard netstandard framework chose design older",
+        "a": "I believed the mark does not exist on netstandard2.0 and .NET Framework. So I left it out there, to keep those projects building. I did not confirm this with a build."
+      },
+      {
+        "q": "What were you least sure about?",
+        "keys": "unsure risk worried doubt confident",
+        "a": "Resolver classes. The user writes half of that class and we generate the other half. If the user already added the mark, it is there twice and the build may fail."
+      },
+      {
+        "q": "What did you not test?",
+        "keys": "tests tested missing cover coverage",
+        "a": "The new unit test looks for the mark in each file. It ignores build errors, so it would miss the double-mark case."
+      }
+    ]
+  },
+  "revisions": {
+    "1": {
+      "tags": [
+        {
+          "label": "New feature",
+          "tone": "info"
+        },
+        {
+          "label": "Generated code",
+          "tone": "info"
+        },
+        {
+          "label": "Shared templates",
+          "tone": "warn"
+        },
+        {
+          "label": "Can break user builds",
+          "tone": "bad"
+        },
+        {
+          "label": "Unit tests: 169 of 169 pass",
+          "tone": "ok"
+        }
+      ],
+      "summary": "Marks all generated code so that coverage tools skip it. (Coverage is how much of your code the tests run.) The mark also lands on a class that users write part of themselves.",
+      "sections": [
+        {
+          "title": "Requirement",
+          "text": "Feature request #2297 in MessagePack-CSharp."
+        },
+        {
+          "title": "Why",
+          "text": "Generated code is hard to test. It drags the coverage number down."
+        },
+        {
+          "title": "Before → after",
+          "text": "Before: generated code counts in coverage. After: it is marked `[ExcludeFromCodeCoverage]` and skipped. Older project types do not get the mark."
+        },
+        {
+          "title": "Must preserve",
+          "text": "Projects that build today must still build. Generated code must work the same."
+        },
+        {
+          "title": "Approach",
+          "text": "All 6 code templates add the mark. One shared helper, `EmitNestingTypesAndNamespaces()`, also adds a line break."
+        },
+        {
+          "title": "Alternatives",
+          "text": "The request mentions an on/off setting. None was added."
+        },
+        {
+          "title": "Checks run",
+          "text": "Unit tests (`dotnet test`, a saved run on one machine, not the automatic server run): 169 of 169 pass. The new unit test only looks for the mark once per file. It ignores build errors."
+        },
+        {
+          "title": "Open gaps",
+          "text": "If a user already added the same mark to their own class, it is there twice. That can break the build."
+        },
+        {
+          "title": "Rollback",
+          "text": "Undo the commit. Then make the saved test output files again."
+        }
+      ]
+    }
+  }
+}

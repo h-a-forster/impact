@@ -1,0 +1,40 @@
+{
+  "pr": "req-17",
+  "generatedBy": "AI-written (Claude), saved for this demo",
+  "revisions": {
+    "1": {
+      "tags": [
+        { "label": "Behaviour change", "tone": "warn" },
+        { "label": "Shared code", "tone": "warn" },
+        { "label": "Money maths", "tone": "warn" },
+        { "label": "Reaches 2 workflows", "tone": "info" },
+        { "label": "Tests cover 1 of 2", "tone": "bad" }
+      ],
+      "summary": "Discounts now round half-cents up, not down. The edit is one line in a shared pricing function, so totals change in Checkout and in Order Import.",
+      "sections": [
+        { "title": "What changes", "text": "`applyDiscount()` adds 50 before it divides by 100. A 105-cent order at 10% now gets an 11-cent discount (total 94), not a 10-cent one (total 95)." },
+        { "title": "Why", "text": "REQ-17: discounts round to the nearest cent, half-cents up." },
+        { "title": "What it reaches", "text": "`checkoutTotal()` in Checkout and `importOrder()` in Order Import. Both call `applyDiscount()`. Neither is in the diff." },
+        { "title": "What is tested", "text": "Checkout: two REQ-17 tests pass on this commit. Order Import: no test runs a discounted order through it." },
+        { "title": "What stays the same", "text": "A zero discount still totals 105 cents." }
+      ]
+    },
+    "2": {
+      "tags": [
+        { "label": "Behaviour change", "tone": "warn" },
+        { "label": "Shared code", "tone": "warn" },
+        { "label": "Money maths", "tone": "warn" },
+        { "label": "Reaches 2 workflows", "tone": "info" },
+        { "label": "Tests cover 2 of 2", "tone": "ok" }
+      ],
+      "summary": "Discounts now round half-cents up, not down. The edit is one line in a shared pricing function, so totals change in Checkout and in Order Import. This commit adds the missing Order Import tests.",
+      "sections": [
+        { "title": "What changes", "text": "`applyDiscount()` adds 50 before it divides by 100. A 105-cent order at 10% now gets an 11-cent discount (total 94), not a 10-cent one (total 95)." },
+        { "title": "Why", "text": "REQ-17: discounts round to the nearest cent, half-cents up." },
+        { "title": "What it reaches", "text": "`checkoutTotal()` in Checkout and `importOrder()` in Order Import. Both call `applyDiscount()`. Neither is in the diff." },
+        { "title": "What is tested", "text": "Checkout: two REQ-17 tests pass. Order Import: two new REQ-17 tests pass (94 cents at 10%, 105 cents at 0%)." },
+        { "title": "What stays the same", "text": "A zero discount still totals 105 cents in both workflows." }
+      ]
+    }
+  }
+}

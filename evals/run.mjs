@@ -9,7 +9,6 @@ import { buildModel, loadBrief, loadRevisions } from "../src/lib/model.mjs";
 import { loadRun } from "../src/lib/runner.mjs";
 import { decisionView, recordDecision } from "../src/lib/decisions.mjs";
 import { findPr, prSummary } from "../src/lib/github.mjs";
-import { ledgerSource } from "../src/lib/ledger.mjs";
 import { DATA } from "../src/lib/paths.mjs";
 import { ROOT } from "../src/lib/paths.mjs";
 
@@ -202,44 +201,6 @@ group = "Planted faults (measurement)";
   check("commit 2: nothing escapes where the map said Unverified", p2.summary.escapedWhereMapSaidUnverified, e.commit2.escapedWhereMapSaidUnverified);
   check("known miss is reported, not hidden: a fault escapes where the map said Supported", [p1.summary.escapedWhereMapSaidSupported, p2.summary.escapedWhereMapSaidSupported], [e.commit1.escapedWhereMapSaidSupported, e.commit2.escapedWhereMapSaidSupported]);
   check("the planted-fault record is for the commits under review", [p1.sha, p2.sha], [c1, c2]);
-}
-
-// ---- 8. Real Tieto PRs (recorded packs) -----------------------------------
-group = "Real Tieto PRs (recorded packs)";
-{
-  const e = expected.tietoRecorded;
-  const TIETO = "te-industry-tech-office/junction26-messagepack-csharp";
-  const pr = findPr(revisions, TIETO, 1);
-  check("PR #1 of the Tieto repo resolves to the recorded pack, not to the shop PR #1", [pr?.id, pr?.source], ["ju26-issue-2283", "ledger"]);
-  check("an unknown repo or PR resolves to nothing (no borrowed analysis)", [findPr(revisions, "someone/else", 1), findPr(revisions, TIETO, 99)], [null, null]);
-  const [s1, s2] = pr.commits.map((c) => c.sha);
-  const a = buildModel(revisions, pr.id, s1);
-  const b = buildModel(revisions, pr.id, s2);
-  check("#2283 as submitted: green suite, severity and route", [checkOf(a, "head-full"), a.classifier2.severity, a.classifier2.route], ["passed", e["2283"].asSubmitted.severity, e["2283"].asSubmitted.route]);
-  check("#2283 as submitted: waits on the requirement row the reviewer refused, with a named check", [a.classifier2.blockers.some((x) => x.rowId === e["2283"].asSubmitted.waitingOn && Boolean(x.suggestedCheck))], [true]);
-  check("#2283 after targeted checks: severity raised, route to a human", [b.classifier2.severity, b.classifier2.route, b.classifier2.notes.length > 0], [e["2283"].afterTargetedChecks.severity, e["2283"].afterTargetedChecks.route, true]);
-  check("#2283 after targeted checks: contradicted rows", b.rows.filter((r) => r.state === "contradicted").map((r) => r.id).sort(), e["2283"].afterTargetedChecks.contradicted);
-  const rch = b.rows.find((r) => r.id === "RCH-26");
-  check("RCH-26 is outside the diff and its contradicting check passed on base and failed on head", [rch.inDiff, rch.checks.some((c) => c.base === "Passed" && c.head === "Failed")], [false, true]);
-  const node = b.graph.nodes.find((n) => n.id === rch.member && n.level === "function");
-  check("the map marks that member as contradicted, and it was not contradicted as submitted", [node?.evidence, a.graph.nodes.find((n) => n.id === rch.member && n.level === "function")?.evidence !== "contradicted"], ["contradicted", true]);
-  const src = ledgerSource(pr.id, rch.location.file);
-  check("RCH-26 links to real code at the head commit", /reportDiagnostic/.test((src.text ?? "").split("\n")[rch.location.line - 1] ?? ""), true);
-  check("both steps share one commit and are labelled as new evidence, not a new commit", [a.selected.commitSha === b.selected.commitSha, b.selected.sameCommit], [true, true]);
-  check("the pack is labelled as recorded output of another tool", [a.provenance.producedBy, Boolean(a.provenance.packSha256)], ["Impact Ledger", true]);
-  const p3 = findPr(revisions, TIETO, 3);
-  check("#2129 touches a sensitive path: High", buildModel(revisions, p3.id, p3.commits[0].sha).classifier2.severity, e["2129"].severity);
-
-  // Decisions and the GitHub summary on a recorded PR.
-  const file = path.join(os.tmpdir(), `impact-map-eval-ledger-${process.pid}.json`);
-  fs.rmSync(file, { force: true });
-  const early = recordDecision(a, { name: "Eval Engineer", action: "sign-off", residualRisk: "none" }, file);
-  check("sign-off while waiting for evidence is rejected", early.ok, false);
-  const late = recordDecision(b, { name: "Eval Engineer", action: "sign-off", residualRisk: "the dropped diagnostic, pending the owner's decision" }, file);
-  check("a decision at the later step is recorded for that step only", [late.ok, decisionView(a, file).signedOff, decisionView(b, file).signedOff], [true, false, true]);
-  const sum = prSummary(revisions, pr, file);
-  check("GitHub summary: two review steps on the one real commit, latest signed", [sum.commits.length, new Set(sum.commits.map((c) => c.sha)).size, sum.commits[0].status, sum.commits[1].status], [2, 1, "pending", "success"]);
-  fs.rmSync(file, { force: true });
 }
 
 // ---- Report ---------------------------------------------------------------

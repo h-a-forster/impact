@@ -1,0 +1,154 @@
+{
+  "pr": "ju26-issue-2234",
+  "author": {
+    "by": "Stelian Vultur (vultuste) · commit message on branch ju26-issue-2234. Tieto's repo has branches, not pull requests.",
+    "text": "Implementation for #2234 The analyzer does not work if SuppressSourceGeneration = true"
+  },
+  "generatedBy": "AI-written (Claude), saved for this demo",
+  "verdict": {
+    "classifier1": "The changed code is used in 2 other places that this PR does not edit.",
+    "reason": "One extra unit test disagrees with what this change should do. A named person must decide if that is OK.",
+    "notes": [
+      "Severity went from Medium to High because that unit test disagrees."
+    ]
+  },
+  "reviewSummary": "The checker no longer crashes on bad keys. But the code generator now makes output with a member missing, and says nothing.",
+  "plainReview": {
+    "findings": [
+      {
+        "match": "duplicate or mixed keys",
+        "title": "The generator now makes code that quietly drops a member",
+        "detail": "The changed code is shared with the code generator. Before, a repeated or mixed key stopped the generator. Now it makes code that leaves the later member out. The checker still shows an error, but only if the checker is on."
+      },
+      {
+        "match": "field half",
+        "title": "Half of the change is never run by a unit test",
+        "detail": "The change edits the code for properties and the code for fields. Every new unit test uses properties only. So the field part is untested."
+      },
+      {
+        "match": "new continue",
+        "title": "A skipped member is no longer checked at all",
+        "detail": "When a member is skipped for a bad key, its type is not checked either. Before, the user got two warnings. Now they get one."
+      },
+      {
+        "match": "null key on the first keyed field",
+        "title": "An empty key on a field still crashes",
+        "detail": "If the first field with a key has an empty key, the checker still crashes. This is the same kind of crash the PR set out to fix. It happens on the old code and the new code."
+      },
+      {
+        "match": "MsgPack016",
+        "title": "A unit test claims to cover a warning it cannot trigger",
+        "detail": "The test comment and the README name warning MsgPack016. The test input cannot raise that warning. So a pass tells us nothing about it."
+      }
+    ],
+    "questions": [
+      {
+        "question": "What does \"does not work\" mean in the bug report?",
+        "help": "Ask the reporter for an example."
+      },
+      {
+        "question": "Is the fix aimed at the right version of the code?",
+        "help": "The maintainers name the branch. Then run the unit tests there."
+      },
+      {
+        "question": "Is no code generated for a type that has generation turned off?",
+        "help": "Run the two unit tests written for this."
+      },
+      {
+        "question": "Does such a type still save and load correctly when the app runs?",
+        "help": "Run the unit test that saves and loads it."
+      },
+      {
+        "question": "Before this change, did one bad type stop all code generation?",
+        "help": "A unit test with a repeated key, run on the old code and the new code."
+      }
+    ]
+  },
+  "agent": {
+    "model": "claude-sonnet-5-5",
+    "snapshot": "snap-2234-9007cee",
+    "context": "bug report #2234 and the 4 files this PR changes",
+    "chat": [
+      {
+        "q": "Why skip the member and not stop?",
+        "keys": "approach skip continue duplicate chose design",
+        "a": "With code generation off, the checker still has to finish before it can warn you. A repeated key made it crash, so no warning came out. Now I keep the first member and skip the later one. The checker can finish and show the error."
+      },
+      {
+        "q": "What were you least sure about?",
+        "keys": "unsure risk worried doubt confident",
+        "a": "The bug report only says it \"does not work\". I guessed it meant the crash. I also changed code that the generator shares. It now makes output with a member missing, where it used to stop."
+      },
+      {
+        "q": "What did you not test?",
+        "keys": "tests tested missing cover coverage",
+        "a": "No unit test runs the field part, only the property part. An empty key on a field still crashes."
+      }
+    ]
+  },
+  "revisions": {
+    "1": {
+      "tags": [
+        {
+          "label": "Bug fix",
+          "tone": "info"
+        },
+        {
+          "label": "Shared code",
+          "tone": "warn"
+        },
+        {
+          "label": "Changes what gets generated",
+          "tone": "bad"
+        },
+        {
+          "label": "Unit tests: 175 of 175 pass",
+          "tone": "ok"
+        },
+        {
+          "label": "1 extra unit test disagrees",
+          "tone": "bad"
+        }
+      ],
+      "summary": "Stops the code checker from crashing when a type uses the same key twice, or mixes number keys and text keys. The same code is also used to generate code. That part now quietly leaves a member out.",
+      "sections": [
+        {
+          "title": "Requirement",
+          "text": "Bug report #2234 in MessagePack-CSharp."
+        },
+        {
+          "title": "Why",
+          "text": "The report says the code checker \"does not work\" when code generation is turned off. It does not say what goes wrong."
+        },
+        {
+          "title": "Before → after",
+          "text": "Before: a repeated or mixed key made the tool crash. After: it keeps the first member with that key and skips the later one."
+        },
+        {
+          "title": "Must preserve",
+          "text": "The code generator uses the same code. It must not quietly drop a member."
+        },
+        {
+          "title": "Approach",
+          "text": "`GetObjectInfo()` now skips a member that has the wrong kind of key. It also stops adding the same key twice."
+        },
+        {
+          "title": "Alternatives",
+          "text": "The author wrote none."
+        },
+        {
+          "title": "Checks run",
+          "text": "Unit tests (`dotnet test`, a saved run on one machine, not the automatic server run): 175 of 175 pass. One extra unit test disagrees with the change."
+        },
+        {
+          "title": "Open gaps",
+          "text": "The change covers properties and fields. No unit test runs the field part. An empty key on a field still crashes."
+        },
+        {
+          "title": "Rollback",
+          "text": "Undo the commit. Nothing else to clean up."
+        }
+      ]
+    }
+  }
+}

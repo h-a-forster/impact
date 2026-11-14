@@ -14,8 +14,7 @@
     "reset": "node -e \"require('fs').rmSync('.demo/decisions.json',{force:true});console.log('Decisions cleared.')\"",
     "export:replica": "node scripts/export-replica.mjs",
     "planted": "node scripts/planted.mjs",
-    "gate": "node scripts/gate.mjs",
-    "import:ledger": "node scripts/import-ledger.mjs"
+    "gate": "node scripts/gate.mjs"
   },
   "engines": {
     "node": ">=22.6"

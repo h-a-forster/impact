@@ -13,15 +13,220 @@ import { BRIEFS, DATA, REVISIONS_FILE, ROOT } from "./paths.mjs";
 const short = (sha) => (sha ?? "").slice(0, 7);
 const concepts = JSON.parse(fs.readFileSync(path.join(ROOT, "config", "concepts.json"), "utf8")).groups;
 
-/**
- * All pull requests the map can show:
- *  - the shop sample (built and analysed here), and
- *  - the real Tieto sample PRs (recorded packs from the Impact Ledger project, data/tieto/).
- */
+/** All pull requests the map can show: the shop sample, built and analysed here. */
 export function loadRevisions() {
   const revisions = JSON.parse(fs.readFileSync(REVISIONS_FILE, "utf8"));
   const shop = revisions.prs.map((p) => ({ ...p, repo: revisions.github.fullName, source: "shop" }));
-  return { ...revisions, prs: [...shop, ...ledgerPrs()] };
+  return { ...revisions, prs: shop };
+}
+
+/**
+ * The pull requests the demo shows: the real Tieto example PRs, one step each.
+ * Their facts come from recorded packs in data/tieto/. The shop sample is kept
+ * for the evals only (loadRevisions).
+ */
+export function demoRevisions() {
+  const prs = ledgerPrs().map((p) => {
+    // Extra commits are made up for the demo, so the map can be stepped from commit to commit.
+    const extra = (loadSemantic(p.id)?.commits ?? []).map((c, i) => ({ sha: c.sha, index: i + 2, label: `commit ${i + 2}`, message: c.message, madeUp: true }));
+    return { ...p, source: "tieto", commits: [{ sha: p.commits[0].commitSha, index: 1, label: "commit 1", message: p.title }, ...extra] };
+  });
+  return { ...loadRevisions(), prs };
+}
+
+function loadSemantic(prId) {
+  const file = path.join(BRIEFS, "semantic", `${prId}.json`);
+  return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : null;
+}
+
+/** One Tieto PR in the plain shape the UI needs: no row numbers, no evidence stages. */
+function buildTietoModel(pr, sha) {
+  const commit = pr.commits.find((c) => c.sha === sha);
+  if (!commit) throw new Error(`commit ${sha} is not part of PR ${pr.id}`);
+  const recorded = ledgerPrs().find((p) => p.id === pr.id);
+  const m = buildLedgerModel(recorded, recorded.commits.at(-1).sha);
+  const saved = loadSemantic(pr.id) ?? {};
+  // A made-up commit changes the recorded facts through hand-written overrides.
+  const o = commit.index > 1 ? (saved.revisions?.[String(commit.index)]?.model ?? {}) : null;
+  const failing = (e) => (e === "contradicted" && !o?.fixed ? "contradicted" : null);
+  const text = (list) => (list ?? []).map((t) => ({ type: "text", text: t }));
+  return {
+    source: "tieto",
+    pr,
+    base: m.base,
+    selected: { sha, short: short(sha), isBase: false, index: commit.index, message: commit.message, madeUp: Boolean(commit.madeUp) },
+    graph: {
+      nodes: m.graph.nodes.map(({ rowIds, ...n }) => ({ ...n, evidence: failing(n.evidence), sub: n.type === "pr" ? `commit ${short(sha)}` : n.type === "requirement" ? "GitHub issue" : n.sub })),
+      edges: m.graph.edges,
+    },
+    tests: [],
+    run: null,
+    checks: m.checks.map((c) => ({
+      ...c,
+      label: "Unit tests",
+      name: "dotnet test",
+      by: o ? "Made-up result for the demo commit" : "Recorded run on this commit · not CI",
+      counts: o?.unitTests ? { passed: o.unitTests, total: o.unitTests, failed: 0 } : c.counts,
+    })),
+    impact: { ...m.impact, unverified: [] },
+    policy: m.policy,
+    requirementText: m.requirementText,
+    diff: { files: [...m.diff.files, ...(o?.files ?? [])] },
+    since: o ? { from: commit.index - 1, items: o.since ?? [], files: o.files ?? [] } : null,
+    evidence: o?.fixed ? [] : m.evidence.filter((e) => e.status === "contradicted").map(({ rowIds, ...e }) => ({ ...e, statusLabel: "A targeted unit test fails here", missing: null })),
+    brief: null,
+    claims: [],
+    description: loadDescription(pr, m.brief, commit),
+    classifier1: { ...m.classifier1, kind: "deterministic rules", reason: saved.verdict?.classifier1 ?? m.classifier1.reason },
+    classifier2: {
+      ...m.classifier2,
+      kind: "deterministic rules",
+      severity: o?.severity ?? m.classifier2.severity,
+      route: o?.route ?? m.classifier2.route,
+      rule: o?.rule ?? m.classifier2.rule,
+      reason: o?.reason ?? saved.verdict?.reason ?? m.classifier2.reason,
+      blockers: text(o ? o.blockers : saved.verdict?.blockers),
+      notes: (o ? (o.notes ?? []) : (saved.verdict?.notes ?? [])).map((t) => ({ text: t })),
+    },
+    review: {
+      ...m.review,
+      summary: o?.reviewSummary ?? saved.reviewSummary ?? "",
+      // The recorded review is dense. The demo shows a hand-written plain-words version of each item.
+      findings: m.review.findings
+        .filter((f) => !(o?.dropFindings ?? []).some((t) => f.title.includes(t)))
+        .map((f) => {
+          const plain = (saved.plainReview?.findings ?? []).find((x) => f.title.includes(x.match));
+          return plain ? { ...f, title: plain.title, detail: plain.detail } : f;
+        }),
+      couldNotDecide: m.review.couldNotDecide.map((q, i) => {
+        const plain = saved.plainReview?.questions?.[i];
+        return plain ? { ...q, question: plain.question, checkThatWouldHelp: plain.help } : q;
+      }),
+      modeLabel: o ? "Made-up review result for the demo commit" : m.review.modeLabel.replace(" from the Impact Ledger pack", "").replace(/\)\..*$/, ")") + ", rewritten in plain words for the demo",
+    },
+    reviewInput: null,
+    agent: saved.agent ?? null,
+  };
+}
+
+/** A small glob matcher for the concept patterns ("**", "*"). */
+function globToRegex(pattern) {
+  const body = pattern
+    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+    .replace(/\*\*\//g, "\u0000")
+    .replace(/\*\*/g, "\u0001")
+    .replace(/\*/g, "[^/]*")
+    .replace(/\u0000/g, "(?:.*/)?")
+    .replace(/\u0001/g, ".*");
+  return new RegExp(`^${body}$`);
+}
+
+/**
+ * The whole repository as one map, at three levels, with every commit of every
+ * PR laid over it.
+ *  - Concepts: the team's named areas, plus the rest of the repo by top folder.
+ *    Counts come from a saved snapshot of the whole repo (scripts/snapshot-fullmap.mjs).
+ *  - Files and Functions: every file and function that any demo PR edits or reaches.
+ *    The rest of the repo is not indexed at these levels.
+ */
+export function buildFullMap(revisions) {
+  const snap = JSON.parse(fs.readFileSync(path.join(DATA, "tieto", "fullmap.json"), "utf8"));
+  const declared = JSON.parse(fs.readFileSync(path.join(DATA, "tieto", "concepts.json"), "utf8")).concepts;
+  const ordered = [...declared]
+    .sort((a, b) => Math.max(...b.patterns.map((p) => p.length)) - Math.max(...a.patterns.map((p) => p.length)))
+    .map((c) => ({ ...c, regexes: c.patterns.map(globToRegex) }));
+  const AREA = { src: "Core library and other packages", sandbox: "Sandbox projects", benchmark: "Benchmarks" };
+  const areaOf = (file) => {
+    const hit = ordered.find((c) => c.regexes.some((r) => r.test(file)));
+    if (hit) return { id: `concept:${hit.id}`, label: hit.name, sub: hit.patterns[0] };
+    const top = file.split("/")[0];
+    return AREA[top] ? { id: `area:${top}`, label: AREA[top], sub: `${top}/**` } : { id: "area:repo", label: "Repo tooling and config", sub: "everything else" };
+  };
+  const projectDirs = snap.projects.map((p) => p.id).sort((a, b) => b.length - a.length);
+  const projectOf = (file) => projectDirs.find((d) => file.startsWith(d + "/")) ?? null;
+
+  // Concept level: every file in the snapshot belongs to one area.
+  const areas = new Map();
+  const areaProjects = new Map();
+  for (const file of snap.files) {
+    const a = areaOf(file);
+    const node = areas.get(a.id) ?? areas.set(a.id, { ...a, level: "concept", type: "concept", files: 0 }).get(a.id);
+    node.files += 1;
+    const proj = projectOf(file);
+    if (proj) (areaProjects.get(a.id) ?? areaProjects.set(a.id, new Set()).get(a.id)).add(proj);
+  }
+  for (const n of areas.values()) n.sub = `${n.files} files · ${n.sub}`;
+
+  // File and function levels: the union of what the demo PRs edit or reach.
+  const files = new Map();
+  const functions = new Map();
+  const calls = new Map();
+  const commits = [];
+  for (const pr of revisions.prs) {
+    for (const c of pr.commits) {
+      const m = buildModel(revisions, pr.id, c.sha);
+      const changed = (m.since ? m.since.files : m.diff.files).map((f) => f.file);
+      const edited = { concept: new Set(changed.map((f) => areaOf(f).id)), file: new Set(), function: new Set() };
+      const affected = { concept: new Set(), file: new Set(), function: new Set() };
+      // A made-up commit that only touches tests reaches nothing else.
+      const reaches = !m.since || changed.some((f) => m.graph.nodes.some((n) => n.type === "file" && n.file === f));
+      for (const n of reaches ? m.graph.nodes : []) {
+        if (n.type === "file" && n.level === "file") {
+          files.set(n.id, { id: n.id, level: "file", type: "file", label: n.label, sub: n.sub, file: n.file });
+          if (changed.includes(n.file)) edited.file.add(n.id);
+          else if (n.state !== "none") affected.file.add(n.id);
+        }
+        if (n.type === "function") {
+          functions.set(n.id, { id: n.id, level: "function", type: "function", label: n.label, sub: n.sub, file: n.file });
+          if (n.state === "edited" && changed.includes(n.file)) edited.function.add(n.id);
+          else if (n.state !== "none") affected.function.add(n.id);
+          if (n.state !== "none" && !edited.concept.has(areaOf(n.file).id)) affected.concept.add(areaOf(n.file).id);
+        }
+      }
+      for (const e of m.graph.edges) if (e.level === "function" && e.kind === "calls") calls.set(`${e.from}>${e.to}`, { from: e.from, to: e.to });
+      const list = (sets) => Object.fromEntries(Object.entries(sets).map(([k, v]) => [k, [...v]]));
+      commits.push({ sha: c.sha, short: short(c.sha), pr: pr.id, prNumber: pr.number, title: pr.title, index: c.index, message: c.message, madeUp: Boolean(c.madeUp), fileCount: changed.length, edited: list(edited), affected: list(affected) });
+    }
+  }
+
+  // Links. Functions: calls. Files and concepts: the same calls, rolled up.
+  const edge = (level, from, to) => ({ id: `${from}>${to}`, level, from, to, kind: "calls" });
+  const rollUp = (level, keyOf) => {
+    const seen = new Map();
+    for (const c of calls.values()) {
+      const a = functions.get(c.from), b = functions.get(c.to);
+      if (!a || !b) continue;
+      const from = keyOf(a.file), to = keyOf(b.file);
+      if (from !== to) seen.set(`${from}>${to}`, edge(level, from, to));
+    }
+    return seen;
+  };
+  const conceptEdges = rollUp("concept", (file) => areaOf(file).id);
+  // Concept level also gets project dependencies from the snapshot (.csproj references).
+  const refs = new Map(snap.projects.map((p) => [p.id, p.references]));
+  for (const [from, fromProjects] of areaProjects) {
+    for (const [to, toProjects] of areaProjects) {
+      // Docs and build files are file types, not code areas: no dependency links for them.
+      if (from === to || conceptEdges.has(`${to}>${from}`) || [from, to].some((x) => x === "concept:docs" || x === "concept:build-config")) continue;
+      if ([...fromProjects].some((p) => (refs.get(p) ?? []).some((r) => toProjects.has(r) && !fromProjects.has(r)))) conceptEdges.set(`${from}>${to}`, edge("concept", from, to));
+    }
+  }
+  const fileEdges = rollUp("file", (file) => `file:${file}`);
+  for (const key of [...fileEdges.keys()]) if (!files.has(fileEdges.get(key).from) || !files.has(fileEdges.get(key).to)) fileEdges.delete(key);
+
+  return {
+    note: snap.note,
+    repo: snap.repo,
+    commit: snap.commit,
+    takenAt: snap.takenAt,
+    totals: snap.totals,
+    commits,
+    levels: {
+      concept: { nodes: [...areas.values()], edges: [...conceptEdges.values()] },
+      file: { nodes: [...files.values()], edges: [...fileEdges.values()] },
+      function: { nodes: [...functions.values()], edges: [...calls.values()].filter((c) => functions.has(c.from) && functions.has(c.to)).map((c) => edge("function", c.from, c.to)) },
+    },
+  };
 }
 
 function loadPlanted(prId, sha) {
@@ -30,6 +235,18 @@ function loadPlanted(prId, sha) {
   const all = JSON.parse(fs.readFileSync(file, "utf8"));
   const here = all.commits.find((c) => c.sha === sha);
   return here ? { kind: "planted-faults", ranAt: all.ranAt, ...here } : null;
+}
+/**
+ * The two PR descriptions the UI can switch between: the one the author wrote,
+ * and a semantic one written by an AI (saved in briefs/semantic/<pr-id>.json).
+ */
+function loadDescription(pr, brief, commit) {
+  const saved = loadSemantic(pr.id);
+  const ai = commit ? saved?.revisions?.[String(commit.index)] : null;
+  return {
+    author: saved?.author ?? { by: brief?.author ?? "Author", text: [brief?.why, brief?.approach].filter(Boolean).join("\n\n") || commit?.message || "" },
+    ai: ai ? { generatedBy: saved.generatedBy, ...ai } : null,
+  };
 }
 export function loadBrief(prId) {
   const file = path.join(BRIEFS, `${prId}.json`);
@@ -94,7 +311,7 @@ function edgeKeys(index, tests) {
 export function buildModel(revisions, prId, sha, opts = {}) {
   const pr = revisions.prs.find((p) => p.id === prId);
   if (!pr) throw new Error(`unknown PR: ${prId}`);
-  if (pr.source === "ledger") return buildLedgerModel(pr, sha);
+  if (pr.source === "tieto") return buildTietoModel(pr, sha);
   const baseSha = revisions.base.sha;
   const commit = pr.commits.find((c) => c.sha === sha);
   const isBase = sha === baseSha;
@@ -377,6 +594,7 @@ export function buildModel(revisions, prId, sha, opts = {}) {
     diff: { files: diffFiles },
     evidence,
     brief: brief ? { ...brief, revisions: undefined, checksRun: briefRev.checksRun, openGaps: briefRev.openGaps } : null,
+    description: loadDescription(pr, brief, commit),
     claims,
     classifier1: c1,
     review,

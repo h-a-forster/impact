@@ -1,0 +1,254 @@
+{
+  "pr": "ju26-issue-2283",
+  "author": {
+    "by": "Stelian Vultur (vultuste) · commit message on branch ju26-issue-2283. Tieto's repo has branches, not pull requests.",
+    "text": "implementation for #2283"
+  },
+  "generatedBy": "AI-written (Claude), saved for this demo",
+  "verdict": {
+    "classifier1": "The changed code is used in 31 other places that this PR does not edit.",
+    "reason": "One extra unit test passes on the old code and fails on the new code. A named person must decide if that is OK.",
+    "notes": [
+      "Severity went from Medium to High because that unit test fails."
+    ]
+  },
+  "reviewSummary": "The fix is wider than the bug. It hides warnings in places that never crashed. The new unit tests do not prove the fix works.",
+  "plainReview": {
+    "findings": [
+      {
+        "match": "report filter silences",
+        "title": "The fix hides more warnings than it needs to",
+        "detail": "The new check drops every warning that points outside this project. That stops the crash. But it also hides warnings in cases that never crashed. No unit test shows how many warnings are now hidden."
+      },
+      {
+        "match": "explicit null key",
+        "title": "A bad key on one kind of property is no longer reported",
+        "detail": "If a property has an empty key, the old code crashed. The new code says nothing at all. So the user gets no warning about the bad key."
+      },
+      {
+        "match": "MsgPack004 doc",
+        "title": "The new help page does not match the code",
+        "detail": "The help page for warning MsgPack004 says it only covers code in your own project. The code can still raise it for a parent type that comes from another project."
+      },
+      {
+        "match": "resolver file exists",
+        "title": "The new unit tests do not prove the fix works",
+        "detail": "They only check that the output file exists and that there are no warnings. They do not check that the file can save and load the type from the bug report."
+      },
+      {
+        "match": "UnkeyedMember",
+        "title": "One unit test locks in a missing warning",
+        "detail": "A member with no key now gives no warning in the project that uses it. The unit test treats that as correct. Its comment says the other project will report it, but no check shows that."
+      }
+    ],
+    "questions": [
+      {
+        "question": "Do other types from another project still behave the same, warnings included?",
+        "help": "Add unit tests for those types. Run them on the old code and the new code."
+      },
+      {
+        "question": "Is a problem in another project's type really reported by that project?",
+        "help": "A unit test that builds that project with the checker turned on."
+      },
+      {
+        "question": "Is it true that a warning may not point outside the project?",
+        "help": "Check the compiler's rules, or try it in a unit test."
+      },
+      {
+        "question": "Should these warnings be hidden, or shown on the line that uses the type?",
+        "help": "The maintainers must decide."
+      },
+      {
+        "question": "Does the generated file really save and load the type when the app runs?",
+        "help": "Run the example from the bug report from start to end."
+      },
+      {
+        "question": "Which line caused the crash, and is that the line this PR fixes?",
+        "help": "Run the 3 new unit tests on the old code and read the error."
+      }
+    ]
+  },
+  "agent": {
+    "model": "claude-sonnet-5-5",
+    "snapshot": "snap-2283-9df83c3",
+    "context": "bug report #2283 and the 4 files this PR changes",
+    "chat": [
+      {
+        "q": "Why did you hide the warnings and not fix only the crash?",
+        "keys": "approach filter warning crash chose design hide",
+        "a": "The crash came from a type that lives in another project. There is no line in this project to point a warning at. A checker is not allowed to point outside the project. So I made one check, `ReportIfLocatedInCompilation()`, that every warning goes through."
+      },
+      {
+        "q": "What were you least sure about?",
+        "keys": "unsure risk worried doubt confident",
+        "a": "Whether I hide too many warnings. Some types from other projects worked fine before. A few of their warnings are now hidden. I did not check that."
+      },
+      {
+        "q": "What did you not test?",
+        "keys": "tests tested missing cover coverage",
+        "a": "My unit tests check that the output file gets made. They do not check that it works. They also skip some kinds of types from other projects."
+      }
+    ]
+  },
+  "revisions": {
+    "1": {
+      "tags": [
+        {
+          "label": "Bug fix",
+          "tone": "info"
+        },
+        {
+          "label": "Shared code",
+          "tone": "warn"
+        },
+        {
+          "label": "Changes more than the bug",
+          "tone": "bad"
+        },
+        {
+          "label": "Unit tests: 170 of 170 pass",
+          "tone": "ok"
+        },
+        {
+          "label": "1 extra unit test fails",
+          "tone": "bad"
+        }
+      ],
+      "summary": "Fixes a crash. The crash happened when your code used one kind of type from another project. The fix hides some warnings to stop the crash. It also hides some warnings that used to work.",
+      "sections": [
+        {
+          "title": "Requirement",
+          "text": "Bug report #2283 in MessagePack-CSharp."
+        },
+        {
+          "title": "Why",
+          "text": "The tool crashed on one kind of type that comes from another project. The build still looked fine. But a file the app needs was never made, so some apps broke when they ran."
+        },
+        {
+          "title": "Before → after",
+          "text": "Before: the tool crashed and the file was missing. After: no crash. But warnings about code in another project are now hidden."
+        },
+        {
+          "title": "Must preserve",
+          "text": "Other types from another project already worked. They must still work, and still show their warnings."
+        },
+        {
+          "title": "Approach",
+          "text": "All warnings now go through one new check, `ReportIfLocatedInCompilation()`. It drops any warning that points outside this project."
+        },
+        {
+          "title": "Alternatives",
+          "text": "The author wrote none."
+        },
+        {
+          "title": "Checks run",
+          "text": "Unit tests (`dotnet test`, a saved run on one machine, not the automatic server run): 170 of 170 pass. One extra unit test for `GetObjectInfo()` passes on the old code and fails on the new code."
+        },
+        {
+          "title": "Open gaps",
+          "text": "The new unit tests only check that the file gets made. They do not check that it works. The new check also touches every warning, not just the crash."
+        },
+        {
+          "title": "Rollback",
+          "text": "Undo the commit. Nothing else to clean up."
+        }
+      ]
+    },
+    "2": {
+      "tags": [
+        {
+          "label": "Bug fix",
+          "tone": "info"
+        },
+        {
+          "label": "Shared code",
+          "tone": "warn"
+        },
+        {
+          "label": "Unit tests: 172 of 172 pass",
+          "tone": "ok"
+        },
+        {
+          "label": "Extra unit test now passes",
+          "tone": "ok"
+        }
+      ],
+      "summary": "Fixes a crash on one kind of type from another project. After commit 2, only warnings that point into another project are hidden. Warnings that worked before are back.",
+      "sections": [
+        {
+          "title": "Requirement",
+          "text": "Bug report #2283 in MessagePack-CSharp."
+        },
+        {
+          "title": "Why",
+          "text": "The tool crashed on one kind of type that comes from another project. The build still looked fine. But a file the app needs was never made, so some apps broke when they ran."
+        },
+        {
+          "title": "Before → after",
+          "text": "Before: the tool crashed and a file the app needs was missing. After: no crash. Only warnings that point into another project are hidden."
+        },
+        {
+          "title": "Must preserve",
+          "text": "Other types from another project already worked. They must still work, and still show their warnings."
+        },
+        {
+          "title": "Approach",
+          "text": "All warnings go through one check, `ReportIfLocatedInCompilation()`. Commit 2 makes it narrower: it only drops a warning that points into another project."
+        },
+        {
+          "title": "Alternatives",
+          "text": "The author wrote none."
+        },
+        {
+          "title": "Checks run",
+          "text": "Unit tests (`dotnet test`, made-up result for the demo): 172 of 172 pass. The extra unit test for `GetObjectInfo()` now passes."
+        },
+        {
+          "title": "Open gaps",
+          "text": "The unit tests still only check that the file gets made, not that it works."
+        },
+        {
+          "title": "Rollback",
+          "text": "Undo the commit. Nothing else to clean up."
+        }
+      ],
+      "model": {
+        "severity": "Medium",
+        "route": "Human review required",
+        "rule": "T-human-review",
+        "reason": "The unit tests passed and nothing is missing. A named person decides.",
+        "unitTests": 172,
+        "fixed": true,
+        "reviewSummary": "The check now only hides warnings that point into another project. Three small points are left.",
+        "dropFindings": [
+          "report filter silences",
+          "resolver file exists"
+        ],
+        "since": [
+          "Severity: High → Medium",
+          "Extra unit test for `GetObjectInfo()`: fails → passes",
+          "Unit tests: 170 → 172, all pass",
+          "2 files changed"
+        ],
+        "files": [
+          {
+            "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+            "status": "M",
+            "patch": "@@ -1444,7 +1444,9 @@ private void ReportIfLocatedInCompilation(Action<Diagnostic> report, Diagnostic diagnostic)\n     {\n-        if (diagnostic.Location.IsInSource && this.compilation.ContainsSyntaxTree(diagnostic.Location.SourceTree))\n+        // Only drop a diagnostic that points into another assembly.\n+        // One with no location, or one in this compilation, is reported as before.\n+        if (!diagnostic.Location.IsInMetadata)\n         {\n             report(diagnostic);\n         }"
+          },
+          {
+            "file": "tests/MessagePack.SourceGenerator.Tests/GenericsFormatterTests.cs",
+            "status": "M",
+            "patch": "@@ -660,3 +660,25 @@ public class GenericsFormatterTests\n+    [Fact]\n+    public async Task ClosedGenericClassFromReferencedAssembly_KeepsItsDiagnostics()\n+    {\n+        // A generic class from a referenced assembly worked before this PR.\n+        // Its warnings must still be reported.\n+        await this.RunWithMetadataReferenceAsync(LibraryWithGenericClass, ConsumerOfGenericClass, expectDiagnostics: true);\n+    }\n+\n+    [Fact]\n+    public async Task ClosedGenericRecordClassFromReferencedAssembly_KeepsItsDiagnostics()\n+    {\n+        await this.RunWithMetadataReferenceAsync(LibraryWithGenericRecordClass, ConsumerOfGenericRecordClass, expectDiagnostics: true);\n+    }"
+          }
+        ]
+      }
+    }
+  },
+  "commits": [
+    {
+      "sha": "4b7e1a9000000000000000000000000000002283",
+      "message": "Only drop warnings that point into another assembly; add generic class tests"
+    }
+  ]
+}

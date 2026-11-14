@@ -4,7 +4,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const short = (sha) => (sha ?? "").slice(0, 7);
 const chip = (text, cls) => `<span class="chip ${esc(cls ?? text)}">${esc(text)}</span>`;
 
-const state = { revisions: null, prId: null, sha: null, level: "function", sel: null, model: null, notice: null };
+const state = { revisions: null, prId: null, sha: null, level: "function", sel: null, model: null, notice: null, descView: "author", mapScope: "pr", full: null, fullCommit: "all" };
 const sourceCache = new Map();
 
 // ---------- data ----------
@@ -20,16 +20,10 @@ async function getSource(sha, file) {
   return sourceCache.get(key);
 }
 const currentPr = () => state.revisions.prs.find((p) => p.id === state.prId);
-const isLedger = (pr) => pr.source === "ledger";
-const revList = () => {
-  const pr = currentPr();
-  const steps = pr.commits.map((c) => ({ sha: c.sha, label: isLedger(pr) ? c.label : `PR commit ${c.index}`, message: c.message, short: short(c.commitSha ?? c.sha) }));
-  return isLedger(pr) ? steps : [{ sha: state.revisions.base.sha, label: "Base", message: state.revisions.base.message, short: short(state.revisions.base.sha) }, ...steps];
-};
-/** "commit 2 · 3d67ab6" for the shop sample, "After targeted checks · 9df83c3" for a recorded PR. */
-const stepText = (m) => (m.source === "ledger" ? `${m.selected.stageLabel} · ${m.selected.short}${m.selected.sameCommit ? " · same commit, new evidence" : ""}` : `commit ${m.selected.index} · ${m.selected.short}`);
-const ROW_CHIP = { proven: "ok", exercised: "info", open: "warn", refused: "warn", contradicted: "bad" };
-const rowChip = (r) => chip(r.state + (r.proof ? ` · ${r.proof}` : ""), ROW_CHIP[r.state]);
+const revList = () => currentPr().commits.map((c) => ({ sha: c.sha, label: `Commit ${c.index}${c.madeUp ? " · made up" : ""}`, message: c.message, short: short(c.sha) }));
+const stepText = (m) => `commit ${m.selected.index} · ${m.selected.short}`;
+/** Escape, then turn `code` into a code span. */
+const rich = (s) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>');
 
 function readHash() {
   const p = new URLSearchParams(location.hash.slice(1));
@@ -92,87 +86,69 @@ function selectNode(id) {
 }
 
 // ---------- header ----------
+const GITHUB_URL = "http://localhost:3000"; // the GitHub replica
 function renderHeader() {
-  const prSel = $("prSelect");
-  const brandSub = document.querySelector(".brand .muted");
-  if (brandSub) brandSub.textContent = `${currentPr().repo} · local demo`;
-  const repos = [...new Set(state.revisions.prs.map((p) => p.repo))];
-  prSel.innerHTML = repos.map((repo) => `<optgroup label="${esc(repo)}${state.revisions.prs.find((p) => p.repo === repo).source === "ledger" ? " (real Tieto sample, recorded)" : " (synthetic, analysed here)"}">${state.revisions.prs.filter((p) => p.repo === repo).map((p) => `<option value="${esc(p.id)}" ${p.id === state.prId ? "selected" : ""}>#${p.number} ${esc(p.kind === "eval" ? "[eval] " : "")}${esc(p.title)}</option>`).join("")}</optgroup>`).join("");
-  const revs = revList();
-  const i = revs.findIndex((r) => r.sha === state.sha);
-  $("revPills").innerHTML = revs.map((r) => `<button type="button" class="pill ${r.sha === state.sha ? "active" : ""}" data-sha="${r.sha}" title="${esc(r.message)}">${esc(r.label)} <span class="mono">${r.short}</span></button>`).join("");
-  $("prevBtn").disabled = i <= 0;
-  $("nextBtn").disabled = i >= revs.length - 1;
-  $("prevBtn").onclick = () => load(state.prId, revs[i - 1].sha);
-  $("nextBtn").onclick = () => load(state.prId, revs[i + 1].sha);
+  $("prSelect").innerHTML = state.revisions.prs.map((p) => `<option value="${esc(p.id)}" ${p.id === state.prId ? "selected" : ""}>#${p.number} ${esc(p.title)}</option>`).join("");
+  $("revPills").innerHTML = revList().map((r) => `<button type="button" class="pill ${r.sha === state.sha ? "active" : ""}" data-sha="${r.sha}" title="${esc(r.message)}">${esc(r.label)} <span class="mono">${r.short}</span></button>`).join("");
   for (const b of $("revPills").querySelectorAll("button")) b.onclick = () => load(state.prId, b.dataset.sha);
+  $("backLink").href = `${GITHUB_URL}/${currentPr().repo}/pull/${currentPr().number}`;
   const n = $("notice");
   n.hidden = !state.notice;
   n.textContent = state.notice ?? "";
 }
 
-// ---------- route banner ----------
-function renderRoute() {
-  const m = state.model;
-  const el = $("routeCard");
-  const checksHtml = m.checks.length
-    ? m.checks.map((c) => `<button type="button" class="check-row" data-run="1"><span><strong>${esc(c.name)}</strong> <span class="muted">required · ${esc(c.kind ? c.kind + " run" : "no run")}</span></span>${chip(c.status + (c.counts ? ` ${c.counts.passed}/${c.counts.total}` : ""), c.status)}</button>`).join("")
-    : `<span class="muted">No required checks.</span>`;
-  if (m.selected.isBase) {
-    el.innerHTML = `<div class="route base"><div class="route-main">
-      <div class="route-title">Base revision <span class="mono muted">${m.selected.short}</span></div>
-      <div>This is the code before the PR. No route applies here. Step to a PR commit to review the change.</div>
-      ${m.baselineNote ? `<div class="muted">${esc(m.baselineNote)}</div>` : ""}
-      </div><div class="checks">${checksHtml}</div></div>`;
-  } else {
-    const c2 = m.classifier2;
-    const signed = m.decisions.signedOff;
-    const cls = signed ? "signed" : c2.route.startsWith("Waiting") ? "waiting" : c2.route.startsWith("Auto") ? "auto" : "human";
-    el.innerHTML = `<div class="route ${cls}"><div class="route-main">
-      <div class="route-title">${chip(c2.severity)} ${esc(c2.route)} <span class="mono muted">${esc(stepText(m))}</span></div>
-      <div>${esc(c2.reason)} <span class="muted">(${esc(c2.rule)}; ${esc(m.policy.source)})</span></div>
-      ${c2.blockers.length ? `<ul class="blockers">${c2.blockers.map((b) => `<li>${b.type === "evidence" && b.rowId ? `<button type="button" class="link" data-row="${esc(b.rowId)}">${esc(b.text)}</button>` : b.type === "evidence" ? `<button type="button" class="link" data-node="${esc(b.ref)}">${esc(b.text)}</button>` : esc(b.text)}${b.suggestedCheck ? `<div class="muted">Targeted check: ${esc(b.suggestedCheck)}</div>` : ""}</li>`).join("")}</ul>` : ""}
-      ${c2.notes.map((n) => `<div><strong>${esc(n.text)}</strong> <span class="muted">(${esc(n.rule)})</span></div>`).join("")}
-      ${c2.autoMergeDryRun ? `<div class="muted">Policy dry run only. This app never merges.</div>` : ""}
-      ${m.provenance ? `<div class="muted">Real Tieto sample PR. Evidence, AI review, severity and route are recorded output of ${esc(m.provenance.producedBy)} (pack ${esc(m.provenance.packSha256.slice(0, 12))}). Shown here, not recomputed.</div>` : ""}
-      <div class="signoff-line">${signed ? `✔ Signed off on this commit by ${esc(m.decisions.signOff.name)} (${esc(m.decisions.signOff.at.slice(0, 16).replace("T", " "))} UTC)` : `No human sign-off on this commit.`}</div>
-      </div><div class="checks">${checksHtml}</div></div>`;
-  }
+// ---------- verdict: one stamp per decision, each says who made it ----------
+const SEVERITY_TONE = { High: "bad", Medium: "warn", Low: "info" };
+const stamp = (label, value, tone, by, attrs = "") => `<${attrs ? "button type=\"button\"" : "div"} class="stamp ${tone}" ${attrs}><span class="stamp-label">${esc(label)}</span><span class="stamp-value">${esc(value)}</span><span class="stamp-by">${esc(by)}</span></${attrs ? "button" : "div"}>`;
+function renderVerdict() {
+  const m = state.model, el = $("routeCard"), c1 = m.classifier1, c2 = m.classifier2, r = m.review;
+  const signed = m.decisions.signedOff;
+  const routeTone = c2.route.startsWith("Waiting") ? "warn" : c2.route.startsWith("Auto") ? "ok" : "info";
+  const checkTone = (s) => (s === "passed" ? "ok" : s === "failed" ? "bad" : "warn");
+  el.innerHTML = `<div class="stamps">
+      ${stamp("Severity", c2.severity, SEVERITY_TONE[c2.severity] ?? "plain", `Classifier 1 · rule ${c1.rule}`)}
+      ${stamp("Route", c2.route, routeTone, `Classifier 2 · rule ${c2.rule}`)}
+      ${m.checks.map((c) => stamp(c.label ?? "Check", `${c.name} · ${c.status}${c.counts ? ` ${c.counts.passed}/${c.counts.total}` : ""}`, checkTone(c.status), c.by ?? "Test run on this commit", m.run ? 'data-run="1"' : "")).join("")}
+      ${stamp("AI review", !r.available ? "Not available" : r.findings.length ? `${r.findings.length} finding${r.findings.length > 1 ? "s" : ""}` : "No findings", !r.available ? "plain" : r.findings.length ? "warn" : "ok", "AI reviewer · advice only", 'data-jump="reviewCard"')}
+      ${stamp("Sign-off", signed ? m.decisions.signOff.name : "None yet", signed ? "ok" : "plain", "Human · this commit only", 'data-jump="decisionCard"')}
+    </div>
+    ${c2.blockers.length ? `<ul class="blockers">${c2.blockers.map((b) => `<li>${b.type === "evidence" ? `<button type="button" class="link" data-node="${esc(b.ref)}">${esc(b.text)}</button>` : esc(b.text)}</li>`).join("")}</ul>` : `<div class="verdict-reason">${esc(c2.reason)}</div>`}
+    ${c2.notes.map((n) => `<div class="verdict-reason"><strong>${esc(n.text)}</strong></div>`).join("")}
+    ${m.since ? `<div class="since"><span class="tag warn">Made-up commit for the demo</span> <strong>Since commit ${m.since.from}:</strong> ${m.since.items.map(rich).join(" · ")} · <button type="button" class="link" data-since="1">Show the code change</button></div>` : ""}`;
+  // After a merge: a person can mark this PR as one that broke the system.
+  el.insertAdjacentHTML("beforeend", m.evalCase
+    ? `<div class="evalcase on"><span class="tag bad">Eval test case</span> <span>This PR was merged and broke the system. It is saved as a test case for the AI review agent: a good reviewer must flag it. <span class="muted">Marked ${esc(m.evalCase.markedAt.slice(0, 16).replace("T", " "))} UTC</span></span> <button type="button" class="link" data-evalcase="off">Remove</button></div>`
+    : `<div class="evalcase"><button type="button" class="danger" data-evalcase="on">Eval test case</button> <span class="muted">Did this PR merge and then break the system? Mark it, and it becomes a test case for the AI review agent.</span></div>`);
+  for (const b of el.querySelectorAll("[data-evalcase]")) b.onclick = async () => {
+    await api("/api/evalcase", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pr: state.prId, on: b.dataset.evalcase === "on" }) });
+    await load(state.prId, state.sha);
+  };
+  for (const b of el.querySelectorAll("[data-since]")) b.onclick = () => select({ type: "since" });
   for (const b of el.querySelectorAll("[data-run]")) b.onclick = () => select({ type: "run" });
   for (const b of el.querySelectorAll("[data-node]")) b.onclick = () => selectNode(b.dataset.node);
-  for (const b of el.querySelectorAll("[data-row]")) b.onclick = () => select({ type: "row", id: b.dataset.row });
+  for (const b of el.querySelectorAll("[data-jump]")) b.onclick = () => $(b.dataset.jump).scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-// ---------- PR intent + claims ----------
-function renderIntent() {
-  const m = state.model;
-  const el = $("intentCard");
-  $("claimsCard").hidden = true;
-  if (m.selected.isBase || !m.brief) {
-    el.innerHTML = `<div class="card-head"><h2>PR intent</h2></div><div class="muted">${m.selected.isBase ? "Not shown on the base revision. The PR brief belongs to the PR commits." : "No PR brief saved for this PR."}</div>`;
-    return;
-  }
-  const b = m.brief;
-  const none = "<em>None recorded</em>";
-  const field = (v) => (v ? esc(v) : none);
-  el.innerHTML = `<div class="card-head"><h2>PR intent: ${esc(m.pr.title)}</h2><span>${m.pr.requirement ? `<button type="button" class="link" data-node="req:${esc(m.pr.requirement)}">${esc(m.pr.requirement)}</button>` : chip("No requirement linked", "warn")}</span></div>
-    <dl class="intent-grid">
-      <dt>Author</dt><dd>${esc(b.author)} ${chip(b.noTemplate ? "agent-written change, no brief" : b.authorKind === "agent" ? "AI-written brief" : "human-written", "plain")}</dd>
-      <dt>Why</dt><dd>${field(b.why)}${b.noTemplate ? ` <span class="muted">(commit message; this PR did not use the brief template)</span>` : ""}</dd>
-      <dt>Before → after</dt><dd>${b.before || b.after ? `${field(b.before)} → ${field(b.after)}` : none}</dd>
-      <dt>Must preserve</dt><dd>${field(b.preserve)}</dd>
-      <dt>Approach</dt><dd>${field(b.approach)}</dd>
-      <dt>Alternatives</dt><dd>${b.alternatives ? esc(b.alternatives) : "<em>None recorded</em>"}</dd>
-      <dt>Checks run</dt><dd>${(b.checksRun ?? []).length ? (b.checksRun ?? []).map((c) => esc(c.label)).join("; ") + " " + chip("local", "plain") : none}</dd>
-      <dt>Open gaps</dt><dd>${(b.openGaps ?? []).map(esc).join("; ") || "<em>None stated by the author</em>"}</dd>
-      <dt>Rollback</dt><dd>${field(b.rollback)}</dd>
-    </dl>`;
-  $("claimsCard").hidden = false;
-  $("claimsCard").innerHTML = `<div class="card-head"><h2>${m.source === "ledger" ? "Requirement clauses and author claims, checked" : "Author claims, checked"}</h2><span class="muted">${m.claims.filter((c) => c.label === "Verified").length} verified · ${m.claims.filter((c) => c.label === "Inferred").length} inferred · ${m.claims.filter((c) => c.label === "Unverified").length} unverified${m.claims.some((c) => c.label === "Contradicted") ? ` · ${m.claims.filter((c) => c.label === "Contradicted").length} contradicted` : ""}</span></div>
-    <h3 hidden>Author claims, checked <span class="muted" style="text-transform:none;letter-spacing:0">(${esc(m.labels.claimVerifier)})</span></h3>
-    <ul class="claims">${m.claims.map((c) => `<li><button type="button" class="claim ${state.sel?.type === "claim" && state.sel.id === c.id ? "sel" : ""}" data-claim="${esc(c.id)}"><span>${chip(c.label)}</span><span><div>${esc(c.text)}</div><div class="reason">${esc(c.reason)}</div></span></button></li>`).join("")}</ul>`;
-  for (const btn of $("claimsCard").querySelectorAll("[data-claim]")) btn.onclick = () => (m.claims.find((c) => c.id === btn.dataset.claim)?.link?.kind === "row" ? select({ type: "row", id: btn.dataset.claim }) : select({ type: "claim", id: btn.dataset.claim }));
-  for (const btn of el.querySelectorAll("[data-node]")) btn.onclick = () => selectNode(btn.dataset.node);
+// ---------- PR description: the author's, or the AI-written PR in the team's shape ----------
+/** The agent's saved context for this PR. The Q&A agent answers from it. */
+const openContext = () => select({ type: "doc", file: `context/${state.prId}.md`, title: "context.md" });
+function renderDescription() {
+  const m = state.model, el = $("intentCard"), d = m.description;
+  const view = d.ai ? state.descView : "author";
+  const body = view === "ai"
+    ? `<div class="tags">${d.ai.tags.map((t) => `<span class="tag ${esc(t.tone)}">${esc(t.label)}</span>`).join("")}</div>
+       <p class="lead">${rich(d.ai.summary)}</p>
+       <dl class="desc-grid">${d.ai.sections.map((s) => `<dt>${esc(s.title)}</dt><dd>${rich(s.text)}</dd>`).join("")}</dl>
+       <div class="byline">${esc(d.ai.generatedBy)}</div>`
+    : `${d.author.text.split("\n\n").map((p) => `<p>${rich(p)}</p>`).join("")}
+       <div class="byline">Written by: ${esc(d.author.by)}</div>`;
+  el.innerHTML = `<div class="card-head"><h2>${esc(m.pr.title)}</h2>
+      <div class="tabs" role="tablist"><button type="button" data-view="author" class="${view === "author" ? "active" : ""}">Author's description</button><button type="button" data-view="ai" class="${view === "ai" ? "active" : ""}" ${d.ai ? "" : "disabled"}>AI PR</button></div></div>${body}${m.agent ? `<div class="byline">Agent snapshot (demo data): ${esc(m.agent.model)} · ${esc(m.agent.snapshot)} · <button type="button" class="link" data-ctx="1">context.md</button> (what the agent knew and decided)</div>` : ""}`;
+  for (const b of el.querySelectorAll("[data-ctx]")) b.onclick = openContext;
+  for (const b of el.querySelectorAll("[data-view]")) b.onclick = () => {
+    state.descView = b.dataset.view;
+    renderDescription();
+  };
 }
 
 // ---------- graph ----------
@@ -230,14 +206,13 @@ function layout(nodes, edges) {
   return { pos, width: PAD * 2 + colIds.length * NODE_W + (colIds.length - 1) * COL_GAP, height };
 }
 const clip = (s, n) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
-function badgeFor(n, isBase) {
-  if (n.type === "test") return n.testStatus === "passed" ? ["PASSED", "#17753a"] : n.testStatus === "failed" ? ["FAILED", "#c0261c"] : ["NO RESULT", "#9a5b00"];
-  if (n.type === "pr" || n.type === "requirement" || isBase) return null;
-  if (n.evidence === "contradicted") return ["CONTRADICTED BY A CHECK", "#8f1209"];
-  if (n.evidence === "unverified") return ["UNVERIFIED", "#c0261c"];
-  if (n.evidence === "exercised") return [n.state === "edited" ? "EDITED · EXERCISED ONLY" : "NOT EDITED · EXERCISED ONLY", "#9a5b00"];
-  if (n.state === "edited") return [n.evidence === "supported" ? "EDITED · SUPPORTED" : "EDITED", "#b45309"];
-  if (n.state === "downstream") return [n.evidence === "supported" ? "NOT EDITED · SUPPORTED" : "NOT EDITED · CALLER", n.evidence === "supported" ? "#17753a" : "#1d4ed8"];
+function badgeFor(n) {
+  if (n.badge !== undefined) return n.badge;
+  if (n.type === "test") return n.testStatus === "passed" ? ["PASSED", "ok"] : n.testStatus === "failed" ? ["FAILED", "bad"] : ["NO RESULT", "warn"];
+  if (n.type === "pr" || n.type === "requirement") return null;
+  if (n.evidence === "contradicted") return [n.state === "edited" ? "EDITED · UNIT TEST FAILS" : "AFFECTED · UNIT TEST FAILS", "bad"];
+  if (n.state === "edited") return ["EDITED", "edited"];
+  if (n.state === "downstream") return ["AFFECTED", "info"];
   return null;
 }
 function renderGraph() {
@@ -247,23 +222,32 @@ function renderGraph() {
     b.onclick = () => {
       state.level = b.dataset.level;
       if (state.sel?.type === "node" && !m.graph.nodes.some((n) => n.id === state.sel.id && n.level === state.level)) state.sel = null;
-      if (state.sel?.type === "edge") state.sel = null;
+      if (["edge", "fullnode"].includes(state.sel?.type)) state.sel = null;
       writeHash();
       render();
     };
   }
-  const nodes = m.graph.nodes.filter((n) => n.level === state.level);
-  const edges = m.graph.edges.filter((e) => e.level === state.level);
+  const full = state.mapScope === "full";
+  for (const b of $("scopeTabs").querySelectorAll("button")) {
+    b.classList.toggle("active", b.dataset.scope === state.mapScope);
+    b.onclick = () => setScope(b.dataset.scope);
+  }
+  $("fullBar").hidden = !full;
+  $("legendPr").hidden = full;
+  $("legendFull").hidden = !full;
+  if (full) return renderFull();
+  drawGraph($("graphWrap"), m.graph.nodes.filter((n) => n.level === state.level), m.graph.edges.filter((e) => e.level === state.level), selectNode, (id) => select({ type: "edge", id }));
+}
+function drawGraph(el, nodes, edges, onNode, onEdge) {
   const { pos, width, height } = layout(nodes, edges);
-  const isBase = m.selected.isBase;
-  const affected = (n) => isBase || n.state !== "none" || n.type === "pr" || n.type === "requirement";
+  const affected = (n) => n.state !== "none" || n.type === "pr" || n.type === "requirement";
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
   // A test is "in focus" when it reaches something affected.
   const focusTests = new Set(edges.filter((e) => e.kind === "tests" && affected(nodeById.get(e.to) ?? {})).map((e) => e.from));
   const lit = (n) => affected(n) || focusTests.has(n.id);
 
   let svg = `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Impact map">
-    <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#667085"/></marker></defs>`;
+    <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead" d="M0 0 L10 5 L0 10 z"/></marker></defs>`;
   for (const e of edges) {
     const a = pos.get(e.from), b = pos.get(e.to);
     if (!a || !b) continue;
@@ -274,113 +258,153 @@ function renderGraph() {
     const d = a.x === b.x ? `M${a.x} ${y1} C${a.x - 40} ${y1}, ${b.x - 40} ${y2}, ${b.x} ${y2}` : `M${x1} ${y1} C${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
     const dim = !(lit(nodeById.get(e.from)) && lit(nodeById.get(e.to)));
     const sel = state.sel?.type === "edge" && state.sel.id === e.id;
-    svg += `<g class="edge ${e.kind} ${e.resolution === "inferred" && e.kind === "calls" ? "inferred" : ""} ${e.change === "added" ? "added" : ""} ${dim ? "dim" : ""} ${sel ? "selected" : ""}" data-edge="${esc(e.id)}"><title>${esc(e.kind)} · ${esc(e.confidence ?? "")}${e.change === "added" ? " · new in this PR" : ""}${e.anchor ? ` · ${esc(e.anchor.file)}:${e.anchor.line}` : ""}</title><path class="vis" d="${d}" marker-end="url(#arrow)"/><path class="hit" d="${d}"/></g>`;
+    svg += `<g class="edge ${e.kind} ${e.resolution === "inferred" && e.kind === "calls" ? "inferred" : ""} ${e.change === "added" ? "added" : ""} ${dim ? "dim" : ""} ${sel ? "selected" : ""}" data-edge="${esc(e.id)}"><title>${esc(e.kind)}${e.change === "added" ? " · new in this PR" : ""}${e.anchor ? ` · ${esc(e.anchor.file)}:${e.anchor.line}` : ""}</title><path class="vis" d="${d}" marker-end="url(#arrow)"/><path class="hit" d="${d}"/></g>`;
   }
   for (const n of nodes) {
     const p = pos.get(n.id);
-    const cls = ["node", n.type, n.state !== "none" ? n.state : "", n.evidence === "unverified" ? "unverified" : n.evidence === "contradicted" ? "contradicted" : "", lit(n) ? "" : "dim", n.change === "added" ? "added" : "", state.sel?.type === "node" && state.sel.id === n.id ? "selected" : ""].join(" ");
-    const badge = badgeFor(n, isBase);
+    const cls = ["node", n.type, n.state !== "none" ? n.state : "", n.evidence === "contradicted" ? "failing" : "", lit(n) ? "" : "dim", ["node", "fullnode"].includes(state.sel?.type) && state.sel.id === n.id ? "selected" : ""].join(" ");
+    const badge = badgeFor(n);
     const extra = n.change === "added" ? "NEW" : null;
     svg += `<g class="${cls}" data-node="${esc(n.id)}" transform="translate(${p.x},${p.y})" tabindex="0" role="button" aria-label="${esc(n.label)}"><title>${esc(n.label)}\n${esc(n.sub ?? "")}</title>
       <rect class="box" width="${NODE_W}" height="${NODE_H}" rx="8"/>
       <text x="10" y="${badge || extra ? 27 : 20}">${esc(clip(n.label, 29))}</text>
       <text class="sub" x="10" y="${badge || extra ? 40 : 35}">${esc(clip(n.sub ?? "", 33))}</text>
-      ${badge ? `<text class="badge" x="10" y="13" fill="${badge[1]}">${esc(badge[0])}</text>` : ""}
-      ${extra ? `<text class="badge" x="${NODE_W - 10}" y="13" text-anchor="end" fill="#17753a">${extra}</text>` : ""}
+      ${badge ? `<text class="badge ${badge[1]}" x="10" y="13">${esc(badge[0])}</text>` : ""}
+      ${extra ? `<text class="badge ok" x="${NODE_W - 10}" y="13" text-anchor="end">${extra}</text>` : ""}
     </g>`;
   }
   svg += `</svg>`;
-  $("graphWrap").innerHTML = svg;
-  for (const g of $("graphWrap").querySelectorAll("[data-node]")) {
-    g.onclick = () => selectNode(g.dataset.node);
-    g.onkeydown = (ev) => (ev.key === "Enter" || ev.key === " ") && selectNode(g.dataset.node);
+  el.innerHTML = svg;
+  for (const g of el.querySelectorAll("[data-node]")) {
+    g.onclick = () => onNode(g.dataset.node);
+    g.onkeydown = (ev) => (ev.key === "Enter" || ev.key === " ") && onNode(g.dataset.node);
   }
-  for (const g of $("graphWrap").querySelectorAll("[data-edge]")) g.onclick = () => select({ type: "edge", id: g.dataset.edge });
-
-  // Counts: direct edits are counted separately from downstream code.
-  const im = m.impact;
-  $("impactSummary").innerHTML = isBase
-    ? `<span class="muted">Baseline call graph at ${m.selected.short}. Click a node or a link to open the code.</span>`
-    : `${chip(`${im.edited.length} edited`, "edited")} ${chip(`${im.downstream.length} downstream, not edited`, "info")} ${chip(`${im.unverified.length} unverified`, im.unverified.length ? "bad" : "ok")}
-       <span class="muted">Workflows: ${im.workflows.map((w) => `${esc(w.label)} (${w.edited} edited, ${w.downstream} downstream${w.unverified ? `, ${w.unverified} unverified` : ""})`).join(" · ") || "none mapped"}</span>
-       ${im.newLinks.length ? `<span class="muted">· New links: ${im.newLinks.length}</span>` : ""}${im.removedLinks.length ? `<span class="muted">· Removed links: ${im.removedLinks.map((r) => esc(r.text)).join("; ")}</span>` : ""}`;
-  const c = m.coverage;
-  $("coverage").innerHTML = `<summary>Index coverage and gaps in analysis</summary><ul><li>${esc(c.indexer)}</li><li>${esc(c.language)} ${esc(c.counts)}</li>${c.mappers.map((x) => `<li>${esc(x)}</li>`).join("")}${c.gaps.map((x) => `<li><strong>Gap:</strong> ${esc(x)}</li>`).join("")}</ul>`;
+  if (onEdge) for (const g of el.querySelectorAll("[data-edge]")) g.onclick = () => onEdge(g.dataset.edge);
 }
 
-// ---------- review factory ----------
-function renderReview() {
-  const m = state.model;
-  const el = $("reviewCard");
-  if (m.selected.isBase) {
-    el.innerHTML = `<div class="card-head"><h2>Review factory</h2></div><div class="muted">Runs on PR commits.</div>`;
-    return;
+// ---------- full map: the whole repo, with commits from every PR laid over it ----------
+async function setScope(scope) {
+  state.mapScope = scope;
+  state.sel = null;
+  if (scope === "full") {
+    state.level = "concept";
+    if (!state.full) state.full = await api("/api/fullmap");
   }
-  const c1 = m.classifier1, c2 = m.classifier2, r = m.review;
-  const cite = (c) => (c.valid ? `<button type="button" class="link mono" data-src="${esc(c.file)}" data-line="${c.line}">${esc(c.file)}:${c.line}</button>` : `<span class="mono" style="color:var(--bad)" title="${esc(c.problem)}">${esc(c.file)}:${esc(c.line)} (invalid)</span>`);
-  el.innerHTML = `<div class="card-head"><h2>Review factory</h2><span class="muted">${esc(stepText(m))}</span></div>
-    <div class="stage"><div class="stage-head"><strong>1 · Classifier 1</strong> ${chip(c1.severity)} <span class="muted">${esc(c1.kind)} · ${esc(c1.rule)}</span></div>
-      <div>${esc(c1.reason)}</div>
-      <div class="muted">${c1.fired.map((f) => `${esc(f.rule)}: ${f.facts.map(esc).join("; ") || "-"}`).join(" · ")}</div>
-      <div class="muted">Facts: ${c1.facts.editedFunctions} edited, ${c1.facts.downstreamFunctions} downstream, workflows reached: ${c1.facts.workflowsReached.map(esc).join(", ") || "none"}, rollback ${c1.facts.rollbackRecorded ? "recorded" : "not recorded"}.</div></div>
-    <div class="stage"><div class="stage-head"><strong>2 · Independent AI review</strong> ${r.available ? chip("available", "ok") : chip("unavailable", "warn")}</div>
-      <div class="mode-banner ${r.mode === "rule-based-fallback" || !r.available ? "fallback" : ""}">${esc(r.modeLabel)}${r.runner ? ` · ${esc(r.runner)}` : ""}</div>
-      <div>${esc(r.summary)}</div>
-      ${r.findings.length ? r.findings.map((f) => `<div class="finding ${f.category === "Action required" ? "action" : "need"}">${chip(f.category, f.category === "Action required" ? "bad" : f.category === "Needs evidence" ? "warn" : "plain")} <strong>${esc(f.title)}</strong>
+  writeHash();
+  render();
+}
+const pickedCommits = () => (state.fullCommit === "all" ? state.full.commits : state.full.commits.filter((c) => c.sha === state.fullCommit));
+const FULL_HINT = {
+  concept: "Whole repo, by area. A link means one area uses the other.",
+  file: "Every file a demo PR edits or reaches. The rest of the repo is not indexed at this level.",
+  function: "Every function a demo PR edits or reaches. The rest of the repo is not indexed at this level.",
+};
+function renderFull() {
+  const f = state.full, level = state.level;
+  $("fullHint").textContent = `${FULL_HINT[level]} Snapshot of ${f.repo}: ${f.totals.files} files, taken ${f.takenAt.slice(0, 10)}.`;
+  $("fullPills").innerHTML = `<button type="button" class="pill ${state.fullCommit === "all" ? "active" : ""}" data-sha="all">All commits</button>` +
+    f.commits.map((c) => `<button type="button" class="pill ${state.fullCommit === c.sha ? "active" : ""}" data-sha="${c.sha}" title="${esc(c.message)}">PR #${c.prNumber} · commit ${c.index} <span class="mono">${c.short}</span>${c.madeUp ? " · made up" : ""}</button>`).join("");
+  for (const b of $("fullPills").querySelectorAll("button")) b.onclick = () => {
+    state.fullCommit = b.dataset.sha;
+    render();
+  };
+  const picked = pickedCommits();
+  // At the concept level, an area that uses an edited area (directly or through others) is affected.
+  const editedIds = new Set(picked.flatMap((c) => c.edited[level]));
+  const usesEdited = new Set();
+  for (let grew = level === "concept"; grew; ) {
+    grew = false;
+    for (const e of f.levels[level].edges) {
+      if (editedIds.has(e.from) || usesEdited.has(e.from) || !(editedIds.has(e.to) || usesEdited.has(e.to))) continue;
+      usesEdited.add(e.from);
+      grew = true;
+    }
+  }
+  const nodes = f.levels[level].nodes.map((n) => {
+    const editedBy = picked.filter((c) => c.edited[level].includes(n.id)).length;
+    const affected = !editedBy && (usesEdited.has(n.id) || picked.some((c) => c.affected[level].includes(n.id)));
+    return { ...n, state: editedBy ? "edited" : affected ? "downstream" : "none", badge: editedBy ? [`EDITED${editedBy > 1 ? ` · ${editedBy} COMMITS` : ""}`, "edited"] : affected ? ["AFFECTED", "info"] : null };
+  });
+  drawGraph($("graphWrap"), nodes, f.levels[level].edges, (id) => select({ type: "fullnode", id }), null);
+}
+function fullNodeHtml(id) {
+  const f = state.full, level = state.level;
+  const n = f.levels[level].nodes.find((x) => x.id === id);
+  if (!n) return "";
+  const name = (x) => f.levels[level].nodes.find((y) => y.id === x)?.label ?? x;
+  const link = (x) => `<button type="button" class="link" data-fullnode="${esc(x)}">${esc(name(x))}</button>`;
+  const uses = f.levels[level].edges.filter((e) => e.from === id).map((e) => e.to);
+  const usedBy = f.levels[level].edges.filter((e) => e.to === id).map((e) => e.from);
+  const row = (c) => `<li><strong>PR #${c.prNumber}</strong> · commit ${c.index} <span class="mono">${c.short}</span>${c.madeUp ? ` <span class="tag warn">made up</span>` : ""}
+      <div>${esc(c.message)}</div>
+      <button type="button" class="link" data-openpr="${esc(c.pr)}" data-sha="${c.sha}">Open this commit's impact map</button></li>`;
+  const edits = f.commits.filter((c) => c.edited[level].includes(id));
+  const reaches = f.commits.filter((c) => c.affected[level].includes(id));
+  return `<h2>${esc(n.label)}</h2><div class="where mono">${esc(n.file ?? n.sub ?? "")}</div>
+    <dl class="kv"><dt>Uses</dt><dd>${uses.map(link).join(", ") || "nothing mapped"}</dd><dt>Used by</dt><dd>${usedBy.map(link).join(", ") || "nothing mapped"}</dd></dl>
+    <h3>Commits that edit it</h3>${edits.length ? `<ul class="list">${edits.map(row).join("")}</ul>` : `<div class="muted">None in the demo.</div>`}
+    ${reaches.length ? `<h3>Commits that affect it without editing it</h3><ul class="list">${reaches.map(row).join("")}</ul>` : ""}`;
+}
+/** One file's change in a made-up commit. */
+const patchBlock = (file, from, to) => `<div class="code"><div class="code-head"><span class="mono">${esc(file.file)}</span><span>commit ${from} → commit ${to}</span></div>${file.patch.split("\n").map((l) => `<div class="code-line ${l.startsWith("+") ? "add" : l.startsWith("-") ? "del" : l.startsWith("@@") ? "hunk" : ""}"><span class="n"></span><span>${esc(l) || " "}</span></div>`).join("")}</div>`;
+
+// ---------- AI review (advice only) ----------
+function renderReview() {
+  const m = state.model, el = $("reviewCard"), r = m.review;
+  const cite = (c) => (c.valid ? `<button type="button" class="link mono" data-src="${esc(c.file)}" data-line="${c.line}">${esc(c.file)}:${c.line}</button>` : `<span class="mono bad-text" title="${esc(c.problem)}">${esc(c.file)}:${esc(c.line)} (invalid)</span>`);
+  const c1 = m.classifier1, c2 = m.classifier2;
+  const sev = (s) => `<span class="tag ${SEVERITY_TONE[s] ?? ""}">${esc(s)}</span>`;
+  el.innerHTML = `<div class="card-head"><h2>Review steps</h2><span class="muted">The rules come from <button type="button" class="link" data-doc="REVIEW.md">REVIEW.md</button> and <button type="button" class="link" data-doc="review-policy.yml">review-policy.yml</button></span></div>
+    <div class="step"><div class="step-head"><span class="step-n">1</span><strong>Classifier 1</strong> ${sev(c1.severity)} <span class="muted">rule ${esc(c1.rule)} · before the AI review</span></div>
+      <div>${esc(c1.reason)}</div></div>
+    <div class="step"><div class="step-head"><span class="step-n">2</span><strong>AI review</strong> <span class="tag ${r.findings.length ? "warn" : "ok"}">${r.findings.length} finding${r.findings.length === 1 ? "" : "s"}</span> <span class="muted">advice only</span></div>
+    <div>${esc(r.summary)}</div>
+    ${r.findings.map((f) => `<details class="finding ${f.category === "Minor" ? "plain" : "warn"}" ${f.category === "Minor" ? "" : "open"}>
+        <summary><span class="tag ${f.category === "Minor" ? "" : "warn"}">${esc(f.category)}</span> <strong>${esc(f.title)}</strong></summary>
         <div>${esc(f.detail)}</div>
-        <div>Cites: ${f.citations.map(cite).join(", ") || "<em>nothing</em>"}</div>
-        ${f.suggestedCheck ? `<div><strong>Check that would help:</strong> ${esc(f.suggestedCheck)}</div>` : ""}
-        ${f.note ? `<div class="note">${esc(f.note)}</div>` : ""}</div>`).join("") : `<div class="muted">No findings.</div>`}
-      ${r.couldNotDecide.length ? `<h3>Could not decide</h3><ul class="list">${r.couldNotDecide.map((q) => `<li>${esc(q.question)}<div class="muted">Would help: ${esc(q.checkThatWouldHelp)}</div></li>`).join("")}</ul>` : ""}
-      <details><summary class="muted">Saved inputs for this review (${esc(short(m.reviewInput.inputHash))})</summary><pre class="raw">${esc(m.reviewInput.prompt)}</pre></details></div>
-    <div class="stage"><div class="stage-head"><strong>3 · Classifier 2</strong> ${chip(c2.severity)} <strong>${esc(c2.route)}</strong> <span class="muted">${esc(c2.kind)} · ${esc(c2.rule)}</span></div>
-      <div>${esc(c2.reason)}</div>
-      ${c2.notes.map((n) => `<div class="muted">${esc(n.rule)}: ${esc(n.text)}</div>`).join("")}
-      <div class="muted">${esc(m.policy.source)}${m.policy.changedInThisPr ? ". This PR edits review-policy.yml; its edits are NOT applied to itself." : "."} The AI findings are shown as evidence for the human. Severity and route come from rules only.</div></div>`;
+        ${f.suggestedCheck ? `<div><strong>Check to add:</strong> ${esc(f.suggestedCheck)}</div>` : ""}
+        ${f.citations.length ? `<div class="muted">Code: ${f.citations.map(cite).join(", ")}</div>` : ""}</details>`).join("")}
+    ${r.couldNotDecide.length ? `<details class="finding plain"><summary><strong>${r.couldNotDecide.length} questions the AI could not answer</strong></summary>${r.couldNotDecide.map((q) => `<div>${esc(q.question)}<div class="muted">Would help: ${esc(q.checkThatWouldHelp)}</div></div>`).join("")}</details>` : ""}
+    <div class="byline">${esc(r.modeLabel)}</div></div>
+    <div class="step"><div class="step-head"><span class="step-n">3</span><strong>Classifier 2</strong> ${sev(c2.severity)} <span class="tag">${esc(c2.route)}</span> <span class="muted">rule ${esc(c2.rule)} · after the AI review</span></div>
+      <div>${esc(c2.reason)}</div></div>`;
+  for (const b of el.querySelectorAll("[data-doc]")) b.onclick = () => select({ type: "doc", file: b.dataset.doc });
   for (const b of el.querySelectorAll("[data-src]")) b.onclick = () => select({ type: "source", file: b.dataset.src, line: Number(b.dataset.line) });
 }
 
-// ---------- decision ----------
+// ---------- human decision ----------
+const NOTE_LABEL = { "request-check": "Check to request", escalate: "Reason", "sign-off": "Risk you accept (write: none)" };
 function renderDecision() {
-  const m = state.model;
-  const el = $("decisionCard");
-  const d = m.decisions;
-  const historyHtml = d.history.length
-    ? `<ul class="history">${[...d.history].reverse().map((h) => `<li class="${h.appliesToSelection ? "" : "other"}">
-        <div><strong>${esc(h.action === "sign-off" ? "Signed off" : h.action === "escalate" ? "Escalated" : "Requested a check")}</strong> by ${esc(h.name)} on commit ${h.commitIndex} <span class="mono">${short(h.commit)}</span> · ${esc(h.at.slice(0, 16).replace("T", " "))} UTC
-        ${h.appliesToSelection ? chip("applies to this commit", "ok") : chip("other commit · no effect here", "plain")}</div>
-        <div class="muted">Route then: ${esc(h.severityAtDecision)} · ${esc(h.routeAtDecision)}</div>
-        ${h.requestedCheck ? `<div>Requested: ${esc(h.requestedCheck)}</div>` : ""}${h.residualRisk ? `<div>Residual risk accepted: ${esc(h.residualRisk)}</div>` : ""}${h.note ? `<div>Note: ${esc(h.note)}</div>` : ""}
-        <details><summary>What was checked, and by whom (${h.checked.length}) · what remains unchecked (${h.unchecked.length})</summary>
-          <ul>${h.checked.map((c) => `<li><strong>${esc(c.by)}:</strong> ${esc(c.what)}</li>`).join("")}</ul>
-          <ul>${h.unchecked.map((u) => `<li><strong>Unchecked:</strong> ${esc(u.what)} - ${esc(u.why)}</li>`).join("") || "<li>Nothing listed as unchecked.</li>"}</ul></details></li>`).join("")}</ul>`
-    : `<div class="muted">No decisions recorded for this PR yet.</div>`;
-  if (m.selected.isBase) {
-    el.innerHTML = `<div class="card-head"><h2>Human decision</h2></div><div class="muted">Decisions are recorded on PR commits.</div><h3>History for this PR</h3>${historyHtml}`;
-    return;
-  }
+  const m = state.model, el = $("decisionCard"), d = m.decisions;
   const suggested = m.classifier2.blockers.find((b) => b.suggestedCheck)?.suggestedCheck ?? "";
-  el.innerHTML = `<div class="card-head"><h2>Human decision</h2><span class="muted">for ${esc(stepText(m))} only</span></div>
+  const verb = { "sign-off": "Signed off", escalate: "Escalated", "request-check": "Requested a check" };
+  const historyHtml = d.history.length
+    ? `<ul class="history">${[...d.history].reverse().map((h) => `<li class="${h.appliesToSelection ? "" : "other"}"><strong>${esc(verb[h.action])}</strong> by ${esc(h.name)} on commit ${h.commitIndex} <span class="mono">${short(h.commit)}</span>${h.appliesToSelection ? "" : ` <span class="muted">· other commit, no effect here</span>`}${h.requestedCheck || h.residualRisk ? `<div class="muted">${esc(h.requestedCheck || h.residualRisk)}</div>` : ""}</li>`).join("")}</ul>`
+    : "";
+  el.innerHTML = `<div class="card-head"><h2>Your decision</h2><span class="muted">Counts for ${esc(stepText(m))} only</span></div>
     <form id="decisionForm" class="form-grid">
-      <label for="dName">Engineer name</label><input id="dName" type="text" autocomplete="name" placeholder="Your name" />
+      <label for="dName">Your name</label><input id="dName" type="text" autocomplete="name" />
       <span>Action</span><div class="actions">
         <label><input type="radio" name="action" value="request-check" ${d.canSignOff ? "" : "checked"}/> Request a check</label>
         <label><input type="radio" name="action" value="escalate"/> Escalate</label>
-        <label title="${d.canSignOff ? "" : "Not available until required checks and evidence are in for this commit."}"><input type="radio" name="action" value="sign-off" ${d.canSignOff ? "checked" : "disabled"}/> Sign off ${d.canSignOff ? "" : `<span class="muted">(blocked: evidence missing on this commit)</span>`}</label></div>
-      <label for="dReq">Check requested</label><textarea id="dReq">${esc(suggested)}</textarea>
-      <label for="dChecked">What I checked myself</label><textarea id="dChecked" placeholder="e.g. Opened the import test result and the call site."></textarea>
-      <label for="dUnchecked">What stays unchecked, and why</label><textarea id="dUnchecked"></textarea>
-      <label for="dRisk">Residual risk I accept</label><textarea id="dRisk" placeholder="Needed for sign-off. Write 'none' if none."></textarea>
-      <span></span><div><button class="primary" type="submit">Record decision</button> <span class="muted">Machine-checked items and open gaps are added to the record automatically.</span><div id="decisionError" class="error"></div></div>
-    </form>
-    <h3>History for this PR</h3>${historyHtml}`;
+        <label><input type="radio" name="action" value="sign-off" ${d.canSignOff ? "checked" : "disabled"}/> Sign off${d.canSignOff ? "" : ` <span class="muted">(blocked until the evidence is in)</span>`}</label></div>
+      <label for="dNote" id="dNoteLabel"></label><textarea id="dNote"></textarea>
+      <span></span><div><button class="primary" type="submit">Record decision</button><div id="decisionError" class="error"></div></div>
+    </form>${historyHtml}`;
+  const action = () => el.querySelector('input[name="action"]:checked')?.value;
+  const syncNote = () => {
+    $("dNoteLabel").textContent = NOTE_LABEL[action()];
+    $("dNote").value = action() === "request-check" ? suggested : "";
+  };
+  for (const r of el.querySelectorAll('input[name="action"]')) r.onchange = syncNote;
+  syncNote();
   $("decisionForm").onsubmit = async (ev) => {
     ev.preventDefault();
-    const action = el.querySelector('input[name="action"]:checked')?.value;
+    const note = $("dNote").value;
     const res = await api("/api/decisions", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ pr: state.prId, sha: state.sha, name: $("dName").value, action, requestedCheck: $("dReq").value, checkedByHuman: $("dChecked").value, uncheckedByHuman: $("dUnchecked").value, residualRisk: $("dRisk").value }),
+      body: JSON.stringify({ pr: state.prId, sha: state.sha, name: $("dName").value, action: action(), requestedCheck: action() === "request-check" ? note : "", residualRisk: action() === "sign-off" ? note : "", checkedByHuman: action() === "escalate" ? note : "" }),
     });
     if (!res.ok) {
       $("decisionError").textContent = res.error;
@@ -411,60 +435,8 @@ function diffBlock(file) {
 const nodeLink = (id, text) => `<button type="button" class="link" data-node="${esc(id)}">${esc(text)}</button>`;
 const labelOf = (id) => state.model.graph.nodes.find((n) => n.id === id)?.label ?? id;
 
-const srcLink = (file, line) => `<button type="button" class="link mono" data-src="${esc(file)}" data-line="${line}">${esc(file)}:${line}</button>`;
-const rowLine = (r) => `<li><button type="button" class="link mono" data-row="${esc(r.id)}">${esc(r.id)}</button> ${rowChip(r)} ${esc(clip(r.title || r.detail || "", 110))}<div class="muted">${esc(clip(r.why ?? "", 220))}</div></li>`;
-const outcome = (o) => chip(o ?? "absent", o === "Passed" ? "ok" : o === "Failed" ? "bad" : "plain");
-
-async function rowHtml(r) {
-  const m = state.model;
-  let body = `<h2>${esc(r.id)}</h2><div class="where">${esc(r.type)} row · ${esc(stepText(m))}</div>
-    <div class="callout ${r.state === "proven" ? "ok" : r.state === "contradicted" ? "bad" : r.state === "exercised" ? "info" : "bad"}">${rowChip(r)} ${esc(r.title || "")}<div>${esc(r.why ?? "")}</div></div>
-    ${r.state === "exercised" ? `<div class="muted">Exercised means a passing test executed this line. It does not mean anything asserted its behaviour.</div>` : ""}
-    ${r.proof === "changed" ? `<div class="muted">Proven · changed: the check fails before the change and passes after it.</div>` : r.proof === "held" ? `<div class="muted">Proven · held: the check passes before and after. The statement held; this does not show the change caused it.</div>` : ""}
-    <dl class="kv">${r.detail ? `<dt>Text</dt><dd class="mono">${esc(r.detail)}</dd>` : ""}<dt>Why this row exists</dt><dd>${esc(r.rule)}</dd><dt>State decided by</dt><dd>${esc(r.decidedBy)}</dd>
-    ${r.location ? `<dt>Place</dt><dd>${srcLink(r.location.file, r.location.line)} ${r.inDiff ? chip("in the diff", "edited") : chip("outside the diff", "info")}</dd>` : ""}
-    ${r.member ? `<dt>Member</dt><dd>${nodeLink(r.member, labelOf(r.member))}</dd>` : ""}
-    ${r.wouldResolve ? `<dt>Check that would settle it</dt><dd>${esc(r.wouldResolve)}</dd>` : ""}</dl>`;
-  if (r.checks.length) {
-    body += `<h3>Executed checks behind this row</h3><ul class="list">${r.checks.map((c) => `<li><div class="mono">${esc(c.test)}</div>
-      <div>base ${outcome(c.base)} → head ${outcome(c.head)} <span class="muted">expected ${esc(c.expect)}${c.run ? ` · run ${esc(c.run)}` : " · not run at this step"}</span></div>
-      ${c.why ? `<div class="muted">${esc(c.why)}</div>` : ""}
-      <div class="muted">Link proposed by: ${esc(c.linkProposedBy ?? "-")}. Check written by: ${esc(c.writtenBy ?? "-")}.</div>
-      ${c.baseMessage ? `<pre class="raw">base: ${esc(c.baseMessage)}</pre>` : ""}${c.headMessage ? `<pre class="raw">head: ${esc(c.headMessage)}</pre>` : ""}</li>`).join("")}</ul>`;
-  } else body += `<div class="callout bad">No executed check stands behind this row at this step.</div>`;
-  if (r.coverage.length) body += `<div class="muted">Coverage: ${r.coverage.map((c) => `line ${c.line} ${c.covered ? "executed" : "not executed"} in run ${esc(c.run)}`).join("; ")}.</div>`;
-  const related = [...r.findings, ...r.refusals];
-  if (related.length) body += `<div class="muted">Related reviewer items: ${related.map(esc).join(", ")} (see Review factory).</div>`;
-  if (r.location) {
-    const src = await getSource(m.selected.sha, r.location.file);
-    if (!src.error) body += `<h3>Code at the head commit</h3>${codeBlock(src, { marks: [{ line: r.location.line, label: r.id }], title: "source" })}`;
-  }
-  return body;
-}
-
-async function ledgerNodeHtml(n) {
-  const m = state.model;
-  const ev = m.evidence.find((e) => e.nodeId === n.id);
-  const mine = m.rows.filter((r) => r.member === n.id);
-  const links = m.graph.edges.filter((e) => e.level === "function" && e.kind === "calls" && (e.from === n.id || e.to === n.id));
-  let body = `<h2>${esc(n.label)}</h2><div class="where mono">${esc(n.file)}:${n.line}-${n.endLine}</div>`;
-  body += n.state === "edited" ? `<div class="callout info">${chip("edited", "edited")} This member is edited in this PR.</div>` : `<div class="callout info">${chip("not edited", "info")} This member is <strong>not in the diff</strong>. It reads, writes or calls something the PR changed.</div>`;
-  if (ev) body += `<div class="callout ${ev.status === "supported" ? "ok" : "bad"}"><strong>${esc(ev.statusLabel)}.</strong> ${esc(ev.missing ?? "")}${ev.suggestedCheck ? `<div style="margin-top:4px"><strong>Targeted check:</strong> ${esc(ev.suggestedCheck)}</div>` : ""}</div>`;
-  if (mine.length) body += `<h3>Places in this member (${mine.length} rows)</h3><ul class="list">${mine.map(rowLine).join("")}</ul>`;
-  if (links.length) body += `<h3>Links</h3><ul class="list">${links.map((e) => `<li>${nodeLink(e.from, labelOf(e.from))} <span class="muted">${esc(e.relation ?? "calls")}</span> ${nodeLink(e.to, labelOf(e.to))}</li>`).join("")}</ul>`;
-  const src = await getSource(m.selected.sha, n.file);
-  body += src.error ? `<div class="muted">${esc(src.error)}</div>` : `<h3>Code at the head commit</h3>${codeBlock(src, { range: [n.line, n.endLine], marks: mine.filter((r) => r.location).map((r) => ({ line: r.location.line, label: `${r.id}: ${r.state}` })), title: "source" })}`;
-  return body;
-}
-
 function runHtml() {
   const m = state.model, run = m.run;
-  if (m.runs) {
-    return `<h2>Recorded check runs</h2><div class="where">dotnet test, recorded by the Impact Ledger project. Not re-run here.</div>
-      <ul class="list">${m.runs.map((r) => `<li><strong>${esc(r.id)}</strong> ${chip(r.totals.failed ? `${r.totals.failed} failed` : "passed", r.totals.failed ? "bad" : "ok")} ${r.totals.passed} passed, ${r.totals.failed} failed
-        <dl class="kv"><dt>Side</dt><dd>${esc(r.side)} · commit <span class="mono">${short(r.commit)}</span></dd><dt>Command</dt><dd class="mono">${esc(r.command)}</dd><dt>Tool</dt><dd>${esc(r.tool)}</dd>${r.overlay ? `<dt>Overlay</dt><dd>${esc(r.overlay)}</dd>` : ""}<dt>Collected</dt><dd>${esc(r.collectedAt)}</dd></dl></li>`).join("")}</ul>
-      <div class="muted">A failure on the base side with the head tests is expected: it shows the test notices the change.</div>`;
-  }
   if (!run) return `<h2>Run result</h2><div class="callout bad">No test run is recorded for commit ${m.selected.short}.</div>`;
   const stale = run.revision !== m.selected.sha;
   return `<h2>Run result: ${esc(run.check)}</h2><div class="where">${esc(run.kindLabel)}</div>
@@ -477,17 +449,15 @@ function runHtml() {
 
 async function sideHtml() {
   const m = state.model, sel = state.sel, sha = m.selected.sha;
-  if (!sel) {
-    const im = m.impact;
-    return `<h2>Overview</h2><div class="where">${m.selected.isBase ? "Base" : `PR commit ${m.selected.index}`} · <span class="mono">${m.selected.short}</span> · ${esc(m.selected.message)}</div>
-      ${m.selected.isBase ? `<div class="callout info">Baseline. Click a function to read its code at this revision. Click a link to open the call site.</div>` : `
-      <h3>Edited in this PR</h3><ul class="list">${im.edited.map((e) => `<li>${nodeLink(e.id, e.label)}</li>`).join("") || `<li class="muted">No indexed functions edited. See the Files level.</li>`}</ul>
-      <h3>Downstream, not edited</h3><ul class="list">${im.downstream.map((e) => `<li>${nodeLink(e.id, e.label)} ${m.evidence.find((x) => x.nodeId === e.id) ? chip(m.evidence.find((x) => x.nodeId === e.id).statusLabel, /^Exercised/.test(m.evidence.find((x) => x.nodeId === e.id).statusLabel) ? "info" : m.evidence.find((x) => x.nodeId === e.id).status === "contradicted" ? "bad" : m.evidence.find((x) => x.nodeId === e.id).status) : ""}</li>`).join("") || `<li class="muted">None mapped.</li>`}</ul>
-      <h3>Changed files</h3><ul class="list">${m.diff.files.map((f) => `<li><button type="button" class="link mono" data-diff="${esc(f.file)}">${esc(f.file)}</button> ${chip(f.status === "A" ? "added" : f.status === "D" ? "deleted" : "modified", "plain")}</li>`).join("")}</ul>`}
-      ${m.source === "ledger" ? `<h3>Ledger rows at this step</h3><div>${Object.entries(m.rowCounts).map(([k, v]) => chip(`${v} ${k}`, ROW_CHIP[k])).join(" ")}</div><div class="muted" style="margin-top:6px">A row is one requirement clause, claim or place the change reaches. Only an executed check closes a row.</div><div style="margin-top:6px"><button type="button" class="link" data-run="1">Recorded check runs</button></div>` : `<h3>Tests at this revision</h3><ul class="list">${m.tests.map((t) => `<li>${chip(t.status, t.status === "passed" ? "passed" : t.status === "failed" ? "failed" : "warn")} ${t.proof ? chip(t.proof === "changed" ? "fails on base" : "held", t.proof === "changed" ? "ok" : "plain") : ""} ${nodeLink(t.id, t.name)}</li>`).join("")}</ul>`}`;
+  if (!sel) return "";
+  if (sel.type === "fullnode") return fullNodeHtml(sel.id);
+  if (sel.type === "doc") {
+    const text = await (await fetch(`demo/${sel.file}`)).text();
+    const note = sel.file.startsWith("context/") ? "Demo version, made up. The coding agent saves this file with the pull request. The Q&A agent reads it to answer your questions." : "Demo version. In a real repo this file sits at the top of the repo, and the copy on the base branch is the one that counts.";
+    return `<h2>${esc(sel.title ?? sel.file)}</h2><div class="where">${note}</div><pre class="raw doc">${esc(text)}</pre>`;
   }
+  if (sel.type === "since") return `<h2>Code change in commit ${m.selected.index}</h2><div class="where">${esc(m.selected.message)} · made up for the demo</div>${m.since.files.map((f) => patchBlock(f, m.since.from, m.selected.index)).join("<div style='height:8px'></div>")}`;
   if (sel.type === "run") return runHtml();
-  if (sel.type === "row") return rowHtml(m.rows.find((r) => r.id === sel.id));
   if (sel.type === "diff") {
     const f = m.diff.files.find((x) => x.file === sel.file);
     return f ? `<h2>Diff</h2>${diffBlock(f)}` : `<h2>Diff</h2><div class="muted">No diff for ${esc(sel.file)} at this revision.</div>`;
@@ -496,24 +466,6 @@ async function sideHtml() {
     const src = await getSource(sha, sel.file);
     if (src.error) return `<h2>Source</h2><div class="callout bad">${esc(src.error)}</div>`;
     return `<h2>${esc(sel.file)}:${sel.line}</h2><div class="where">Cited by the reviewer</div>${codeBlock(src, { marks: [{ line: sel.line, label: "cited line" }], title: "source" })}`;
-  }
-  if (sel.type === "claim") {
-    const c = m.claims.find((x) => x.id === sel.id);
-    let body = `<h2>Claim</h2><div class="where">${esc(m.brief.author)}</div><div class="callout ${c.label === "Verified" ? "ok" : c.label === "Inferred" ? "info" : "bad"}">${chip(c.label)} ${c.proof ? chip(c.proof === "changed" ? "fails on base, passes here" : "held: passes before and after", "plain") : ""} ${esc(c.text)}</div><div>${esc(c.reason)}</div>${c.missing ? `<div><strong>Missing:</strong> ${esc(c.missing)}</div>` : ""}`;
-    if (c.link?.kind === "test") {
-      const t = m.tests.find((x) => x.id === c.link.testId);
-      const src = await getSource(sha, t.file);
-      body += `<h3>Cited test</h3><div>${nodeLink(t.id, t.name)} ${chip(t.status, t.status === "passed" ? "passed" : "warn")} <button type="button" class="link" data-run="1">open run result</button></div>${codeBlock(src, { range: [t.line, t.endLine], marks: t.assertions.map((a) => ({ line: a.line, label: "assertion" })), title: "test" })}`;
-    } else if (c.link?.kind === "source") {
-      const src = await getSource(sha, c.link.file);
-      body += `<h3>Cited source</h3>${c.link.nodeId ? `<div>${nodeLink(c.link.nodeId, labelOf(c.link.nodeId))}</div>` : ""}${codeBlock(src, { marks: [{ line: c.link.line, label: "cited call site" }], title: "source" })}`;
-    } else if (c.link?.kind === "diff") {
-      const f = c.link.file ? m.diff.files.find((x) => x.file === c.link.file) : null;
-      body += `<h3>Cited diff</h3>${(f ? [f] : m.diff.files).map(diffBlock).join("")}`;
-    } else if (c.link?.kind === "run") {
-      body += `<div><button type="button" class="link" data-run="1">Open the run result</button></div>`;
-    } else if (c.link?.kind === "node") body += `<div>${nodeLink(c.link.nodeId, labelOf(c.link.nodeId))}</div>`;
-    return body;
   }
   if (sel.type === "edge") {
     const e = m.graph.edges.find((x) => x.id === sel.id && x.level === state.level);
@@ -539,9 +491,9 @@ async function sideHtml() {
     const members = (n.members ?? []).map((id) => m.graph.nodes.find((x) => x.id === id)).filter(Boolean);
     const diffFile = n.file ? m.diff.files.find((f) => f.file === n.file) : null;
     let body = `<h2>${esc(n.label)}</h2><div class="where">${n.type === "concept" ? (n.labelled ? `Concept · folder group <span class="mono">${esc(n.sub)}</span> (rule-based)` : "Unlabelled folder group (meaning unclear)") : `<span class="mono">${esc(n.sub)}</span>`}</div>
-      ${n.counts ? `<div>${chip(`${n.counts.edited} edited`, "edited")} ${chip(`${n.counts.downstream} downstream`, "info")} ${chip(`${n.counts.unverified} unverified`, n.counts.unverified ? "bad" : "ok")}</div>` : ""}
+      ${n.counts ? `<div>${chip(`${n.counts.edited} edited`, "edited")} ${chip(`${n.counts.downstream} affected`, "info")}</div>` : ""}
       ${n.indexed === false ? `<div class="callout info">Changed, but no symbols were indexed for this file. Shown at file level only.</div>` : ""}
-      ${members.length ? `<h3>${n.type === "concept" ? "Files" : "Functions and tests"}</h3><ul class="list">${members.map((x) => `<li>${nodeLink(x.id, x.label)} ${x.state === "edited" ? chip("edited", "edited") : x.state === "downstream" ? chip("downstream", "info") : ""} ${x.evidence === "unverified" ? chip("Unverified", "bad") : x.evidence === "contradicted" ? chip("Contradicted", "bad") : ""}</li>`).join("")}</ul>` : ""}`;
+      ${members.length ? `<h3>${n.type === "concept" ? "Files" : "Functions and tests"}</h3><ul class="list">${members.map((x) => `<li>${nodeLink(x.id, x.label)} ${x.state === "edited" ? chip("edited", "edited") : x.state === "downstream" ? chip("affected", "info") : ""} ${x.evidence === "contradicted" ? chip("unit test fails", "bad") : ""}</li>`).join("")}</ul>` : ""}`;
     if (diffFile) body += `<h3>Diff</h3>${diffBlock(diffFile)}`;
     if (n.file) {
       const src = await getSource(sha, n.file);
@@ -562,7 +514,7 @@ async function sideHtml() {
       <h3>Test and assertions</h3>${codeBlock(src, { range: [t.line, t.endLine], marks: t.assertions.map((a) => ({ line: a.line, label: "assertion" })), title: "test" })}`;
   }
   // function
-  if (m.source === "ledger") return ledgerNodeHtml(n);
+  if (m.source === "tieto") return tietoNodeHtml(n);
   const ev = m.evidence.find((e) => e.nodeId === n.id);
   const outCalls = m.graph.edges.filter((e) => e.level === "function" && e.kind === "calls" && e.from === n.id);
   const inCalls = m.graph.edges.filter((e) => e.level === "function" && e.kind === "calls" && e.to === n.id);
@@ -575,8 +527,8 @@ async function sideHtml() {
   if (n.state === "downstream") body += `<div class="callout info">${chip("not edited", "info")} This function is <strong>not in the diff</strong>. It calls edited code${affectedCalls.length ? ` at line ${affectedCalls.map((e) => e.anchor.line).join(", ")}` : ""}, so its behaviour can change.</div>`;
   if (ev) {
     body += ev.status === "unverified"
-      ? `<div class="callout bad"><strong>Unverified.</strong> ${esc(ev.missing)}<div style="margin-top:4px"><strong>Targeted check:</strong> ${esc(ev.suggestedCheck)}</div></div>`
-      : `<div class="callout ok"><strong>${esc(ev.statusLabel)}.</strong> ${ev.supportingTests.length} ${esc(m.pr.requirement)} test(s) passed on commit ${m.selected.short}:<ul>${ev.supportingTests.map((id) => `<li>${nodeLink(id, labelOf(id))}</li>`).join("")}</ul><button type="button" class="link" data-run="1">Open the run result</button></div>`;
+      ? `<div class="callout bad"><strong>Not tested.</strong> ${esc(ev.missing)}<div style="margin-top:4px"><strong>Check to add:</strong> ${esc(ev.suggestedCheck)}</div></div>`
+      : `<div class="callout ok"><strong>Tested.</strong> ${ev.supportingTests.length} ${esc(m.pr.requirement)} test(s) passed on commit ${m.selected.short}:<ul>${ev.supportingTests.map((id) => `<li>${nodeLink(id, labelOf(id))}</li>`).join("")}</ul><button type="button" class="link" data-run="1">Open the run result</button></div>`;
     if (ev.rejected.length) body += `<h3>Tests that touch it but do not count</h3><ul class="list">${ev.rejected.map((r) => `<li>${nodeLink(r.testId, labelOf(r.testId))}<div class="muted">${esc(r.reason)}</div></li>`).join("")}</ul>`;
   } else if (testsHere.length) {
     body += `<h3>Tests that reach it</h3><ul class="list">${testsHere.map((t) => `<li>${chip(t.status, t.status === "passed" ? "passed" : "warn")} ${nodeLink(t.id, t.name)}</li>`).join("")}</ul>`;
@@ -587,103 +539,134 @@ async function sideHtml() {
   return body;
 }
 
+/** A function in a Tieto PR: where it is, why it is on the map, its links, its code. */
+async function tietoNodeHtml(n) {
+  const m = state.model;
+  const links = m.graph.edges.filter((e) => e.level === "function" && e.kind === "calls" && (e.from === n.id || e.to === n.id));
+  let body = `<h2>${esc(n.label)}</h2><div class="where mono">${esc(n.file)}:${n.line}${n.endLine > n.line ? `-${n.endLine}` : ""}</div>`;
+  body += n.state === "edited"
+    ? `<div class="callout info">${chip("edited", "edited")} This PR edits this code.</div>`
+    : `<div class="callout info">${chip("not edited", "info")} This code is <strong>not in the diff</strong>. It uses code the PR changed, so its behaviour can change.</div>`;
+  if (n.evidence === "contradicted") body += `<div class="callout bad"><strong>A targeted unit test fails here.</strong> It passes before this change and fails after it.</div>`;
+  if (links.length) body += `<h3>Links</h3><ul class="list">${links.map((e) => `<li>${nodeLink(e.from, labelOf(e.from))} <span class="muted">${esc(e.relation ?? "calls")}</span> ${nodeLink(e.to, labelOf(e.to))}</li>`).join("")}</ul>`;
+  const src = await getSource(m.selected.sha, n.file);
+  body += src.error ? `<div class="muted">Code not shown: this file is not changed by the PR.</div>` : `<h3>Code</h3>${codeBlock(src, { range: [n.line, n.endLine], title: "source" })}`;
+  return body;
+}
+
 let sideToken = 0;
 async function renderSide() {
   const token = ++sideToken;
   const html = await sideHtml();
   if (token !== sideToken) return;
   const el = $("sidePanel");
-  el.innerHTML = (state.sel ? `<div style="float:right"><button type="button" id="closeSel">Overview</button></div>` : "") + html;
+  document.querySelector(".layout").classList.toggle("has-sel", Boolean(state.sel));
+  el.innerHTML = state.sel ? `<button type="button" id="closeSel" class="close" aria-label="Close">✕</button>${html}` : "";
   if ($("closeSel")) $("closeSel").onclick = () => select(null);
   for (const b of el.querySelectorAll("[data-node]")) b.onclick = () => selectNode(b.dataset.node);
   for (const b of el.querySelectorAll("[data-run]")) b.onclick = () => select({ type: "run" });
-  for (const b of el.querySelectorAll("[data-diff]")) b.onclick = () => select({ type: "diff", file: b.dataset.diff });
-  for (const b of el.querySelectorAll("[data-row]")) b.onclick = () => select({ type: "row", id: b.dataset.row });
   for (const b of el.querySelectorAll("[data-src]")) b.onclick = () => select({ type: "source", file: b.dataset.src, line: Number(b.dataset.line) });
+  for (const b of el.querySelectorAll("[data-fullnode]")) b.onclick = () => select({ type: "fullnode", id: b.dataset.fullnode });
+  for (const b of el.querySelectorAll("[data-openpr]")) b.onclick = () => {
+    state.mapScope = "pr";
+    load(b.dataset.openpr, b.dataset.sha, { keepSelection: false });
+  };
   for (const code of el.querySelectorAll(".code")) {
     const mark = code.querySelector("[data-mark]") ?? code.querySelector(".code-line.range");
     if (mark) code.scrollTop = Math.max(0, mark.offsetTop - 70);
   }
 }
 
-// ---------- ledger rows (recorded PRs) ----------
-function renderRows() {
-  const m = state.model, el = $("rowsCard");
-  const rows = (m.rows ?? []).filter((r) => r.type === "reach" || r.type === "change");
-  el.hidden = !rows.length;
-  if (!rows.length) return;
-  const order = ["contradicted", "open", "refused", "exercised", "proven"];
-  const sorted = [...rows].sort((a, b) => order.indexOf(a.state) - order.indexOf(b.state));
-  const outside = rows.filter((r) => !r.inDiff).length;
-  el.innerHTML = `<div class="card-head"><h2>Places this change reaches</h2><span class="muted">${rows.length} rows · ${outside} outside the diff</span></div>
-    <div>${order.filter((s) => rows.some((r) => r.state === s)).map((s) => chip(`${rows.filter((r) => r.state === s).length} ${s}`, ROW_CHIP[s])).join(" ")}
-    <span class="muted">Only an executed check closes a row. "Exercised" is weak: executed by a passing test, nothing asserted.</span></div>
-    <details ${rows.some((r) => r.state === "contradicted") ? "open" : ""}><summary class="muted">Show the rows (open and contradicted first)</summary><ul class="list">${sorted.map(rowLine).join("")}</ul></details>`;
-  for (const b of el.querySelectorAll("[data-row]")) b.onclick = () => select({ type: "row", id: b.dataset.row });
-}
-
-// ---------- track record: planted faults ----------
-function renderTrack() {
-  const m = state.model, el = $("trackCard"), t = m.trackRecord;
-  el.hidden = !t;
-  if (!t) return;
-  if (t.kind === "planted-faults-upstream") {
-    el.innerHTML = `<div class="card-head"><h2>Track record of this review system</h2><span class="muted">planted faults · area ${esc(t.area)}</span></div>
-      <div>${esc(t.basis)}</div>
-      <div class="muted">Reading depth for the named engineer: <strong>${esc(m.readingList.depth)}</strong>. By rows alone the reading list is ${m.readingList.rows} rows on ${m.readingList.lines} lines of a ${m.readingList.diffLines}-line diff. Measured by the Impact Ledger project; not re-run here.</div>`;
-    return;
-  }
-  const s = t.summary;
-  const flag = (f) => (f.mapFlag === "unverified" ? chip("Unverified", "bad") : f.mapFlag === "supported" ? chip("Supported", "ok") : chip("not affected by this PR", "plain"));
-  el.innerHTML = `<div class="card-head"><h2>Track record of this review system</h2><span class="muted">planted faults · ${esc(stepText(m))}</span></div>
-    <div>We planted <strong>${s.planted}</strong> known bugs into a copy of this commit and ran the same green suite. The tests caught <strong>${s.caughtByTests}</strong>. <strong>${s.escapedTests}</strong> got past them.</div>
-    <ul>
-      <li>${s.escapedWhereMapSaidUnverified.length} escaped where the map said <strong>Unverified</strong>${s.escapedWhereMapSaidUnverified.length ? ` (${s.escapedWhereMapSaidUnverified.join(", ")})` : ""}. The map warned about these.</li>
-      <li>${s.escapedWhereMapSaidSupported.length} escaped where the map said <strong>Supported</strong>${s.escapedWhereMapSaidSupported.length ? ` (${s.escapedWhereMapSaidSupported.join(", ")})` : ""}. A miss: "supported" covers the tested case only.</li>
-      <li>${s.escapedOutsideThePr.length} escaped in code this PR does not touch or reach${s.escapedOutsideThePr.length ? ` (${s.escapedOutsideThePr.join(", ")})` : ""}. The map makes no claim there.</li>
-    </ul>
-    <details><summary class="muted">Show each planted fault</summary><ul class="list">${t.faults.filter((f) => f.applied).map((f) => `<li><strong>${esc(f.id)}</strong> ${f.caughtByTests ? chip("caught by tests", "ok") : chip("escaped the tests", "bad")} map said: ${flag(f)} · ${nodeLink(f.node, labelOf(f.node))}<div class="muted">${esc(f.what)}${f.caughtByTests ? ` Caught by: ${f.failingTests.map(esc).join("; ")}` : ""}</div></li>`).join("")}</ul></details>
-    <div class="muted">Rule-based, no model. One small sample: an observation, not an accuracy figure. See docs/measurement.md.</div>`;
-  for (const b of el.querySelectorAll("[data-node]")) b.onclick = () => selectNode(b.dataset.node);
-}
-
 function render() {
   renderHeader();
   if (!state.model) return;
-  renderRoute();
-  renderIntent();
+  renderVerdict();
+  renderDescription();
   renderGraph();
-  renderRows();
   renderReview();
-  renderTrack();
   renderDecision();
+  renderAgent();
   renderSide();
 }
 
+// ---------- ask the agent that wrote the PR (demo: sample answers saved with the PR) ----------
+const chat = { open: false, logs: {} };
+function renderAgent() {
+  const a = state.model.agent, btn = $("agentBtn"), box = $("agentChat");
+  btn.hidden = !a;
+  box.hidden = !a || !chat.open;
+  if (!a) return;
+  btn.onclick = () => {
+    chat.open = !chat.open;
+    renderAgent();
+  };
+  if (!chat.open) return;
+  const log = (chat.logs[state.prId] ??= []);
+  const open = a.chat.filter((c) => !log.some((x) => x.text === c.q));
+  box.innerHTML = `<div class="agent-head"><div><strong>Ask the agent that wrote this PR</strong><div class="muted">${esc(a.model)} · snapshot ${esc(a.snapshot)}</div><div class="muted">Answers come from <button type="button" class="link" data-ctx="1">context.md</button>: ${esc(a.context)}</div></div><button type="button" id="agentClose" class="close" aria-label="Close">✕</button></div>
+    <div class="agent-log" id="agentLog">${log.map((x) => `<div class="msg ${x.who}">${rich(x.text)}</div>`).join("") || `<div class="muted">Pick a question, or type your own.</div>`}</div>
+    <div class="agent-suggest">${open.map((c) => `<button type="button" data-q="${esc(c.q)}">${esc(c.q)}</button>`).join("")}</div>
+    <form id="agentForm"><input id="agentInput" type="text" placeholder="Ask a question" autocomplete="off" /><button class="primary" type="submit">Send</button></form>
+    <div class="byline">Demo data: sample answers saved with the snapshot. No live model is called.</div>`;
+  const ask = (q) => {
+    const words = q.toLowerCase().match(/[a-z]{4,}/g) ?? [];
+    const best = a.chat.map((c) => ({ c, n: words.filter((w) => `${c.q} ${c.keys ?? ""}`.toLowerCase().includes(w)).length })).sort((x, y) => y.n - x.n)[0];
+    log.push({ who: "me", text: q }, { who: "agent", text: best.n ? best.c.a : "This demo snapshot only holds answers to the suggested questions." });
+    renderAgent();
+  };
+  $("agentClose").onclick = () => {
+    chat.open = false;
+    renderAgent();
+  };
+  for (const b of box.querySelectorAll("[data-q]")) b.onclick = () => ask(b.dataset.q);
+  for (const b of box.querySelectorAll("[data-ctx]")) b.onclick = openContext;
+  $("agentForm").onsubmit = (ev) => {
+    ev.preventDefault();
+    const q = $("agentInput").value.trim();
+    if (q) ask(q);
+  };
+  $("agentLog").scrollTop = $("agentLog").scrollHeight;
+}
+
+// ---------- light / dark ----------
+function initTheme() {
+  const root = document.documentElement, btn = $("themeBtn");
+  let saved = null;
+  try { saved = localStorage.getItem("impact-map-theme"); } catch {}
+  const apply = (t) => {
+    root.dataset.theme = t;
+    btn.textContent = t === "dark" ? "☀ Light" : "☾ Dark";
+  };
+  apply(new URLSearchParams(location.search).get("theme") ?? saved ?? "light");
+  btn.onclick = () => {
+    const next = root.dataset.theme === "dark" ? "light" : "dark";
+    apply(next);
+    try { localStorage.setItem("impact-map-theme", next); } catch {}
+  };
+}
+
 async function init() {
+  initTheme();
   state.revisions = await api("/api/revisions");
   const h = readHash();
   // Link form used by the GitHub replica: /?repo=<owner/name>&pr=<number>&sha=<sha>&embed=1
   const q = new URLSearchParams(location.search);
   if (q.get("embed") === "1") document.body.classList.add("embed");
+  if (q.get("chat") === "1") chat.open = true;
+  if (["author", "ai"].includes(q.get("desc"))) state.descView = q.get("desc");
   const linkedRepo = q.get("repo");
   const linkedPr = q.get("pr") ? state.revisions.prs.find((p) => String(p.number) === q.get("pr") && (!linkedRepo || p.repo === linkedRepo)) : null;
   if (linkedRepo && !linkedPr) {
     // Never show another repo's analysis under this PR's name.
-    document.querySelector("main").innerHTML = `<div class="card"><h2>No impact analysis for this pull request yet</h2>
-      <p><span class="mono">${esc(linkedRepo)}</span> PR #${esc(q.get("pr"))} has not been indexed by this Impact Map.</p>
-      <p class="muted">This build covers: ${[...new Set(state.revisions.prs.map((p) => p.repo))].map((r) => `<span class="mono">${esc(r)}</span>`).join(", ")}.
-      Its status for this PR is: queued, nothing claimed.</p></div>`;
+    document.querySelector("main").innerHTML = `<div class="card"><h2>No impact map for this pull request</h2>
+      <p><span class="mono">${esc(linkedRepo)}</span> PR #${esc(q.get("pr"))} has not been analysed.</p></div>`;
     document.querySelector(".topbar").classList.add("bare");
     return;
   }
   if (!h.rev && linkedPr && q.get("sha")) h.rev = q.get("sha");
   const pr = state.revisions.prs.find((p) => p.id === h.pr) ?? linkedPr ?? state.revisions.prs[0];
   if (["concept", "file", "function"].includes(h.level)) state.level = h.level;
-  const revs = [state.revisions.base.sha, ...pr.commits.map((c) => c.sha)];
-  // The Open Impact Map link lands on the first step unless a revision is named.
-  // A plain commit SHA for a recorded PR means its first evidence stage.
-  const sha = revs.includes(h.rev) && !(isLedger(pr) && h.rev === state.revisions.base.sha) ? h.rev : pr.commits[0].sha;
+  const sha = pr.commits.some((c) => c.sha === h.rev) ? h.rev : pr.commits[0].sha;
   $("prSelect").onchange = (ev) => {
     const next = state.revisions.prs.find((p) => p.id === ev.target.value);
     state.notice = null;
@@ -691,6 +674,19 @@ async function init() {
   };
   if (h.sel) state.sel = { type: "node", id: h.sel, label: h.sel.split("#").pop() };
   await load(pr.id, sha, { keepSelection: Boolean(h.sel) });
+  if (q.get("since") === "1" && state.model.since) select({ type: "since" });
+  if (q.get("doc") === "context") openContext();
+  else if (q.get("doc")) select({ type: "doc", file: q.get("doc") });
+  if (q.get("map") === "full") {
+    if (q.get("commit")) state.fullCommit = q.get("commit");
+    const level = state.level;
+    await setScope("full");
+    if (h.level) {
+      state.level = level;
+      render();
+    }
+    if (q.get("node")) select({ type: "fullnode", id: q.get("node") });
+  }
 }
 init().catch((err) => {
   document.body.insertAdjacentHTML("afterbegin", `<div class="notice">Could not load the demo: ${esc(err.message)}. Run <code>npm run setup</code>, then <code>npm start</code>.</div>`);

@@ -1,0 +1,74 @@
+# review-policy.yml
+#
+# Demo version. The two classifiers read this file. They are plain rules, not AI.
+#   Classifier 1 runs when a commit is pushed, before any test result. It sets the severity.
+#   Classifier 2 runs after the unit tests and the AI review. It may raise the severity,
+#   and it picks the route.
+# The copy on the base branch is the one that counts, so a pull request cannot
+# loosen its own review.
+
+version: 1
+
+# A change to any of these is always High.
+sensitive_paths:
+  - "**/*.csproj"
+  - "**/*.props"
+  - "**/*.targets"
+  - "**/global.json"
+
+# These must pass on the exact commit under review.
+required_checks:
+  - name: unit-tests
+    command: dotnet test
+    what: the repo's unit test suite
+
+# Dry run only. Nothing is ever merged by the demo.
+auto_merge:
+  dry_run: true
+  max_severity: Low
+  allow_paths:
+    - README.md
+    - doc/**
+    - "**/*.md"
+
+# Classifier 1: severity. The highest matching rule wins.
+severity_rules:
+  - id: S-sensitive-path
+    severity: High
+    when: a changed file matches a sensitive path
+  - id: S-shared-code
+    severity: Medium
+    when: changed code is used from places outside the diff
+  - id: S-product-code
+    severity: Medium
+    when: a changed file is neither documentation nor test code
+  - id: S-docs-or-tests-only
+    severity: Low
+    when: every changed file is documentation or test code
+
+# Classifier 2 may keep or raise the severity. It never lowers it.
+raise_rules:
+  - id: R-contradicted
+    severity: High
+    when: a targeted unit test passes before the change and fails after it
+
+# Classifier 2: route. The first matching rule wins.
+route_rules:
+  - id: T-required-check-missing
+    route: Waiting for checks or evidence
+    when: a required check has no result for the reviewed commit
+  - id: T-required-check-failed
+    route: Waiting for checks or evidence
+    when: a required check failed on the reviewed commit
+  - id: T-evidence-missing
+    route: Waiting for checks or evidence
+    when: part of the requirement has no evidence, and a named check would settle it
+  - id: T-contradicted
+    route: Human review required
+    when: a targeted unit test contradicts the change; a named person accepts or rejects that
+  - id: T-auto-merge
+    route: Auto-merge eligible (dry run)
+    when: severity is Low, every changed file is on the allow list, and every required check passed
+  - id: T-human-review
+    route: Human review required
+    when: required checks passed and no named evidence is missing; a named person decides

@@ -1,0 +1,22 @@
+{
+  "pr": "ledger-note",
+  "generatedBy": "AI-written (Claude), saved for this demo",
+  "revisions": {
+    "1": {
+      "tags": [
+        { "label": "Text change", "tone": "ok" },
+        { "label": "Payments code", "tone": "bad" },
+        { "label": "Sensitive path", "tone": "bad" },
+        { "label": "Reaches 0 workflows", "tone": "info" }
+      ],
+      "summary": "Adds a full stop to one note string. The edit is tiny, but it sits in the payments ledger, which the team marks as a sensitive path.",
+      "sections": [
+        { "title": "What changes", "text": "`postCharge()` writes the note `charge posted.` where it wrote `charge posted`." },
+        { "title": "Why", "text": "The note text had no full stop." },
+        { "title": "What it reaches", "text": "Only `postCharge()`. Nothing else calls the changed line." },
+        { "title": "What is tested", "text": "The ledger test passes. It checks the amount, not the note text." },
+        { "title": "What stays the same", "text": "Amounts and validation." }
+      ]
+    }
+  }
+}

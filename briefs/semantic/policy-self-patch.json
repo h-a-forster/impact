@@ -1,0 +1,22 @@
+{
+  "pr": "policy-self-patch",
+  "generatedBy": "AI-written (Claude), saved for this demo",
+  "revisions": {
+    "1": {
+      "tags": [
+        { "label": "Text change", "tone": "ok" },
+        { "label": "Payments code", "tone": "bad" },
+        { "label": "Edits review policy", "tone": "bad" },
+        { "label": "Loosens its own review", "tone": "bad" }
+      ],
+      "summary": "Changes one note string in the payments ledger and, in the same PR, relaxes the review policy so that this kind of change could merge without a human.",
+      "sections": [
+        { "title": "What changes", "text": "`postCharge()` note text, and `review-policy.yml`: the sensitive path `src/payments/**` is removed and any Low change becomes auto-merge eligible." },
+        { "title": "Why", "text": "The author says small ledger text edits keep going to full review." },
+        { "title": "What it reaches", "text": "Every future PR, through the policy file. In code, only `postCharge()`." },
+        { "title": "What is tested", "text": "The suite passes. No test covers the policy change." },
+        { "title": "What stays the same", "text": "This PR is still judged by the policy on the base commit. Its own policy edit does not apply to itself." }
+      ]
+    }
+  }
+}

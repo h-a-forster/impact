@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -8,60 +8,62 @@
   </head>
   <body>
     <header class="topbar">
-      <div class="brand">
-        <strong>Code Review Impact Map</strong>
-        <span class="muted">shop-sample · local demo</span>
-      </div>
-      <label class="pr-picker">
-        <span class="muted">Pull request</span>
-        <select id="prSelect"></select>
-      </label>
-      <nav class="revnav" aria-label="Revision">
-        <button id="prevBtn" type="button">◀ Previous</button>
-        <div id="revPills" class="pills"></div>
-        <button id="nextBtn" type="button">Next ▶</button>
-      </nav>
+      <a id="backLink" class="back" href="#">← Back to GitHub</a>
+      <strong class="brand">Impact Map</strong>
+      <select id="prSelect" class="pr-picker" aria-label="Pull request"></select>
+      <nav id="revPills" class="pills" aria-label="Commit"></nav>
+      <button id="themeBtn" type="button" class="theme-btn" aria-label="Switch light or dark mode"></button>
     </header>
 
     <div id="notice" class="notice" hidden></div>
 
     <main class="layout">
       <section class="col-main">
+        <div id="prView" class="stack">
         <div id="routeCard" class="card"></div>
         <div id="intentCard" class="card"></div>
         <div class="card">
           <div class="card-head">
-            <h2>Impact map</h2>
+            <div class="head-left">
+              <h2>Impact map</h2>
+              <div class="tabs" id="scopeTabs" role="tablist">
+                <button type="button" data-scope="pr">This PR</button>
+                <button type="button" data-scope="full">Full map</button>
+              </div>
+            </div>
             <div class="tabs" id="levelTabs" role="tablist">
               <button type="button" data-level="concept">Concepts</button>
               <button type="button" data-level="file">Files</button>
               <button type="button" data-level="function">Functions</button>
             </div>
           </div>
-          <div id="impactSummary" class="impact-summary"></div>
-          <div id="graphWrap" class="graph-wrap"></div>
-          <div class="legend">
-            <span><i class="sw sw-edited"></i> edited in this PR</span>
-            <span><i class="sw sw-downstream"></i> not edited, calls edited code</span>
-            <span><i class="sw sw-unverified"></i> unverified</span>
-            <span><i class="sw sw-contradicted"></i> contradicted by a check</span>
-            <span><i class="sw sw-test"></i> test</span>
-            <span><i class="ln ln-calls"></i> calls</span>
-            <span><i class="ln ln-tests"></i> tests</span>
-            <span><i class="ln ln-affect"></i> may affect</span>
+          <div id="fullBar" hidden>
+            <div id="fullHint" class="muted"></div>
+            <div id="fullPills" class="pills wrap"></div>
           </div>
-          <details id="coverage" class="coverage"></details>
+          <div id="graphWrap" class="graph-wrap"></div>
+          <div class="legend" id="legendPr">
+            <span><i class="sw sw-edited"></i> edited</span>
+            <span><i class="sw sw-downstream"></i> affected, not edited</span>
+            <span><i class="sw sw-failing"></i> a targeted unit test fails</span>
+            <span class="muted">Click a box to see its code.</span>
+          </div>
+          <div class="legend" id="legendFull" hidden>
+            <span><i class="sw sw-edited"></i> edited by the picked commits</span>
+            <span><i class="sw sw-downstream"></i> affected, not edited</span>
+            <span class="muted">An arrow points from the user to the thing it uses. Click a box for details.</span>
+          </div>
         </div>
-        <div id="claimsCard" class="card"></div>
-        <div id="rowsCard" class="card" hidden></div>
         <div id="reviewCard" class="card"></div>
-        <div id="trackCard" class="card" hidden></div>
         <div id="decisionCard" class="card"></div>
+        </div>
       </section>
       <aside class="col-side">
         <div id="sidePanel" class="card side"></div>
       </aside>
     </main>
+    <button id="agentBtn" type="button" class="agent-fab" hidden>Ask the agent</button>
+    <div id="agentChat" class="agent-chat" hidden></div>
     <script type="module" src="app.js"></script>
   </body>
 </html>
