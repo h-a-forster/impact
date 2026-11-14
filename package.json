@@ -14,6 +14,7 @@
     "reset": "node -e \"require('fs').rmSync('.demo/decisions.json',{force:true});console.log('Decisions cleared.')\"",
     "export:replica": "node scripts/export-replica.mjs",
     "planted": "node scripts/planted.mjs",
+    "editcheck": "node evals/edit-check.mjs",
     "gate": "node scripts/gate.mjs",
     "build:graph": "esbuild src/graph/main.jsx --bundle --minify --format=iife --jsx=automatic --define:process.env.NODE_ENV=\\\"production\\\" --outfile=src/public/graph.bundle.js"
   },
