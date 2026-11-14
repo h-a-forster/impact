@@ -151,6 +151,16 @@ group = "Policy integrity";
   check("policy self-patch: severity and route", [self.classifier2.severity, self.classifier2.route], [p["policy-self-patch"].finalSeverity, p["policy-self-patch"].route]);
   check("policy self-patch: rules come from the base commit", [self.policy.revision, self.policy.rules.critical_paths], [baseSha, ["src/payments/**"]]);
   check("policy self-patch: the PR's own policy edit is detected and not applied", [self.policy.changedInThisPr, self.classifier2.autoMergeDryRun], [true, false]);
+
+  // Green tests and full evidence, but percents above 100 now give totals below zero.
+  const uncapped = buildModel(revisions, "req-21", sha("req-21"));
+  check("uncapped discount: severity and route", [uncapped.classifier2.severity, uncapped.classifier2.route], [p["req-21"].finalSeverity, p["req-21"].route]);
+  check("uncapped discount: Checkout and Order Import shown as affected", uncapped.impact.downstream.map((e) => e.id).sort(), p["req-21"].downstream);
+  check(
+    "uncapped discount: the AI reviewer reports the missing upper limit, citing the pricing code",
+    uncapped.review.available && uncapped.review.findings.some((f) => f.category === "Action required" && f.citationsValid && f.citations.some((c) => c.file === "src/pricing/discount.ts")),
+    p["req-21"].reviewerFlagsUncappedPercent,
+  );
 }
 
 // ---- 5. Decision integrity ------------------------------------------------

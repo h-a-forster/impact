@@ -1,0 +1,61 @@
+{
+  "check": "unit-tests",
+  "kind": "local",
+  "kindLabel": "Local run by the demo runner (no CI in this demo)",
+  "revision": "977be6ed6999a61ba6da17444181688842068a80",
+  "command": "node --test \"tests/**/*.test.ts\"",
+  "exitCode": 0,
+  "status": "passed",
+  "counts": {
+    "total": 7,
+    "passed": 7,
+    "failed": 0
+  },
+  "tests": [
+    {
+      "id": "test:tests/checkout.test.ts#checkout: 200 cents at 10% totals 180 cents",
+      "file": "tests/checkout.test.ts",
+      "name": "checkout: 200 cents at 10% totals 180 cents",
+      "status": "passed"
+    },
+    {
+      "id": "test:tests/checkout.test.ts#REQ-21 checkout: a negative promo percent counts as no discount",
+      "file": "tests/checkout.test.ts",
+      "name": "REQ-21 checkout: a negative promo percent counts as no discount",
+      "status": "passed"
+    },
+    {
+      "id": "test:tests/checkout.test.ts#REQ-21 checkout: a bad promo percent no longer fails checkout",
+      "file": "tests/checkout.test.ts",
+      "name": "REQ-21 checkout: a bad promo percent no longer fails checkout",
+      "status": "passed"
+    },
+    {
+      "id": "test:tests/checkout.test.ts#REQ-21 checkout: percents from 0 to 100 keep their totals",
+      "file": "tests/checkout.test.ts",
+      "name": "REQ-21 checkout: percents from 0 to 100 keep their totals",
+      "status": "passed"
+    },
+    {
+      "id": "test:tests/ledger.test.ts#ledger: a charge is posted with its amount",
+      "file": "tests/ledger.test.ts",
+      "name": "ledger: a charge is posted with its amount",
+      "status": "passed"
+    },
+    {
+      "id": "test:tests/orderImport.test.ts#import: a row with the wrong column count is rejected",
+      "file": "tests/orderImport.test.ts",
+      "name": "import: a row with the wrong column count is rejected",
+      "status": "passed"
+    },
+    {
+      "id": "test:tests/orderImport.test.ts#REQ-21 import: a row with a negative percent imports at full price",
+      "file": "tests/orderImport.test.ts",
+      "name": "REQ-21 import: a row with a negative percent imports at full price",
+      "status": "passed"
+    }
+  ],
+  "rawOutput": "✔ checkout: 200 cents at 10% totals 180 cents \n✔ REQ-21 checkout: a negative promo percent counts as no discount \n✔ REQ-21 checkout: a bad promo percent no longer fails checkout \n✔ REQ-21 checkout: percents from 0 to 100 keep their totals \n✔ ledger: a charge is posted with its amount \n✔ import: a row with the wrong column count is rejected \n✔ REQ-21 import: a row with a negative percent imports at full price \nℹ tests 7\nℹ suites 0\nℹ pass 7\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms -\n",
+  "nodeVersion": "v24.22.1",
+  "ranAt": "2026-11-14T20:19:51.990Z"
+}
