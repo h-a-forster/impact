@@ -443,3 +443,14 @@ button.danger { background: var(--bad); color: var(--card); border-color: var(--
 .swarm-madeup { margin-bottom: 10px; font-size: 13px; }
 /* The map's colour key belongs to the map: not on the Blast radius or swarm tabs. */
 #mapCard[data-scope="blast"] .map-foot, #mapCard[data-scope="swarm"] .map-foot { display: none; }
+
+/* Blast radius: Run button, then the result fades in */
+.blast-top { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+.blast-top button { flex: none; font-size: 12.5px; }
+.blast-step { margin-top: 12px; font-size: 13px; }
+#blastView.reveal > * { animation: gfade .6s ease both; }
+#blastView.reveal > :nth-child(2) { animation-delay: .15s; }
+#blastView.reveal > :nth-child(3) { animation-delay: .35s; }
+#blastView.reveal > :nth-child(n+4) { animation-delay: .7s; }
+#blastView.reveal .bbox { animation: gform .45s cubic-bezier(.2, .8, .2, 1) both; animation-delay: .5s; }
+@media (prefers-reduced-motion: reduce) { #blastView.reveal > *, #blastView.reveal .bbox { animation: none; } }

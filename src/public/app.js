@@ -406,6 +406,7 @@ function renderGraph() {
   $("blastView").hidden = !blast;
   $("swarmView").hidden = !swarm;
   if (!swarm) stopSwarm();
+  if (!blast) stopBlast();
   else if (swarmUI.pr !== state.prId) renderSwarm();
   $("fullBar").hidden = !full;
   if (blast) return renderBlast();
@@ -582,6 +583,61 @@ function blastBox(x) {
     <span class="bbox-foot"><span class="pips">${blastPips(x.by)}</span>${tags}</span></button>`;
 }
 // The tab works at file level only: one box and one table row per file. Function numbers sit in a fold.
+// The Run button: replays the 3 recorded runs (sped up), then shows the result. Nothing is computed live.
+const blastRun = { pr: null, phase: "idle", timers: [], reveal: false };
+const BLAST_TOLD = { minimal: "told: touch as little as you can", normal: "told: solve it the way you normally would", wide: "told: refactor and tidy freely" };
+function stopBlast() {
+  for (const t of blastRun.timers) clearTimeout(t);
+  blastRun.timers = [];
+  if (blastRun.phase === "running") blastRun.phase = "idle";
+}
+function playBlast() {
+  for (const t of blastRun.timers) clearTimeout(t);
+  blastRun.timers = [];
+  const b = state.blast[state.prId], el = $("blastView");
+  blastRun.pr = state.prId;
+  blastRun.phase = "running";
+  el.dataset.stage = "running";
+  const agents = b.runs.filter((r) => r.id !== "real");
+  const fast = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  const later = (ms, fn) => blastRun.timers.push(setTimeout(fn, fast ? 0 : ms));
+  el.innerHTML = `<p class="blast-what">We give the same task to 3 agents: one careful, one normal, one that changes too much. What they touch is the "blast radius" of the task. Then we lay the real change over it.</p>
+    <div class="swarm-stage">
+      <div class="swarm-flow">
+        <div class="swarm-req" id="blastReq"><b>Requirements</b><span>Same text for every agent</span></div>
+        <div class="swarm-agents">${agents.map((r) => `<div class="swarm-agent"><span class="swarm-name">${esc(BLAST_SHORT[r.id])}<span class="swarm-model">${esc(BLAST_TOLD[r.id])}</span></span><span class="swarm-bar"><i></i></span><span class="swarm-status">waiting</span></div>`).join("")}</div>
+      </div>
+      <div class="blast-step muted" id="blastStep">Sending the task to 3 agents…</div>
+    </div>`;
+  const rows = [...el.querySelectorAll(".swarm-agent")];
+  later(100, () => $("blastReq")?.classList.add("sending"));
+  let end = 0;
+  agents.forEach((r, i) => {
+    const start = 400 + i * 250;
+    const secs = r.startedAt && r.endedAt ? (new Date(r.endedAt) - new Date(r.startedAt)) / 1000 : 60;
+    // 1 second of the real run = 20 ms here, kept between 1.2 and 4 s.
+    const work = Math.min(4000, Math.max(1200, secs * 20));
+    later(start, () => {
+      rows[i].classList.add("working");
+      rows[i].style.setProperty("--work", `${work}ms`);
+      rows[i].querySelector(".swarm-status").textContent = "reading the task, then writing a fix…";
+      $("blastStep").textContent = "The agents are working…";
+    });
+    later(start + work, () => {
+      const c = b.columns.find((x) => x.id === r.id);
+      rows[i].classList.remove("working");
+      rows[i].classList.add("done", "near");
+      rows[i].querySelector(".swarm-status").innerHTML = c.noChange ? "made no change" : `${c.files} file${c.files === 1 ? "" : "s"} · <span class="plus">+${c.added}</span> <span class="minus">−${c.removed}</span> · took ${Math.round(secs)} s`;
+    });
+    end = Math.max(end, start + work);
+  });
+  later(end + 300, () => ($("blastStep").textContent = "Laying the real change over what they touched…"));
+  later(end + 1300, () => {
+    blastRun.phase = "done";
+    blastRun.reveal = true;
+    renderBlast();
+  });
+}
 function renderBlast() {
   const el = $("blastView"), b = state.blast[state.prId];
   if (!b) {
@@ -596,6 +652,22 @@ function renderBlast() {
     el.innerHTML = `<p class="blast-what">We give the same task to 3 agents: one careful, one normal, one that changes too much. What they touch is the "blast radius" of the task. Then we lay the real change over it.</p><div class="callout info">${esc(b.message)}</div>`;
     return;
   }
+  // First a button. Pressing it replays the 3 recorded runs, then shows the result.
+  const run = blastRun.pr === state.prId ? blastRun.phase : "idle";
+  if (run === "idle") {
+    el.dataset.stage = "idle";
+    el.innerHTML = `<p class="blast-what">We give the same task to 3 agents: one careful, one normal, one that changes too much. What they touch is the "blast radius" of the task. Then we lay the real change over it.</p>
+      <div class="swarm-controls"><button type="button" class="primary" id="blastGo">▶ Run blast radius</button>
+      <span class="muted swarm-rec">Replays 3 real runs of <code>${esc(b.model)}</code>, recorded ${esc(b.recordedAt.slice(0, 10))}. No agent runs now.</span></div>`;
+    $("blastGo").onclick = () => playBlast();
+    return;
+  }
+  if (run === "running") {
+    // The animation owns the box while it runs. A redraw of the page must not restart it.
+    if (el.dataset.stage !== "running") playBlast();
+    return;
+  }
+  el.dataset.stage = "done";
   const files = b.items.filter((x) => x.level === "file");
   const zoneRank = { tight: 0, normal: 1, wide: 2, outside: 3 };
   const sorted = (list) => [...list].sort((p, q) => zoneRank[p.zone] - zoneRank[q.zone] || (p.by.real ? 0 : 1) - (q.by.real ? 0 : 1) || p.label.localeCompare(q.label));
@@ -634,7 +706,7 @@ function renderBlast() {
   // The picture and the table are always shown. The extras are small "show more" links.
   const fold = (id, title, hint, body) => (id === "zones" || id === "files" ? body : `<details class="blast-runs"><summary>${title}: ${hint}</summary>${body}</details>`);
   const realCol = cols.find((c) => c.id === "real");
-  el.innerHTML = `<p class="blast-what">We gave the same task to 3 agents: one careful, one normal, one that changes too much. The coloured zones show the files they touched. The thick outline is the real change.</p>
+  el.innerHTML = `<div class="blast-top"><p class="blast-what">We gave the same task to 3 agents: one careful, one normal, one that changes too much. The coloured zones show the files they touched. The thick outline is the real change.</p><button type="button" id="blastAgain">↻ Run again</button></div>
     <div class="blast-label ${esc(b.label.tone)}"><span class="stamp-label">Trust label</span><strong>${esc(b.label.text)}</strong><span>${esc(b.label.how)}</span></div>
     ${fold("zones", "Zone picture", "Which files each agent touched, and where the real change sits", `
     <div class="blast-zones">${zoneHtml(0)}
@@ -671,6 +743,13 @@ function renderBlast() {
         <details><summary>The full prompt, word for word</summary><pre class="raw doc">${esc(r.prompt ?? "")}</pre></details></div>`).join("")}
       <p class="muted">${esc(b.how.functions)} Callers come from ${esc(b.graphTool ?? "the recorded data")} (a saved run) and the recorded compiler data for this PR.</p>`)}`;
   for (const btn of el.querySelectorAll("[data-blast]")) btn.onclick = () => selectBlast(btn.dataset.blast);
+  $("blastAgain").onclick = () => playBlast();
+  // Just after a run: the result fades in, part by part.
+  el.classList.toggle("reveal", blastRun.reveal);
+  if (blastRun.reveal) {
+    blastRun.reveal = false;
+    setTimeout(() => el.classList.remove("reveal"), 2500);
+  }
 }
 /** Side panel for one box: what each of the 4 changes did there. */
 function blastSideHtml(id) {
@@ -1308,7 +1387,10 @@ async function init() {
     // ?map=blast opens the "Blast radius" tab. &box=<box id> also opens that box in the side panel.
     await setScope("blast");
     await loadBlast();
+    // &run=1 plays the runs. &done=1 or &box=<id> shows the result straight away.
+    if (q.get("done") === "1" || q.get("box")) Object.assign(blastRun, { pr: state.prId, phase: "done" });
     render();
+    if (q.get("run") === "1") playBlast();
     if (q.get("box")) selectBlast(q.get("box"));
   }
   // ?map=swarm opens the "Monte Carlo swarm" tab and plays it (&model=<id>&n=<count> to pick first,

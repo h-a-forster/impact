@@ -89,6 +89,8 @@ See [docs/demo-script.md](docs/demo-script.md).
 ## Blast radius tab (PR #1 only)
 
 Open: `http://localhost:4317/?map=blast#pr=ju26-issue-2283` (tab "Blast radius" in the Impact map card).
+The tab opens on a **Run blast radius** button. Pressing it replays the 3 recorded runs (sped up), then
+shows the result. `&run=1` plays it from a link; `&done=1` (or `&box=<id>`) shows the result straight away.
 
 We gave the same task to 3 agents: one careful ("minimal"), one normal, one that changes too
 much ("wide"). What they touched is the zone a fix can reasonably reach. The real change
