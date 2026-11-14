@@ -234,7 +234,7 @@
           {
             "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
             "status": "M",
-            "patch": "@@ -1444,7 +1444,9 @@ private void ReportIfLocatedInCompilation(Action<Diagnostic> report, Diagnostic diagnostic)\n     {\n-        if (diagnostic.Location.IsInSource && this.compilation.ContainsSyntaxTree(diagnostic.Location.SourceTree))\n+        // Only drop a diagnostic that points into another assembly.\n+        // One with no location, or one in this compilation, is reported as before.\n+        if (!diagnostic.Location.IsInMetadata)\n         {\n             report(diagnostic);\n         }"
+            "patch": "@@ -1445,5 +1445,7 @@\n     {\n-        if (diagnostic.Location.IsInSource && this.compilation.ContainsSyntaxTree(diagnostic.Location.SourceTree))\n+        // Only drop a diagnostic that points into another assembly.\n+        // One with no location, or one in this compilation, is reported as before.\n+        if (!diagnostic.Location.IsInMetadata)\n         {\n             report(diagnostic);\n         }"
           },
           {
             "file": "tests/MessagePack.SourceGenerator.Tests/GenericsFormatterTests.cs",

@@ -186,7 +186,7 @@ details.finding > summary { cursor: pointer; }
 .callout.ok { background: var(--ok-bg); color: var(--ok); }
 .callout.info { background: var(--down-bg); color: var(--down); }
 .code { border: 1px solid var(--line); border-radius: 8px; overflow: auto; max-height: 420px; background: var(--bg); font-family: var(--mono); font-size: 12px; line-height: 1.5; }
-.code-head { display: flex; justify-content: space-between; gap: 8px; padding: 5px 9px; border-bottom: 1px solid var(--line); background: var(--soft); position: sticky; top: 0; font-family: system-ui, sans-serif; font-size: 12px; }
+.code-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; padding: 5px 9px; border-bottom: 1px solid var(--line); background: var(--soft); position: sticky; top: 0; font-family: system-ui, sans-serif; font-size: 12px; }
 .code-line { display: grid; grid-template-columns: 40px 1fr; white-space: pre; }
 .code-line .n { color: var(--muted); text-align: right; padding-right: 9px; user-select: none; }
 .code-line.range { background: var(--down-bg); }
@@ -240,3 +240,7 @@ button.danger { background: var(--bad); color: var(--card); border-color: var(--
 .head-left { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 #fullBar { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
 #fullBar .pills.wrap { margin: 0 0 8px; }
+.code-head > .mono { word-break: break-all; }
+.code-head > span:last-child { white-space: nowrap; }
+/* So a marked line's offsetTop is measured inside its own code box (used to scroll to the change). */
+.code { position: relative; }

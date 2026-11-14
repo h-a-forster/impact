@@ -346,7 +346,7 @@ function fullNodeHtml(id) {
     ${reaches.length ? `<h3>Commits that affect it without editing it</h3><ul class="list">${reaches.map(row).join("")}</ul>` : ""}`;
 }
 /** One file's change in a made-up commit. */
-const patchBlock = (file, from, to) => `<div class="code"><div class="code-head"><span class="mono">${esc(file.file)}</span><span>commit ${from} → commit ${to}</span></div>${file.patch.split("\n").map((l) => `<div class="code-line ${l.startsWith("+") ? "add" : l.startsWith("-") ? "del" : l.startsWith("@@") ? "hunk" : ""}"><span class="n"></span><span>${esc(l) || " "}</span></div>`).join("")}</div>`;
+const patchBlock = (file, from, to) => changeBlock(file.file, parseHunks(file.patch), `commit ${from} → commit ${to}`);
 
 // ---------- AI review (advice only) ----------
 function renderReview() {
@@ -415,22 +415,48 @@ function renderDecision() {
 }
 
 // ---------- side panel ----------
-function codeBlock(src, { range, marks = [], title }) {
+/** `slice: [from, to]` shows only those lines (1-based), for one function out of a long file. */
+function codeBlock(src, { range, marks = [], title, slice }) {
   const lines = src.text.replace(/\n$/, "").split("\n");
   const markSet = new Map(marks.map((mk) => [mk.line, mk.label]));
   return `<div class="code"><div class="code-head"><span class="mono">${esc(src.file)}</span><span>${esc(title ?? "")} at commit <span class="mono">${short(src.sha)}</span></span></div>${lines
     .map((l, i) => {
       const n = i + 1;
+      if (slice && (n < slice[0] || n > slice[1])) return "";
       const cls = markSet.has(n) ? "mark" : range && n >= range[0] && n <= range[1] ? "range" : "";
       return `<div class="code-line ${cls}" ${markSet.has(n) ? `data-mark="1" title="${esc(markSet.get(n))}"` : ""}><span class="n">${n}</span><span>${esc(l) || " "}</span></div>`;
     })
     .join("")}</div>`;
 }
-function diffBlock(file) {
-  const body = file.patch.split("\n").filter((l) => !/^(diff --git|index |--- |\+\+\+ )/.test(l));
-  return `<div class="code"><div class="code-head"><span class="mono">${esc(file.file)}</span><span>diff: base <span class="mono">${short(state.model.base.sha)}</span> → <span class="mono">${state.model.selected.short}</span></span></div>${body
-    .map((l) => `<div class="code-line ${l.startsWith("+") ? "add" : l.startsWith("-") ? "del" : l.startsWith("@@") ? "hunk" : ""}"><span class="n"></span><span>${esc(l) || " "}</span></div>`)
+/** Split a diff into its changed blocks. Every line gets its line number in the new file. */
+function parseHunks(patch) {
+  const hunks = [];
+  let hunk = null, newNo = 0;
+  for (const raw of patch.replace(/\n$/, "").split("\n")) {
+    const head = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(raw);
+    if (head) {
+      newNo = Number(head[1]);
+      hunk = { start: newNo, lines: [] };
+      hunks.push(hunk);
+      continue;
+    }
+    if (!hunk || /^(diff --git|index |--- |\+\+\+ |\\ No newline)/.test(raw)) continue;
+    const t = raw[0] === "+" ? "add" : raw[0] === "-" ? "del" : "";
+    // `at` is where the line sits in the new file. A removed line sits where the next line is.
+    hunk.lines.push({ t, text: raw.slice(1), newNo: t === "del" ? null : newNo, at: newNo });
+    if (t !== "del") newNo += 1;
+  }
+  return hunks;
+}
+/** A diff view: removed lines red, added lines green, with line numbers. `right` is trusted HTML. */
+function changeBlock(file, hunks, right) {
+  return `<div class="code"><div class="code-head"><span class="mono">${esc(file)}</span><span>${right}</span></div>${hunks
+    .map((h) => `<div class="code-line hunk"><span class="n"></span><span>Around line ${h.start}</span></div>` +
+      h.lines.map((l) => `<div class="code-line ${l.t}"><span class="n">${l.newNo ?? ""}</span><span>${l.t === "add" ? "+" : l.t === "del" ? "-" : " "}${esc(l.text) || " "}</span></div>`).join(""))
     .join("")}</div>`;
+}
+function diffBlock(file) {
+  return changeBlock(file.file, parseHunks(file.patch), `before <span class="mono">${short(state.model.base.sha)}</span> → after <span class="mono">${state.model.selected.short}</span>`);
 }
 const nodeLink = (id, text) => `<button type="button" class="link" data-node="${esc(id)}">${esc(text)}</button>`;
 const labelOf = (id) => state.model.graph.nodes.find((n) => n.id === id)?.label ?? id;
@@ -549,8 +575,25 @@ async function tietoNodeHtml(n) {
     : `<div class="callout info">${chip("not edited", "info")} This code is <strong>not in the diff</strong>. It uses code the PR changed, so its behaviour can change.</div>`;
   if (n.evidence === "contradicted") body += `<div class="callout bad"><strong>A targeted unit test fails here.</strong> It passes before this change and fails after it.</div>`;
   if (links.length) body += `<h3>Links</h3><ul class="list">${links.map((e) => `<li>${nodeLink(e.from, labelOf(e.from))} <span class="muted">${esc(e.relation ?? "calls")}</span> ${nodeLink(e.to, labelOf(e.to))}</li>`).join("")}</ul>`;
+  // The changed lines that sit inside this function. Made-up commits come last in m.diff.files.
+  const madeUpFrom = m.diff.files.length - (m.since?.files.length ?? 0);
+  const inside = (l) => l.t && l.at >= n.line && l.at <= n.endLine;
+  const changes = m.diff.files
+    .map((f, i) => ({ f, madeUp: i >= madeUpFrom }))
+    .filter((x) => x.f.file === n.file)
+    .map((x) => ({ ...x, hunks: parseHunks(x.f.patch).filter((h) => h.lines.some(inside)) }))
+    .filter((x) => x.hunks.length);
+  if (changes.length) {
+    body += `<h3>What changed here</h3>${changes.map((x) => changeBlock(n.file, x.hunks, x.madeUp ? `commit ${m.since.from} → commit ${m.selected.index} · made up` : "before → after this PR")).join("<div style='height:8px'></div>")}`;
+  } else if (n.state === "edited") {
+    body += `<div class="muted">No changed line was found inside this function.</div>`;
+  }
   const src = await getSource(m.selected.sha, n.file);
-  body += src.error ? `<div class="muted">Code not shown: this file is not changed by the PR.</div>` : `<h3>Code</h3>${codeBlock(src, { range: [n.line, n.endLine], title: "source" })}`;
+  if (src.error) return body + `<div class="muted">Code not shown: this file is not changed by the PR.</div>`;
+  const added = changes.filter((x) => !x.madeUp).flatMap((x) => x.hunks.flatMap((h) => h.lines.filter((l) => l.t === "add" && inside(l)).map((l) => ({ line: l.newNo, label: "changed in this PR" }))));
+  // Recorded code is from commit 1. A made-up commit 2 only exists as the diff above.
+  const shown = m.since ? { ...src, sha: currentPr().commits[0].sha } : src;
+  body += `<h3>${changes.length ? "The function after the change" : "The function"}</h3>${codeBlock(shown, { slice: [n.line, n.endLine], marks: added, title: "code" })}`;
   return body;
 }
 
