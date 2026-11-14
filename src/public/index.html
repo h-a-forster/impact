@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Code Review Impact Map</title>
+    <link rel="stylesheet" href="graph.bundle.css" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -39,29 +40,43 @@
           </div>
           <div id="fullBar" hidden>
             <div id="fullHint" class="muted"></div>
-            <div id="fullPills" class="pills wrap"></div>
+            <div class="timeline">
+              <button type="button" id="fullPrev" aria-label="One step back" title="One step back">←</button>
+              <button type="button" id="fullPlay">▶ Play</button>
+              <button type="button" id="fullNext" aria-label="One step forward" title="One step forward">→</button>
+              <div id="fullStep" class="timeline-label"></div>
+            </div>
+            <div id="fullDots" class="timeline-dots" aria-hidden="true"></div>
           </div>
-          <div id="graphWrap" class="graph-wrap"></div>
+          <div id="graphWrap" class="graph-wrap"><div id="graphFlow"></div><div id="graphVis" hidden></div></div>
           <div id="gfyNote" class="gfy-note"></div>
           <div class="legend" id="legendPr">
-            <span><i class="sw dot sw-edited"></i> edited</span>
-            <span><i class="sw dot sw-downstream"></i> affected, not edited</span>
-            <span><i class="sw dot sw-failing"></i> a targeted unit test fails</span>
-            <span><i class="sw dot sw-none"></i> not changed: code the edited code uses</span>
-            <span><i class="sw dot sw-test"></i> unit test files</span>
-            <span><i class="sw sw-pr"></i> the PR and its issue</span>
+            <span class="for-dots"><i class="sw dot sw-edited"></i> edited</span>
+            <span class="for-dots"><i class="sw dot sw-downstream"></i> affected, not edited</span>
+            <span class="for-dots"><i class="sw dot sw-failing"></i> a targeted unit test fails</span>
+            <span class="for-dots"><i class="sw dot sw-none"></i> not changed: code the edited code uses</span>
+            <span class="for-dots"><i class="sw dot sw-test"></i> unit test files</span>
+            <span class="for-dots"><i class="sw sw-pr"></i> the PR and its issue</span>
+            <span class="for-boxes"><i class="sw sw-edited"></i> edited</span>
+            <span class="for-boxes"><i class="sw sw-downstream"></i> affected, not edited</span>
+            <span class="for-boxes"><i class="sw sw-failing"></i> a targeted unit test fails</span>
           </div>
           <div class="legend" id="legendFull" hidden>
-            <span><i class="sw dot sw-edited"></i> edited by the picked commits</span>
-            <span><i class="sw dot sw-downstream"></i> affected, not edited</span>
-            <span><i class="sw dot sw-none"></i> not touched by the picked commits</span>
+            <span class="for-dots"><i class="sw dot sw-edited"></i> edited so far</span>
+            <span class="for-dots"><i class="sw dot sw-edited sw-now"></i> edited in this step (bigger, glowing)</span>
+            <span class="for-dots"><i class="sw dot sw-downstream"></i> affected, not edited</span>
+            <span class="for-dots"><i class="sw dot sw-none"></i> not touched yet</span>
+            <span class="for-boxes"><i class="sw sw-edited"></i> edited so far</span>
+            <span class="for-boxes"><i class="sw sw-edited sw-now"></i> edited in this step (pulsing)</span>
+            <span class="for-boxes"><i class="sw sw-downstream"></i> affected, not edited</span>
           </div>
-          <div class="legend">
+          <div class="legend for-dots">
             <span><i class="ln ln-solid"></i> link read straight from the code</span>
             <span><i class="ln ln-dashed"></i> link Graphify guessed (the name matches, but it could not be sure)</span>
             <span><i class="ln ln-dotted"></i> the PR edits this</span>
           </div>
-          <div class="legend"><span class="muted">An arrow points from the user to the thing it uses. A bigger dot has more links. Click a dot for details. Drag a dot to move it.</span></div>
+          <div class="legend for-dots"><span class="muted">Functions are drawn the Graphify way. An arrow points from the user to the thing it uses. A bigger dot has more links. Click a dot for details. Drag a dot to move it.</span></div>
+          <div class="legend for-boxes"><span class="muted">An arrow points from the user to the thing it uses. A dashed line is a link Graphify guessed. Click a box for details. Drag to move the map. Zoom with the + and − buttons, or hold Ctrl and scroll.</span></div>
         </div>
         <div id="reviewCard" class="card"></div>
         <div id="decisionCard" class="card"></div>
@@ -73,7 +88,10 @@
     </main>
     <button id="agentBtn" type="button" class="agent-fab" hidden>Ask the agent</button>
     <div id="agentChat" class="agent-chat" hidden></div>
+    <!-- Functions level: vis-network, the library Graphify's own graph.html uses. -->
     <script src="vendor/vis-network/vis-network.min.js"></script>
+    <!-- Concepts and Files levels: React Flow + Dagre. Built from src/graph/main.jsx by `npm run build:graph`. -->
+    <script src="graph.bundle.js"></script>
     <script type="module" src="app.js"></script>
   </body>
 </html>

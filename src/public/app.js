@@ -4,7 +4,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const short = (sha) => (sha ?? "").slice(0, 7);
 const chip = (text, cls) => `<span class="chip ${esc(cls ?? text)}">${esc(text)}</span>`;
 
-const state = { revisions: null, prId: null, sha: null, level: "function", sel: null, model: null, notice: null, descView: "author", mapScope: "pr", full: null, fullCommit: "all" };
+const state = { revisions: null, prId: null, sha: null, level: "function", sel: null, model: null, notice: null, descView: "author", mapScope: "pr", full: null, fullStep: 0, fullRun: 0, fullTimer: null };
 const sourceCache = new Map();
 
 // ---------- data ----------
@@ -151,12 +151,13 @@ function renderDescription() {
   };
 }
 
-// ---------- graph: drawn the Graphify way ----------
-// Graphify's own graph.html draws its graph.json with vis-network 9.1.6: dots sized by
-// how many links they have, a force layout (forceAtlas2Based), solid lines for links read
-// from the code (EXTRACTED) and dashed lines for links it guessed (INFERRED). This is the
-// same library (vendored, no CDN) with the same settings. One change: a dot's colour shows
-// its review state, not Graphify's community.
+// ---------- graph ----------
+// Two ways to draw, picked by level (see drawGraph):
+// - Concepts and Files: boxes, drawn by React Flow + Dagre (src/graph/main.jsx -> graph.bundle.js).
+// - Functions: dots, drawn the Graphify way. Graphify's own graph.html draws its graph.json with
+//   vis-network 9.1.6: dots sized by how many links they have, a force layout (forceAtlas2Based),
+//   solid lines for links read from the code (EXTRACTED), dashed for links it guessed (INFERRED).
+//   Same library (vendored, no CDN), same settings. A dot's colour shows its review state.
 const clip = (s, n) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
 function badgeFor(n) {
   if (n.badge !== undefined) return n.badge;
@@ -168,7 +169,7 @@ function badgeFor(n) {
   return null;
 }
 const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-const gfy = { network: null, key: null, onNode: null, onEdge: null, nodeIds: new Set(), edgeIds: new Set() };
+const gfy = { network: null, nodeSet: null, edgeSet: null, key: null, look: null, fontScale: 1, timer: null, onNode: null, onEdge: null, nodeIds: new Set(), edgeIds: new Set() };
 const isUnitTest = (n) => n.type === "testfile" || n.type === "test" || n.id === "concept:tests";
 /** Show which dot or link is picked, without redrawing (so the layout and zoom stay put). */
 function markSelection() {
@@ -177,17 +178,30 @@ function markSelection() {
   if (["node", "fullnode"].includes(sel?.type) && gfy.nodeIds.has(sel.id)) gfy.network.selectNodes([sel.id], false);
   else if (sel?.type === "edge" && gfy.edgeIds.has(sel.id)) gfy.network.selectEdges([sel.id]);
 }
-function drawGraph(el, nodes, allEdges, onNode, onEdge) {
+function dropDots() {
+  clearInterval(gfy.timer);
+  gfy.network?.destroy();
+  gfy.network = null;
+  gfy.key = null;
+}
+/** Picks the drawing for the level: dots (Graphify way) for Functions, boxes (React Flow) for Concepts and Files. */
+function drawGraph(nodes, edges, onNode, onEdge) {
+  const dots = state.level === "function";
+  $("graphFlow").hidden = dots;
+  $("graphVis").hidden = !dots;
+  $("graphWrap").parentElement.dataset.draw = dots ? "dots" : "boxes";
+  if (dots) return drawDots($("graphVis"), nodes, edges, onNode, onEdge);
+  dropDots();
+  drawBoxes($("graphFlow"), nodes, edges, onNode, onEdge);
+}
+function drawDots(el, nodes, allEdges, onNode, onEdge) {
   const ids = new Set(nodes.map((n) => n.id));
   const edges = allEdges.filter((e) => ids.has(e.from) && ids.has(e.to));
   gfy.onNode = onNode;
   gfy.onEdge = onEdge;
-  const key = JSON.stringify([document.documentElement.dataset.theme, nodes.map((n) => [n.id, n.state, n.evidence, n.badge]), edges.map((e) => [e.id, e.resolution])]);
-  if (gfy.network && gfy.key === key && el.querySelector(".gfy-canvas")) return markSelection();
-  gfy.network?.destroy();
-  gfy.key = key;
-  gfy.nodeIds = ids;
-  gfy.edgeIds = new Set(edges.map((e) => e.id));
+  // key = what is on the map (a change rebuilds it). look = how it is coloured (a change only repaints, so dots stay put).
+  const key = JSON.stringify([document.documentElement.dataset.theme, state.mapScope, state.fullRun, nodes.map((n) => n.id), edges.map((e) => [e.id, e.resolution])]);
+  const look = JSON.stringify(nodes.map((n) => [n.state, n.evidence, n.badge, n.now]));
 
   const C = Object.fromEntries(["ink", "muted", "line", "card", "bg", "soft", "edited", "down", "bad", "req", "test"].map((k) => [k, cssVar(`--${k}`)]));
   const byId = new Map(nodes.map((n) => [n.id, n]));
@@ -201,18 +215,19 @@ function drawGraph(el, nodes, allEdges, onNode, onEdge) {
     const deg = degree.get(n.id) ?? 0;
     const anchor = n.type === "pr" || n.type === "requirement";
     const fill = n.evidence === "contradicted" ? C.bad : n.state === "edited" ? C.edited : n.state === "downstream" ? C.down : n.type === "pr" ? C.ink : n.type === "requirement" ? C.req : isUnitTest(n) ? C.card : C.line;
-    const border = lit(n) ? fill : isUnitTest(n) ? C.test : C.muted;
+    const border = n.now ? C.ink : lit(n) ? fill : isUnitTest(n) ? C.test : C.muted;
     const badge = badgeFor(n);
     return {
       id: n.id,
       label: clip(n.type === "pr" ? n.label.split(":")[0] : n.label, 30),
       title: [n.label, n.sub, badge?.[0]].filter(Boolean).join("\n"),
       shape: anchor ? "diamond" : "dot",
-      // Graphify's rule: a dot grows with the number of links it has.
-      size: anchor ? 13 : 9 + 19 * (deg / maxDeg),
+      // Graphify's rule: a dot grows with the number of links it has. A dot edited in this step is bigger and glows.
+      size: (anchor ? 13 : 9 + 19 * (deg / maxDeg)) * (n.now ? 1.35 : 1),
       color: { background: fill, border, highlight: { background: fill, border: C.ink }, hover: { background: fill, border: C.ink } },
-      borderWidth: lit(n) ? 1.5 : 1.2,
+      borderWidth: n.now ? 3.5 : lit(n) ? 1.5 : 1.2,
       borderWidthSelected: 4,
+      shadow: n.now ? { enabled: true, color: fill, size: 26, x: 0, y: 0 } : { enabled: false },
       // On a crowded map, Graphify only names the busy dots. The rest show their name on hover.
       font: { size: crowded && !lit(n) && deg < maxDeg * 0.15 ? 0 : lit(n) ? 15 : 13, color: lit(n) ? C.ink : C.muted, face: "system-ui, Segoe UI, sans-serif", strokeWidth: 3, strokeColor: C.bg },
       // Graphify's start positions: a spiral. The same graph always settles the same way.
@@ -237,12 +252,32 @@ function drawGraph(el, nodes, allEdges, onNode, onEdge) {
       arrows: { to: { enabled: true, scaleFactor: 0.5 } },
     };
   });
+  // A big graph is zoomed out to fit. Grow the names so they can still be read.
+  const grow = (font) => ({ ...font, size: font.size ? Math.min(30, Math.round(font.size * gfy.fontScale)) : 0 });
+
+  if (gfy.network && gfy.key === key && el.querySelector(".gfy-canvas")) {
+    if (gfy.look !== look) {
+      // Same dots, new colours (a step on the Full map): repaint in place.
+      gfy.look = look;
+      gfy.nodeSet.update(visNodes.map(({ x, y, ...n }) => ({ ...n, font: grow(n.font) })));
+      gfy.edgeSet.update(visEdges);
+    }
+    return markSelection();
+  }
+  dropDots();
+  gfy.key = key;
+  gfy.look = look;
+  gfy.fontScale = 1;
+  gfy.nodeIds = ids;
+  gfy.edgeIds = new Set(edges.map((e) => e.id));
 
   el.innerHTML = `<div class="gfy-canvas" role="img" aria-label="Impact map graph"></div>
     <div class="gfy-zoom"><button type="button" data-zoom="in" aria-label="Zoom in">+</button><button type="button" data-zoom="out" aria-label="Zoom out">−</button><button type="button" data-zoom="fit">Fit</button></div>`;
   const canvas = el.querySelector(".gfy-canvas");
-  const nodeSet = new vis.DataSet(visNodes);
-  const network = new vis.Network(canvas, { nodes: nodeSet, edges: new vis.DataSet(visEdges) }, {
+  // Every dot starts hidden. Once the layout has settled, the dots come in a few at a time, busiest first.
+  const nodeSet = new vis.DataSet(visNodes.map((n) => ({ ...n, hidden: true })));
+  const edgeSet = new vis.DataSet(visEdges);
+  const network = new vis.Network(canvas, { nodes: nodeSet, edges: edgeSet }, {
     physics: {
       enabled: true,
       solver: "forceAtlas2Based",
@@ -255,13 +290,24 @@ function drawGraph(el, nodes, allEdges, onNode, onEdge) {
     edges: { smooth: { type: "continuous", roundness: 0.2 }, selectionWidth: 2, hoverWidth: 1 },
   });
   gfy.network = network;
+  gfy.nodeSet = nodeSet;
+  gfy.edgeSet = edgeSet;
   // Like Graphify: once the layout has settled, stop the physics so dots stay where you drag them.
   network.once("stabilizationIterationsDone", () => {
     network.setOptions({ physics: { enabled: false } });
-    network.fit();
-    // A big graph is zoomed out to fit. Grow the names so they can still be read.
+    network.fit({ nodes: [...ids] });
     const scale = network.getScale();
-    if (scale < 0.85) nodeSet.update(visNodes.filter((n) => n.font.size).map((n) => ({ id: n.id, font: { ...n.font, size: Math.min(30, Math.round(n.font.size / scale)) } })));
+    gfy.fontScale = scale < 0.85 ? 1 / scale : 1;
+    const order = [...ids].sort((a, b) => (degree.get(b) ?? 0) - (degree.get(a) ?? 0));
+    const per = Math.max(1, Math.ceil(order.length / 28));
+    let i = 0;
+    gfy.timer = setInterval(() => {
+      const batch = order.slice(i, i + per);
+      i += per;
+      // Read the dots again: a step may have recoloured them while they were coming in.
+      nodeSet.update(nodeSet.get(batch).map((n) => ({ id: n.id, hidden: false, font: grow(n.font) })));
+      if (i >= order.length) clearInterval(gfy.timer);
+    }, 50);
   });
   network.on("click", (p) => {
     if (p.nodes.length) gfy.onNode(p.nodes[0]);
@@ -316,37 +362,101 @@ function renderGraph() {
   $("legendFull").hidden = !full;
   if (full) return renderFull();
   const edges = m.graph.edges.filter((e) => e.level === state.level);
-  drawGraph($("graphWrap"), m.graph.nodes.filter((n) => n.level === state.level), edges, selectNode, (id) => select({ type: "edge", id }));
+  drawGraph(m.graph.nodes.filter((n) => n.level === state.level), edges, selectNode, (id) => select({ type: "edge", id }));
   renderGraphNote(edges);
+}
+/** Hands the boxes and links to the React Flow graph (src/graph/main.jsx, built into graph.bundle.js). */
+function drawBoxes(el, nodes, edges, onNode, onEdge) {
+  const affected = (n) => n.state !== "none" || n.type === "pr" || n.type === "requirement";
+  const nodeById = new Map(nodes.map((n) => [n.id, n]));
+  // A test is "in focus" when it reaches something affected.
+  const focusTests = new Set(edges.filter((e) => e.kind === "tests" && affected(nodeById.get(e.to) ?? {})).map((e) => e.from));
+  const lit = (n) => Boolean(n) && (affected(n) || focusTests.has(n.id));
+  const full = state.mapScope === "full";
+  window.ImpactGraph.render(el, {
+    // The graph forms and fits itself again only when this key changes. A step on the Full map keeps it.
+    viewKey: full ? `full|${state.level}|${state.fullRun}` : `pr|${state.prId}|${state.sha}|${state.level}`,
+    nodes: nodes.map((n) => ({
+      id: n.id, type: n.type, state: n.state ?? "none", label: n.label, sub: n.sub ?? "",
+      badge: badgeFor(n), isNew: n.change === "added", failing: n.evidence === "contradicted", dim: !full && !lit(n), now: Boolean(n.now),
+      selected: ["node", "fullnode"].includes(state.sel?.type) && state.sel.id === n.id,
+    })),
+    edges: edges.map((e) => ({
+      id: e.id, from: e.from, to: e.to, kind: e.kind,
+      inferred: e.resolution === "inferred" && e.kind === "calls", added: e.change === "added",
+      dim: !full && !(lit(nodeById.get(e.from)) && lit(nodeById.get(e.to))),
+      selected: state.sel?.type === "edge" && state.sel.id === e.id,
+      title: `${e.kind}${e.change === "added" ? " · new in this PR" : ""}${e.anchor ? ` · ${e.anchor.file}:${e.anchor.line}` : ""}`,
+    })),
+    onNode,
+    onEdge,
+  });
 }
 
 // ---------- full map: the whole repo, with commits from every PR laid over it ----------
-async function setScope(scope) {
+async function setScope(scope, { play = true } = {}) {
   state.mapScope = scope;
   state.sel = null;
+  stopFull();
   if (scope === "full") {
     state.level = "concept";
     if (!state.full) state.full = await api("/api/fullmap");
+    if (play) playFull(0);
   }
   writeHash();
   render();
 }
-const pickedCommits = () => (state.fullCommit === "all" ? state.full.commits : state.full.commits.filter((c) => c.sha === state.fullCommit));
+// The Full map is a film: step 0 is the repo before any PR, then one commit is added per step.
+const FULL_STEP_MS = 2600;
+function stopFull() {
+  clearInterval(state.fullTimer);
+  state.fullTimer = null;
+}
+function playFull(from) {
+  stopFull();
+  if (from !== undefined) {
+    state.fullStep = from;
+    state.fullRun++; // a new run: the graph forms again
+  }
+  state.fullTimer = setInterval(() => {
+    if (state.mapScope !== "full") return stopFull();
+    if (state.fullStep < state.full.commits.length) state.fullStep++;
+    if (state.fullStep >= state.full.commits.length) stopFull();
+    renderGraph();
+  }, FULL_STEP_MS);
+}
 const FULL_HINT = {
   concept: "Whole repo, by area. A link means one area uses the other.",
   file: "Every file a demo PR edits or reaches. The rest of the repo is not indexed at this level.",
   function: "Every function a demo PR edits or reaches. The rest of the repo is not indexed at this level.",
 };
 function renderFull() {
-  const f = state.full, level = state.level;
+  const f = state.full, level = state.level, last = f.commits.length;
+  const step = (state.fullStep = Math.max(0, Math.min(last, state.fullStep)));
+  const cur = step ? f.commits[step - 1] : null;
   $("fullHint").textContent = `${FULL_HINT[level]} Snapshot of ${f.repo}: ${f.totals.files} files, taken ${f.takenAt.slice(0, 10)}.`;
-  $("fullPills").innerHTML = `<button type="button" class="pill ${state.fullCommit === "all" ? "active" : ""}" data-sha="all">All commits</button>` +
-    f.commits.map((c) => `<button type="button" class="pill ${state.fullCommit === c.sha ? "active" : ""}" data-sha="${c.sha}" title="${esc(c.message)}">PR #${c.prNumber} · commit ${c.index} <span class="mono">${c.short}</span>${c.madeUp ? " · made up" : ""}</button>`).join("");
-  for (const b of $("fullPills").querySelectorAll("button")) b.onclick = () => {
-    state.fullCommit = b.dataset.sha;
-    render();
+  $("fullStep").innerHTML = cur
+    ? `<strong>Step ${step} of ${last}</strong> · PR #${cur.prNumber} · commit ${cur.index} <span class="mono">${cur.short}</span>${cur.madeUp ? ` <span class="tag warn">made up</span>` : ""}<div class="muted">${esc(cur.message)}</div>`
+    : `<strong>Start</strong> · the repo before any PR<div class="muted">Each step adds one commit. Press → or Play.</div>`;
+  $("fullDots").innerHTML = Array.from({ length: last + 1 }, (_, i) => `<i class="${i <= step ? "on" : ""} ${i === step ? "cur" : ""}"></i>`).join("");
+  const go = (to) => {
+    stopFull();
+    state.fullStep = to;
+    renderGraph();
   };
-  const picked = pickedCommits();
+  $("fullPrev").disabled = step === 0;
+  $("fullNext").disabled = step === last;
+  $("fullPrev").onclick = () => go(step - 1);
+  $("fullNext").onclick = () => go(step + 1);
+  const playing = Boolean(state.fullTimer);
+  $("fullPlay").textContent = playing ? "❚❚ Pause" : step === last ? "↻ Replay" : "▶ Play";
+  $("fullPlay").onclick = () => {
+    if (playing) stopFull();
+    else playFull(step === last ? 0 : undefined);
+    renderGraph();
+  };
+  const picked = f.commits.slice(0, step);
+  const now = new Set(cur?.edited[level] ?? []);
   // At the concept level, an area that uses an edited area (directly or through others) is affected.
   const editedIds = new Set(picked.flatMap((c) => c.edited[level]));
   const usesEdited = new Set();
@@ -361,9 +471,9 @@ function renderFull() {
   const nodes = f.levels[level].nodes.map((n) => {
     const editedBy = picked.filter((c) => c.edited[level].includes(n.id)).length;
     const affected = !editedBy && (usesEdited.has(n.id) || picked.some((c) => c.affected[level].includes(n.id)));
-    return { ...n, state: editedBy ? "edited" : affected ? "downstream" : "none", badge: editedBy ? [`EDITED${editedBy > 1 ? ` · ${editedBy} COMMITS` : ""}`, "edited"] : affected ? ["AFFECTED", "info"] : null };
+    return { ...n, now: now.has(n.id), state: editedBy ? "edited" : affected ? "downstream" : "none", badge: editedBy ? [now.has(n.id) ? "EDITED NOW" : `EDITED${editedBy > 1 ? ` · ${editedBy} COMMITS` : ""}`, "edited"] : affected ? ["AFFECTED", "info"] : null };
   });
-  drawGraph($("graphWrap"), nodes, f.levels[level].edges, (id) => select({ type: "fullnode", id }), null);
+  drawGraph(nodes, f.levels[level].edges, (id) => select({ type: "fullnode", id }), null);
   renderGraphNote(f.levels[level].edges);
 }
 function fullNodeHtml(id) {
@@ -761,9 +871,13 @@ async function init() {
   if (q.get("doc") === "context") openContext();
   else if (q.get("doc")) select({ type: "doc", file: q.get("doc") });
   if (q.get("map") === "full") {
-    if (q.get("commit")) state.fullCommit = q.get("commit");
+    // ?step=3 or ?commit=<sha> opens the Full map on that step, paused. No value: it plays from the start.
     const level = state.level;
-    await setScope("full");
+    const fixed = q.get("step") !== null || q.get("commit") !== null;
+    await setScope("full", { play: !fixed });
+    if (q.get("step") !== null) state.fullStep = Number(q.get("step")) || 0;
+    else if (q.get("commit")) state.fullStep = state.full.commits.findIndex((c) => c.sha === q.get("commit")) + 1;
+    if (fixed && !h.level) render();
     if (h.level) {
       state.level = level;
       render();
