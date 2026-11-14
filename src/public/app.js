@@ -680,7 +680,8 @@ function blastScore(b) {
   const outside = files.filter((x) => x.zone === "outside").length, wide = files.filter((x) => x.zone === "wide").length;
   const where = outside ? { tone: "bad", text: `The real change edits ${things(outside, "code file", "code files")} that no agent touched.` }
     : wide ? { tone: "warn", text: `The real change edits ${things(wide, "code file", "code files")} that only the agent that changes too much touched.` }
-    : { tone: "ok", text: `The real change edits ${things(n, "code file", "code files")}. The agents edited ${n === 1 ? "it" : "them"} too.` };
+    : n ? { tone: "ok", text: `The real change edits ${things(n, "code file", "code files")}. The agents edited ${n === 1 ? "it" : "them"} too.` }
+    : { tone: "ok", text: "The real change edits no code files, only docs or unit tests." };
   const tests = extra ? { tone: "warn", text: `${things(extra, "of its unit tests fails", "of its unit tests fail")} on every agent's fix. So it does something no agent thought was needed.` }
     : b.tests ? { tone: "ok", text: "Its unit tests also pass on the agents' fixes." } : null;
   return { score, tone: trustTone(score), verdict: b.label.text, why: [where, tests].filter(Boolean) };
@@ -1004,7 +1005,7 @@ function playSwarm() {
       </ul>
       <div id="swarmMatrix" class="swarm-matrix"></div>
       <details class="blast-runs"><summary>How similarity is worked out</summary>
-        <p><b>By files and functions</b> (the main score). We list what each change touches in product code (not docs, not unit tests): the files, and the functions in them that already existed. The real change touches: ${s.real.map((x) => `<code>${esc(x)}</code>`).join(", ")}. Similarity = things both changes touch, divided by things either one touches. 100% means the very same files and functions.</p>
+        <p><b>By files and functions</b> (the main score). We list what each change touches in product code (not docs, not unit tests): the files, and the functions in them that already existed. The real change touches: ${s.real.map((x) => `<code>${esc(x)}</code>`).join(", ") || "no product code"}. Similarity = things both changes touch, divided by things either one touches. 100% means the very same files and functions.</p>
         <p><b>By changed lines.</b> We list every code line each change adds or removes in product code (blank lines left out, spaces squeezed). Similarity = lines both changes add or remove, divided by lines either one does. This one sees inside a function: two different fixes in the same function score low. The real change adds or removes ${s.realLines.length} lines.</p>
         <p>${esc(s.how)}</p>
         <p>Trust score = the share of agents whose change is similar to the real one, out of 100. A fixed rule, no AI.</p>
