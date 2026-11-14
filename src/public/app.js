@@ -1,4 +1,5 @@
 // Code Review Impact Map - frontend. No framework. One model per (PR, revision).
+import { prComment } from "./lib/comment.mjs";
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const short = (sha) => (sha ?? "").slice(0, 7);
@@ -1819,6 +1820,7 @@ async function act(b) {
   if (a === "since") return select({ type: "since" });
   if (a === "run") return select({ type: "run" });
   if (a === "commit") return load(state.prId, b.dataset.sha);
+  if (a === "comment") return copyComment(b);
   if (a === "evalcase") {
     const on = b.dataset.on ? true : !m.evalCase; // the button under the chat turns the mark on and off
     await api("/api/evalcase", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pr: state.prId, on }) });
@@ -1827,6 +1829,26 @@ async function act(b) {
     return bot(on
       ? `<p><b>Saved.</b> This PR is now a test for the AI reviewer: a good reviewer must flag it.</p><p class="muted">Click “✓ Eval test case” under the chat to remove the mark.</p>`
       : `<p><b>Removed.</b> This PR is no longer an eval test case.</p>`);
+  }
+}
+/** "Copy as PR comment": the first screen's review as Markdown on the clipboard. If the copy fails, the text is shown to copy by hand. */
+async function copyComment(b) {
+  const a = advice(), rows = scoreRows();
+  const text = prComment({
+    model: state.model,
+    verdict: a.verdict[0],
+    score: a.waiting ? null : a.score,
+    points: openIssues(),
+    notRun: rows.filter((r) => r.tone === "plain").map((r) => r.name),
+    url: location.href,
+  });
+  try {
+    await navigator.clipboard.writeText(text);
+    b.dataset.label ??= b.textContent;
+    b.textContent = "Copied ✓";
+    setTimeout(() => (b.textContent = b.dataset.label), 1500);
+  } catch {
+    bot(`<p>Copy this into the PR on GitHub:</p><pre class="raw doc">${esc(text)}</pre>`, 0);
   }
 }
 function initChat() {
