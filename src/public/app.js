@@ -520,14 +520,14 @@ async function loadBlast() {
 function selectBlast(id) {
   const b = state.blast[state.prId];
   const item = b?.items?.find((x) => x.id === id);
-  // Only the real change's files can be opened.
-  if (!item || !item.by.real) return;
+  if (!item) return;
   state.level = item.level;
   select({ type: "blast", id });
 }
 const blastPips = (by) => ["minimal", "normal", "wide"].map((a) => `<i class="pip pip-${a}${by[a] ? " on" : ""}" title="${esc(BLAST_SHORT[a])}${by[a] ? ": touched it" : ": did not touch it"}"></i>`).join("");
 function blastBox(x) {
   const tags = [
+    x.by.real ? `<span class="btag real">REAL CHANGE</span>` : "",
     x.agents === 3 ? `<span class="btag all">ALL 3 AGENTS</span>` : "",
     x.kind === "test" ? `<span class="btag">UNIT TEST</span>` : x.kind === "doc" ? `<span class="btag">DOC</span>` : "",
   ].join("");
@@ -551,23 +551,15 @@ function renderBlast() {
     el.innerHTML = `<p class="blast-what">We give the same task to 3 agents: one careful, one normal, one that changes too much. What they touch is the "blast radius" of the task. Then we lay the real change over it.</p><div class="callout info">${esc(b.message)}</div>`;
     return;
   }
-  // Only the real change's files are boxes. Each one sits in the zone of the agents that also touched it.
-  // Files only the agents touched are a faint line in their zone: not clickable.
-  const allFiles = b.items.filter((x) => x.level === "file");
-  const files = allFiles.filter((x) => x.by.real);
-  const agentOnly = allFiles.filter((x) => !x.by.real);
+  const files = b.items.filter((x) => x.level === "file");
   const zoneRank = { tight: 0, normal: 1, wide: 2, outside: 3 };
-  const sorted = (list) => [...list].sort((p, q) => zoneRank[p.zone] - zoneRank[q.zone] || p.label.localeCompare(q.label));
+  const sorted = (list) => [...list].sort((p, q) => zoneRank[p.zone] - zoneRank[q.zone] || (p.by.real ? 0 : 1) - (q.by.real ? 0 : 1) || p.label.localeCompare(q.label));
   const inZone = (z) => sorted(files.filter((x) => x.zone === z));
-  const boxesOr = (boxes) => (boxes.length ? `<div class="bz-boxes">${boxes.map(blastBox).join("")}</div>` : `<div class="bz-empty">No file of the real change here.</div>`);
-  const othersIn = (z) => {
-    const list = sorted(agentOnly.filter((x) => x.zone === z));
-    return list.length ? `<div class="bz-others">Agents also touched ${list.length} other file${list.length === 1 ? "" : "s"} here, not in the real change: ${list.map((x) => esc(x.label)).join(", ")}</div>` : "";
-  };
+  const boxesOr = (boxes) => (boxes.length ? `<div class="bz-boxes">${boxes.map(blastBox).join("")}</div>` : `<div class="bz-empty">Nothing here.</div>`);
   const zoneHtml = (i) => {
     if (i >= BLAST_ZONES.length) return "";
     const [z, name, text] = BLAST_ZONES[i];
-    return `<div class="bz bz-${z}"><div class="bz-title">${name} <span>${text}</span></div>${boxesOr(inZone(z))}${othersIn(z)}${zoneHtml(i + 1)}</div>`;
+    return `<div class="bz bz-${z}"><div class="bz-title">${name} <span>${text}</span></div>${boxesOr(inZone(z))}${zoneHtml(i + 1)}</div>`;
   };
   const cols = b.columns;
   const num = (n) => Number(n).toLocaleString("en");
@@ -579,12 +571,6 @@ function renderBlast() {
   const fileRows = sorted(files).map((x) => `<tr class="pick" data-blast="${esc(x.id)}">
       <th><span class="zdot z-${x.zone}" title="${zoneName[x.zone]} zone"></span>${esc(x.label)}${x.kind === "test" ? ` <span class="btag">UNIT TEST</span>` : x.kind === "doc" ? ` <span class="btag">DOC</span>` : ""}</th>
       ${cols.map((c) => `<td class="${c.id === "real" ? "real" : ""}">${delta(fileOf(c.id, x.key))}</td>`).join("")}</tr>`).join("");
-  // One faint row for the files only the agents touched, so the totals add up.
-  const otherCell = (c) => {
-    const fs = agentOnly.map((x) => fileOf(c.id, x.key)).filter(Boolean);
-    return fs.length ? `${fs.length} file${fs.length === 1 ? "" : "s"}${note(`<span class="plus">+${num(fs.reduce((s, f) => s + f.added, 0))}</span> <span class="minus">−${num(fs.reduce((s, f) => s + f.removed, 0))}</span>`)}` : `<span class="none">·</span>`;
-  };
-  const otherRow = agentOnly.length ? `<tr class="others"><th>Other files only the agents touched</th>${cols.map((c) => `<td class="${c.id === "real" ? "real" : ""}">${otherCell(c)}</td>`).join("")}</tr>` : "";
   const totalRow = `<tr class="total"><th>All files</th>${cols.map((c) => `<td class="${c.id === "real" ? "real" : ""}">${num(c.files)} file${c.files === 1 ? "" : "s"}${note(`<span class="plus">+${num(c.added)}</span> <span class="minus">−${num(c.removed)}</span>`)}</td>`).join("")}</tr>`;
   // ---- the fold: numbers below file level ----
   const list = (arr) => (arr.length ? arr.map(esc).join(", ") : "none");
@@ -600,7 +586,7 @@ function renderBlast() {
   const things = (arr) => (arr.length ? arr.map((t) => `<code>${esc(t.label)}</code>${t.kind === "doc" ? " (doc)" : t.kind === "test" ? " (unit test)" : ""}`).join(", ") : "nothing");
   const head = `<thead><tr><th></th>${cols.map((c) => `<th class="${c.id === "real" ? "real" : ""}">${esc(c.label)}${c.id !== "real" && !c.ok ? note(`<span class="bad-text">the run failed</span>`) : c.noChange ? note("made no change") : ""}</th>`).join("")}</tr></thead>`;
   const secs = (r) => (r.startedAt && r.endedAt ? `${Math.max(1, Math.round((new Date(r.endedAt) - new Date(r.startedAt)) / 1000))} s` : "");
-  el.innerHTML = `<p class="blast-what">We gave the same task to 3 agents: one careful, one normal, one that changes too much. The coloured zones show how far they went. Each box is a file the real change touched. It sits in the zone of the agents that touched it too.</p>
+  el.innerHTML = `<p class="blast-what">We gave the same task to 3 agents: one careful, one normal, one that changes too much. The coloured zones show the files they touched. The thick outline is the real change.</p>
     <div class="blast-label ${esc(b.label.tone)}"><span class="stamp-label">Trust label</span><strong>${esc(b.label.text)}</strong><span>${esc(b.label.how)}</span></div>
     <div class="blast-zones">${zoneHtml(0)}
       <div class="bz bz-outside"><div class="bz-title">Outside every zone <span>No agent touched this. Only the real change did.</span></div>${boxesOr(inZone("outside"))}</div>
@@ -609,9 +595,10 @@ function renderBlast() {
       <span><i class="pip pip-minimal on"></i> careful agent</span>
       <span><i class="pip pip-normal on"></i> normal agent</span>
       <span><i class="pip pip-wide on"></i> agent that changes too much</span>
-      <span class="muted">The dots show which agents also touched that file. Click a file to see what each one changed in it.</span>
+      <span><i class="sw sw-real"></i> thick outline: the real change</span>
+      <span class="muted">Click a file to see what each one changed in it.</span>
     </div>
-    <table class="blast-table files">${head}<tbody>${fileRows}${otherRow}${totalRow}</tbody></table>
+    <table class="blast-table files">${head}<tbody>${fileRows}${totalRow}</tbody></table>
     <div class="blast-key muted"><span class="plus">+</span> lines added, <span class="minus">−</span> lines removed, · not touched. The real change is Tieto's AI-written branch, shown as a PR. ${esc(b.notBuilt)}</div>
     <details class="blast-runs"><summary>More numbers: functions, reach and overlap</summary>
       <table class="blast-table">${head}<tbody>

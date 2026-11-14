@@ -356,6 +356,3 @@ button.danger { background: var(--bad); color: var(--card); border-color: var(--
 .z-outside { border: 1.5px dashed var(--bad); }
 .blast-key { font-size: 12px; margin-top: 8px; }
 .bbox { width: 250px; }
-/* Blast radius: files only the agents touched are a faint line, not boxes. */
-.bz-others { margin-top: 8px; font-size: 12px; color: var(--muted); font-style: italic; }
-.blast-table tr.others th, .blast-table tr.others td { color: var(--muted); font-weight: 400; font-style: italic; font-family: inherit; word-break: normal; }
