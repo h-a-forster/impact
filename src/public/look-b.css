@@ -1,0 +1,245 @@
+/* Look B: Instrument. A quiet, dense dev tool: neutral near-black, hairlines, mono for data, white for the primary action.
+   Blue is for focus only. Loads after style.css and only overrides colours, type, borders, radius and spacing.
+
+   Tokens
+     bg #0B0C0E  panel #131418  raised #1A1B20  line #24262B
+     ink #EDEEF0  muted #8A8F98  focus #7AA2FF
+     bad #F2555A  warn #E8A33D  ok #4CC38A
+   Type roles
+     chrome  Segoe UI Variable Small 12-13px
+     prose   Segoe UI Variable Text 14px
+     heading 600, -0.015em
+     data    Cascadia Mono / Consolas 12.5px
+   Radius 6px (4px kbd and badges). Spacing 4/8/12/16/24. */
+
+:root[data-theme="dark"] {
+  --bg: #0B0C0E;
+  --card: #131418;
+  --soft: #1A1B20;
+  --line: #24262B;
+  --ink: #EDEEF0;
+  --muted: #8A8F98;
+  --focus: #7AA2FF;
+  --accent: #EDEEF0;
+  --bad: #F2555A;
+  --warn: #E8A33D;
+  --ok: #4CC38A;
+  --bad-bg: color-mix(in srgb, #F2555A 10%, #0B0C0E);
+  --warn-bg: color-mix(in srgb, #E8A33D 10%, #0B0C0E);
+  --ok-bg: color-mix(in srgb, #4CC38A 10%, #0B0C0E);
+  --edited: #EDEEF0;
+  --edited-bg: #1A1B20;
+  --down: #B4B8C0;
+  --down-bg: #1A1B20;
+  --test: #8A8F98;
+  --test-bg: #131418;
+  --req: #B4B8C0;
+  --req-bg: #131418;
+  --mark-bg: color-mix(in srgb, #E8A33D 16%, #0B0C0E);
+  --mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
+  --ui: "Segoe UI Variable Small", "Segoe UI", system-ui, sans-serif;
+  --prose: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --r: 6px;
+}
+
+body { font: 13px/1.5 var(--ui); background: var(--bg); }
+h2, h3, strong.brand, .pr-title, .chat-title strong, .canvas-head strong { font-weight: 600; letter-spacing: -0.015em; }
+h3 { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600; }
+code, .mono { font-family: var(--mono); font-size: 12.5px; }
+code { border-radius: 4px; background: var(--soft); }
+
+/* Focus: the only blue on the page */
+:focus { outline: none; }
+:focus-visible, .gnode:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.ask:focus-within { border-color: var(--focus); }
+
+/* Links: ink with a quiet underline, not blue */
+.link, .about-link, .back, .tool-details > summary, .issue-more summary, .minor > summary,
+.short .since-line summary, .about-body summary, .blast-runs summary { color: var(--ink); }
+.link { text-decoration-color: var(--muted); text-underline-offset: 3px; }
+.link:hover { text-decoration-color: var(--ink); }
+.short .since-line summary, .tool-details > summary, .issue-more summary { color: var(--muted); }
+.short .since-line summary:hover, .tool-details > summary:hover, .issue-more summary:hover { color: var(--ink); }
+
+/* Buttons: white primary, hairline secondary */
+button { border-radius: var(--r); border-color: var(--line); background: transparent; }
+button:hover:not(:disabled) { border-color: var(--muted); }
+button.primary, .choice.main, .send { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.choice.main:hover:not(:disabled), button.primary:hover:not(:disabled) { background: #FFFFFF; border-color: #FFFFFF; }
+.choice.main span { color: var(--bg); opacity: .7; }
+.choice { border-radius: var(--r); padding: 8px 12px; background: transparent; }
+.choice:hover:not(.main) { background: var(--soft); }
+/* Impact Map: the feature to show, as large as the merge button, outlined so merge stays the one solid action */
+.choice.map { border: 1px solid var(--ink); color: var(--ink); }
+
+/* Rail */
+.rail { background: var(--card); padding: 16px 8px; }
+.rail-top { gap: 12px; padding: 0 8px 8px; }
+.brand { font-size: 14px; }
+.rail-new { border-radius: var(--r); padding: 6px 10px; font-size: 13px; }
+.rail-label { font-size: 12px; font-weight: 500; letter-spacing: .01em; padding: 12px 8px 4px; }
+.rail-pr { border-radius: var(--r); padding: 8px 10px; font-size: 13px; color: var(--muted); }
+.rail-pr:hover { background: var(--soft); color: var(--ink); }
+.rail-pr.active { background: var(--soft); color: var(--ink); font-weight: 500; }
+/* Each PR's bar takes its advice colour: red, amber, green; grey until it is known */
+.rail-pr { --tone: var(--line); box-shadow: inset 3px 0 0 var(--tone); border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.rail-pr.tone-bad { --tone: var(--bad); } .rail-pr.tone-warn { --tone: var(--warn); } .rail-pr.tone-ok { --tone: var(--ok); }
+.rail-num { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.rail-foot { font-size: 12px; border-top-color: var(--line); }
+
+/* Chat head and commit pills as one segmented control */
+.chat { background: var(--bg); }
+.chat-head { padding: 8px 16px; min-height: 48px; }
+.chat-title strong { font-size: 13px; }
+.chat-title span { font-size: 13px; }
+.pills { gap: 0; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.pill { border: 0; border-left: 1px solid var(--line); border-radius: 0; padding: 4px 12px; font-size: 12px; background: transparent; color: var(--muted); }
+.pill:first-child { border-left: 0; }
+.pill:hover:not(:disabled) { color: var(--ink); background: var(--soft); }
+.pill.active { background: var(--ink); color: var(--bg); }
+.pill .mono { font-size: 12px; opacity: .75; }
+.pills.wrap { border: 0; gap: 4px; }
+
+/* Thread: prose at 14px, quiet; no fade-up on every message */
+.thread { padding: 24px 16px 8px; }
+.thread-inner { font: 14px/1.6 var(--prose); gap: 24px; }
+.msg.new { animation: none; }
+.bot-mark { width: 20px; height: 20px; margin-top: 3px; border-radius: var(--r); background: var(--soft); box-shadow: inset 0 0 0 1px var(--line); }
+.bot-mark::after { inset: 7px; border-radius: 1px; background: var(--ink); }
+.msg.bot { grid-template-columns: 20px minmax(0, 1fr); gap: 16px; }
+.bubble { border-radius: var(--r); background: var(--soft); border: 1px solid var(--line); padding: 8px 12px; }
+
+.pr-title { font-size: 20px; line-height: 1.3; }
+.pr-sub { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+
+/* Eyebrow labels that only add reading are hidden; the blocks speak for themselves */
+.short-label, .tldr-tag { display: none; }
+.stamp-label, .bars-title, .trust-num span { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 12px; color: var(--muted); }
+
+/* PR and review in short: plain text under a hairline, no colour bars, capped line length.
+   The only colour bar on the first screen belongs to the verdict. */
+.short { border-left: 0; padding: 0; margin: 0 0 16px; max-width: 64ch; }
+.short + .short { border-top: 1px solid var(--line); padding-top: 12px; }
+.short > p { font-size: 14px; line-height: 1.55; margin: 0 0 6px; }
+.short .tags { margin-bottom: 6px; }
+.short .link { font-size: 13px; color: var(--muted); }
+.short .link:hover { color: var(--ink); }
+
+/* Verdict block: the first thing the eye lands on. One box, thick risk-colour bar, verdict large, score beside it. */
+.short.advice {
+  max-width: none; border: 1px solid var(--line); border-left: 6px solid var(--muted); border-radius: var(--r);
+  background: var(--card); padding: 14px 18px 12px; margin: 4px 0 20px;
+}
+.short.advice.ok { border-left-color: var(--ok); background: color-mix(in srgb, var(--ok) 6%, var(--card)); }
+.short.advice.warn { border-left-color: var(--warn); background: color-mix(in srgb, var(--warn) 6%, var(--card)); }
+.short.advice.bad { border-left-color: var(--bad); background: color-mix(in srgb, var(--bad) 6%, var(--card)); }
+.advice-main { flex-wrap: wrap; justify-content: flex-start; align-items: baseline; column-gap: 16px; row-gap: 10px; margin: 0 0 10px; }
+.advice-main strong { font-size: 26px; line-height: 1.15; font-weight: 650; letter-spacing: -0.02em; }
+.advice-score { font-family: var(--mono); font-size: 22px; font-weight: 500; letter-spacing: -0.02em; }
+.advice-score small { font-family: var(--mono); font-size: 12px; letter-spacing: 0; color: var(--muted); font-weight: 400; }
+.advice-main::after {
+  content: ""; flex-basis: 100%; height: 4px;
+  background: linear-gradient(to right, currentColor calc(round(down, var(--score, 0) * 1%, 5%)), var(--line) 0);
+  -webkit-mask: repeating-linear-gradient(to right, #000 0 calc(5% - 2px), transparent calc(5% - 2px) 5%);
+          mask: repeating-linear-gradient(to right, #000 0 calc(5% - 2px), transparent calc(5% - 2px) 5%);
+}
+.short.advice > p { font-size: 14px; line-height: 1.5; margin: 0 0 6px; }
+.short.advice .link { font-size: inherit; color: var(--ink); font-weight: 600; }
+.short.advice > p.advice-tally { font-family: var(--mono); font-size: 11.5px; text-align: left; margin: 0 0 8px; }
+.short.advice > p.advice-outside { font-size: 13px; color: var(--muted); }
+.short.advice > p.advice-outside b { color: var(--ink); font-weight: 600; }
+.short.advice .since-line { font-size: 12px; margin: 4px 0 0; }
+.short.advice .since-line p { font-size: 12.5px; color: var(--muted); }
+.advice-parts { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.advice-parts b { color: var(--ink); }
+
+/* Badges: hairline in the tone colour, 10% fill, mono, sentence case */
+.tag, .chip { border-radius: 4px; padding: 1px 8px; font: 400 11.5px/1.6 var(--mono); font-weight: 400; text-transform: lowercase; border: 1px solid color-mix(in srgb, var(--muted) 50%, transparent); background: transparent; color: var(--ink); }
+.tag.ok, .chip.ok, .chip.passed, .chip.supported { border-color: color-mix(in srgb, var(--ok) 50%, transparent); background: color-mix(in srgb, var(--ok) 10%, transparent); color: var(--ok); }
+.tag.bad, .chip.bad, .chip.failed, .chip.unverified { border-color: color-mix(in srgb, var(--bad) 50%, transparent); background: color-mix(in srgb, var(--bad) 10%, transparent); color: var(--bad); }
+.tag.warn, .chip.warn, .chip.stale, .chip.missing, .chip.pending { border-color: color-mix(in srgb, var(--warn) 50%, transparent); background: color-mix(in srgb, var(--warn) 10%, transparent); color: var(--warn); }
+.tag.info, .chip.info, .chip.edited { border-color: color-mix(in srgb, var(--ink) 35%, transparent); background: color-mix(in srgb, var(--ink) 6%, transparent); color: var(--ink); }
+
+/* Issue list bullets: small squares */
+.brief li::before { border-radius: 2px; width: 6px; height: 6px; top: .68em; }
+
+/* Tool scores: a real table with fixed columns, row rules and a key hint */
+.scores { border-radius: var(--r); border-color: var(--line); margin: 8px 0 16px; }
+.score { grid-template-columns: 160px 120px minmax(0, 1fr) auto; gap: 12px; padding: 8px 12px; background: transparent; border-top-color: var(--line); font-family: var(--ui); }
+.score:hover:not(:disabled) { background: var(--soft); }
+.score b { font-size: 13px; font-weight: 600; }
+.score .tag { justify-self: start; }
+.score-why { font-size: 13px; line-height: 1.45; }
+.score i { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; }
+.score i::before { font: 500 11px/1 var(--mono); color: var(--muted); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 3px 6px; }
+.score[data-scope="pr"] i::before { content: "I"; }
+.score[data-scope="blast"] i::before { content: "B"; }
+.score[data-scope="swarm"] i::before { content: "S"; }
+.scores-live p.score-note { font-size: 13px; }
+
+/* Issues, notes and boxes */
+.issue { border-radius: var(--r); border-left-width: 2px; background: var(--card); padding: 12px; }
+.issue-mark, .why i, .step-n { border-radius: 4px; }
+.meter, .meter i { border-radius: 1px; height: 4px; }
+.okbox, .warnbox, .callout, .notice, .since, .swarm-note, .blast-warn { border-radius: var(--r); }
+.tldr { border-radius: var(--r); border-left-width: 2px; background: var(--card); }
+.tldr-tag { background: transparent !important; padding: 2px 0; }
+.trust { border-radius: var(--r); border-left-width: 2px; }
+.trust-num b { font-family: var(--mono); font-size: 32px; font-weight: 500; }
+.trust-num small { font-family: var(--mono); }
+
+/* Composer */
+.composer { padding: 8px 16px 12px; }
+.quick { gap: 4px; }
+.quick button { border-radius: var(--r); padding: 3px 10px; font-size: 12px; }
+.quick .eval-btn { border-color: color-mix(in srgb, var(--bad) 50%, transparent); }
+.ask { border-radius: var(--r); box-shadow: none; background: var(--card); padding: 4px 4px 4px 12px; }
+.ask input { font: 14px var(--prose); }
+.send { width: 30px; height: 30px; border-radius: 4px; font-size: 14px; }
+.composer-note { font-size: 11.5px; }
+
+/* Right panel and cards */
+.canvas { background: var(--bg); }
+.canvas-head { background: var(--bg); min-height: 48px; padding: 8px 16px; }
+.canvas-head strong { font-size: 13px; }
+.canvas-body { padding: 16px; }
+.card { border-radius: var(--r); background: var(--card); padding: 16px; }
+.tabs { border-radius: var(--r); }
+.tabs button { font-size: 12px; padding: 4px 12px; color: var(--muted); border-left: 1px solid var(--line); }
+.tabs button:first-child { border-left: 0; }
+.tabs button:hover:not(:disabled) { color: var(--ink); }
+.tabs button.active { background: var(--ink); color: var(--bg); }
+.stamp, .history li, .list li, .bbox, .blast-label, .blast-tests, .blast-run, .bars, .swarm-stage, .swarm-req, .code, pre.raw { border-radius: var(--r); }
+.stamp { border-left-width: 2px; }
+.stamp-value { font-family: var(--mono); font-size: 15px; font-weight: 500; }
+.code-head { font-family: var(--ui); }
+#sidePanel { box-shadow: -12px 0 32px rgba(0, 0, 0, .5); }
+
+/* Impact Map: dotted grid at 4% white, 6px nodes, ink for edited, risk colour only for callers at risk */
+.graph-wrap { border-radius: var(--r); background: var(--bg); }
+.graph-wrap .react-flow { --xy-node-border-radius: 6px; --xy-background-color: var(--bg); }
+.graph-wrap .react-flow__background circle { fill: rgba(255, 255, 255, .04); }
+.graph-wrap .react-flow__background path { stroke: rgba(255, 255, 255, .04); }
+.gnode { border: 1px solid var(--line); border-radius: var(--r); background: var(--card); font: 12px/1.3 var(--ui); padding: 4px 10px; }
+.gnode-sub { font-family: var(--mono); font-size: 10px; }
+.gnode-badge { font-family: var(--mono); font-weight: 500; letter-spacing: 0; text-transform: lowercase; font-size: 9.5px; }
+.gnode.edited { background: var(--soft); border: 1px solid var(--ink); }
+.gnode-badge.edited { color: var(--ink); }
+.gnode.downstream { background: color-mix(in srgb, var(--warn) 8%, var(--card)); border: 1px solid var(--warn); }
+.gnode-badge.info { color: var(--warn); }
+.gnode.failing { background: color-mix(in srgb, var(--bad) 10%, var(--card)); border: 1px solid var(--bad); }
+.gnode.test, .gnode.testfile, .gnode.tests { background: var(--card); border: 1px dashed var(--muted); }
+.gnode.requirement { background: var(--card); border: 1px solid var(--line); }
+.gnode.pr { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.gnode.pr .gnode-sub { color: var(--bg); }
+.gnode.selected { box-shadow: 0 0 0 2px var(--focus); }
+.gnode.now { animation: none; box-shadow: 0 0 0 2px var(--ink); }
+.sw { border-radius: 2px; border-width: 1px; }
+.sw-edited { background: var(--soft); border-color: var(--ink); }
+.sw-downstream { background: color-mix(in srgb, var(--warn) 8%, var(--card)); border-color: var(--warn); }
+.sw-failing { background: color-mix(in srgb, var(--bad) 10%, var(--card)); border-color: var(--bad); }
+.sw-test { border-style: dashed; }
+.legend, .map-foot { font-size: 12px; color: var(--muted); }
+div.vis-tooltip { border-radius: var(--r); font: 12px/1.45 var(--ui); background: var(--soft); }
+
+@media (prefers-reduced-motion: reduce) { .gnode, .meter i { transition: none; } }

@@ -92,10 +92,27 @@ function selectNode(id) {
 }
 
 // ---------- header ----------
+// Each PR in the rail takes the colour of its advice (red, amber, green), worked out on the commit it
+// opens on. The open PR follows the commit on screen. Grey until it is known.
+const railTone = {};
+function paintRailTone(id, tone) {
+  railTone[id] = tone;
+  const b = [...$("prList").querySelectorAll(".rail-pr")].find((x) => x.dataset.pr === id);
+  if (b) b.className = b.className.replace(/\btone-\S+/, `tone-${tone}`);
+}
+function loadRailTones() {
+  for (const p of state.revisions.prs) {
+    if (p.id in railTone || p.id === state.prId || SESSION) continue;
+    railTone[p.id] = null;
+    const q = encodeURIComponent(p.id);
+    Promise.all([api(`/api/model?pr=${q}&sha=${p.commits[0].sha}`), api("/api/blast?pr=" + q), api("/api/swarm?pr=" + q)])
+      .then(([m, blast, swarm]) => { if (!m.error && railTone[p.id] === null) paintRailTone(p.id, advice(m, { blast, swarm }, p).verdict[1]); });
+  }
+}
 const GITHUB_URL = "http://localhost:3000"; // the GitHub replica
 function renderHeader() {
   // Left rail: one row per PR, like a list of chats.
-  $("prList").innerHTML = state.revisions.prs.filter((p) => !SESSION || p.id === state.prId).map((p) => `<button type="button" class="rail-pr ${p.id === state.prId ? "active" : ""}" data-pr="${esc(p.id)}" title="${esc(p.title)}"><span class="rail-num">#${p.number}</span><span class="rail-title">${esc(p.title)}</span></button>`).join("");
+  $("prList").innerHTML = state.revisions.prs.filter((p) => !SESSION || p.id === state.prId).map((p) => `<button type="button" class="rail-pr tone-${railTone[p.id] ?? "none"} ${p.id === state.prId ? "active" : ""}" data-pr="${esc(p.id)}" title="${esc(p.title)}"><span class="rail-num">#${p.number}</span><span class="rail-title">${esc(p.title)}</span></button>`).join("");
   for (const b of $("prList").querySelectorAll("button")) b.onclick = () => {
     const next = state.revisions.prs.find((p) => p.id === b.dataset.pr);
     state.notice = null;
@@ -103,6 +120,7 @@ function renderHeader() {
     $("app").classList.remove("rail-open");
     load(next.id, next.commits[0].sha, { keepSelection: false });
   };
+  loadRailTones();
   $("chatTitle").innerHTML = `<strong>PR #${currentPr().number}</strong><span>${esc(currentPr().title)}</span>`;
   $("revPills").innerHTML = revList().map((r) => `<button type="button" class="pill ${r.sha === state.sha ? "active" : ""}" data-sha="${r.sha}" title="${esc(r.message)}">${esc(r.label)} <span class="mono">${r.short}</span></button>`).join("");
   for (const b of $("revPills").querySelectorAll("button")) b.onclick = () => load(state.prId, b.dataset.sha);
@@ -1470,6 +1488,8 @@ function briefHtml() {
 }
 /** Every issue list in the chat shows the same live state. */
 function refreshIssues() {
+  const a = advice();
+  if (!a.waiting) paintRailTone(state.prId, a.verdict[1]);
   for (const el of $("thread").querySelectorAll(".advice-live")) el.innerHTML = adviceHtml();
   for (const el of $("thread").querySelectorAll(".scores-live")) el.innerHTML = scoresHtml();
   for (const el of $("thread").querySelectorAll(".issues-brief")) el.innerHTML = briefHtml();
@@ -1538,8 +1558,8 @@ function scoreRows() {
  * A fixed rule, no AI: start at 100 and take points off for what the review and the tools found.
  * Missing proof means 0: the rules refuse a sign-off there.
  */
-function advice() {
-  const m = state.model, c2 = m.classifier2, sc = ui.scores[state.prId] ?? {}, parts = [];
+function advice(m = state.model, sc = ui.scores[state.prId] ?? {}, pr = currentPr()) {
+  const c2 = m.classifier2, parts = [];
   const take = (n, why) => parts.push([n, why]);
   const important = m.review.findings.filter((f) => f.category !== "Minor").length, minor = m.review.findings.length - important;
   const blocked = c2.blockers.length > 0, red = c2.rule === "T-contradicted";
@@ -1562,7 +1582,7 @@ function advice() {
   }
   const score = blocked ? 0 : Math.max(0, 100 - parts.reduce((a, p) => a + p[0], 0));
   const verdict = blocked ? ["Cannot merge yet", "bad"] : score >= 75 ? ["Fine to merge", "ok"] : score >= 45 ? ["Look closer first", "warn"] : ["Do not merge yet", "bad"];
-  const next = SESSION ? null : currentPr().commits.find((c) => c.index > m.selected.index); // a session shows one commit only
+  const next = SESSION ? null : pr.commits.find((c) => c.index > m.selected.index); // a session shows one commit only
   const look = blocked ? (next ? { act: "commit", sha: next.sha, name: `Commit ${next.index}${next.madeUp ? " (made up)" : ""}`, why: "It adds the missing proof." } : { act: "issues", name: "The open issues", why: "Proof is missing. The author must add it." })
     : red ? { act: "tool", scope: "pr", name: "Impact Map", why: "It shows where the unit test fails, and what else uses that code." }
     : blastFlag ? { act: "tool", scope: "blast", name: "Blast radius", why: "It shows what only this change does." }
@@ -1598,7 +1618,7 @@ function adviceHtml() {
   const look = a.look
     ? `<p><b>Look at this first:</b> <button type="button" class="link" data-act="${a.look.act}" data-scope="${a.look.scope ?? ""}" data-sha="${a.look.sha ?? ""}">${esc(a.look.name)}</button>. ${esc(a.look.why)}</p>`
     : `<p>Nothing needs a closer look.</p>`;
-  return `<div class="short advice ${a.verdict[1]}"><span class="short-label">My advice</span>
+  return `<div class="short advice ${a.verdict[1]}" style="--score: ${a.waiting ? 0 : a.score}"><span class="short-label">My advice</span>
     <div class="advice-main"><strong>${a.verdict[0]}</strong><span class="advice-score" title="Merge score. 100 = nothing found.">${a.waiting ? "…" : a.score}<small> / 100${a.blocked ? ": proof is missing" : ""}</small></span></div>
     ${tallyHtml()}${outsideHtml()}
     ${look}
@@ -1619,6 +1639,7 @@ const nextHtml = () => `<p><b>What the tools say.</b> <span class="muted">Click 
   <div class="scores-live"></div>
   <p class="next-ask">Merge now, or look closer first?</p>
   <div class="choices"><button type="button" class="choice main" data-act="merge"><b>Merge this PR</b><span>Sign off with your name.</span></button>
+    <button type="button" class="choice map" data-act="tool" data-scope="pr"><b>Impact Map</b><span>What this change touches.</span></button>
     <button type="button" class="choice" data-act="ask"><b>Ask the agent</b><span>Why it was written this way.</span></button></div>`;
 
 // ----- messages -----

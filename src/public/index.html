@@ -7,6 +7,7 @@
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="graph.bundle.css" />
     <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="look-b.css" />
   </head>
   <body>
     <!-- Chat first. Left: the PRs. Middle: the chat. Right: a panel that opens only when a tool or a file is asked for. -->
@@ -37,13 +38,10 @@
         <div id="thread" class="thread" aria-live="polite"></div>
         <div class="composer">
           <div id="quick" class="quick" role="group" aria-label="Tools">
-            <button type="button" data-act="merge">Merge</button>
             <button type="button" data-act="page" data-page="pr">PR description</button>
             <button type="button" data-act="page" data-page="review">Review steps</button>
-            <button type="button" data-act="tool" data-scope="pr">Impact Map</button>
             <button type="button" data-act="tool" data-scope="blast">Blast radius</button>
             <button type="button" data-act="tool" data-scope="swarm">Monte Carlo swarm</button>
-            <button type="button" data-act="ask">Ask the agent</button>
             <button type="button" id="evalBtn" class="eval-btn" data-act="evalcase">Mark as eval test case</button>
           </div>
           <form id="askForm" class="ask">
