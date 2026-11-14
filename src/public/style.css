@@ -261,6 +261,12 @@ body.embed .pills { margin-left: 0; }
 .back:hover { text-decoration: underline; }
 body.embed .back { display: none; }
 
+/* Session mode: one pull request, one commit, judged by a person. Nothing that lets them wander,
+   ask for the answer or record a decision here: the session runner around this page does that. */
+body.session .brand, body.session .pr-picker, body.session .pills, body.session .back,
+body.session .evalcase, body.session #decisionCard, body.session #agentBtn, body.session #agentChat,
+body.session [data-scope="blast"] { display: none !important; }
+
 /* Review steps */
 .step { border-top: 1px solid var(--line); padding: 10px 0 0; margin-top: 10px; }
 .step-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }

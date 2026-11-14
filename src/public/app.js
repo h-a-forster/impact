@@ -8,7 +8,10 @@ const state = { revisions: null, prId: null, sha: null, level: "function", sel: 
 const sourceCache = new Map();
 
 // ---------- data ----------
+// Session mode (?session=1): every API call carries the switch, so the server serves the shop sample.
+const SESSION = new URLSearchParams(location.search).get("session") === "1";
 async function api(path, opts) {
+  if (SESSION) path += (path.includes("?") ? "&" : "?") + "session=1";
   const res = await fetch(path, opts);
   const body = await res.json();
   if (!res.ok && !body.error) throw new Error(`Request failed: ${res.status}`);
@@ -861,6 +864,7 @@ async function init() {
   // Link form used by the GitHub replica: /?repo=<owner/name>&pr=<number>&sha=<sha>&embed=1
   const q = new URLSearchParams(location.search);
   if (q.get("embed") === "1") document.body.classList.add("embed");
+  if (SESSION) document.body.classList.add("session");
   if (q.get("chat") === "1") chat.open = true;
   if (["author", "ai"].includes(q.get("desc"))) state.descView = q.get("desc");
   const linkedRepo = q.get("repo");

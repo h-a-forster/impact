@@ -2,7 +2,7 @@ import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { readFileAt, revisionExists } from "./lib/git.mjs";
-import { buildFullMap, buildModel, demoRevisions } from "./lib/model.mjs";
+import { buildFullMap, buildModel, demoRevisions, loadRevisions } from "./lib/model.mjs";
 import { ledgerSource } from "./lib/ledger.mjs";
 import { loadTietoSlice } from "./lib/graphify-tieto.mjs";
 import { decisionView, recordDecision } from "./lib/decisions.mjs";
@@ -46,14 +46,18 @@ function setEvalCase(prId, on) {
   return cases[prId] ?? null;
 }
 
-function modelFor(prId, sha) {
-  const revisions = demoRevisions();
+// Session mode (?session=1, used by timed review sessions): the routes serve the shop sample's
+// pull requests, whose right answers are known, in place of the demo's four.
+const revisionsSource = (url) => (url.searchParams.get("session") === "1" ? loadRevisions : demoRevisions);
+
+function modelFor(prId, sha, revisions) {
   const model = buildModel(revisions, prId, sha);
   return { ...model, decisions: decisionView(model), evalCase: loadEvalCases()[prId] ?? null };
 }
 
 const handler = async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
+  const demoRevisions = revisionsSource(url); // shadows the import, so every route below follows the session switch
   try {
     if (url.pathname === "/api/revisions") {
       return json(res, 200, demoRevisions());
@@ -64,7 +68,7 @@ const handler = async (req, res) => {
       return json(res, 200, { ok: true, evalCase: setEvalCase(input.pr, Boolean(input.on)) });
     }
     if (url.pathname === "/api/model") {
-      return json(res, 200, modelFor(url.searchParams.get("pr"), url.searchParams.get("sha")));
+      return json(res, 200, modelFor(url.searchParams.get("pr"), url.searchParams.get("sha"), demoRevisions()));
     }
     if (url.pathname === "/api/graphify") {
       // The saved Graphify export for a PR (a slice of graph.json), as a file to read.
