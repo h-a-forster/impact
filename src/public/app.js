@@ -1516,7 +1516,7 @@ function scoreRows() {
   else if (!b.recorded) rows.push({ scope: "blast", name: "Blast radius", tone: "plain", score: "No runs yet", why: "No agent runs are saved for this PR." });
   else {
     const t = blastScore(b), extra = b.tests?.onlyReal?.length;
-    rows.push({ scope: "blast", name: "Blast radius", tone: t.tone, score: `Trust ${t.score} / 100`, trust: t.score, why: `Checks only that it stays where other agents worked. ${b.label.text}.${extra ? ` But ${things(extra, "unit test fails", "unit tests fail")} on every other agent's fix.` : ""}` });
+    rows.push({ scope: "blast", name: "Blast radius", tone: t.tone, score: `Trust ${t.score} / 100`, trust: t.score, why: `Checks only whether the change stays where other agents worked. ${b.label.text}.${extra ? ` But ${things(extra, "unit test fails", "unit tests fail")} on every other agent's fix.` : ""}` });
   }
   const s = sc.swarm;
   if (!s) rows.push({ scope: "swarm", name: "Monte Carlo swarm", wait: true });
@@ -1524,7 +1524,7 @@ function scoreRows() {
   else {
     const set = s.sets.find((x) => x.id === s.defaultSet), runs = set.runs.map((k) => s.runs.find((r) => r.key === k));
     const t = swarmScore(runs);
-    rows.push({ scope: "swarm", name: "Monte Carlo swarm", tone: t.tone, score: `Trust ${t.score} / 100`, trust: t.score, why: `Checks only that other agents make the same change. ${t.verdict}.`, madeUp: set.madeUp });
+    rows.push({ scope: "swarm", name: "Monte Carlo swarm", tone: t.tone, score: `Trust ${t.score} / 100`, trust: t.score, why: `Checks only whether other agents make the same change. ${t.verdict}.`, madeUp: set.madeUp });
   }
   return rows;
 }
@@ -1581,7 +1581,7 @@ function adviceHtml() {
 }
 /** A high tool score next to a 0 for missing proof reads like a contradiction: say the tools do not look at proof. */
 const proofNote = (rows) => (advice().blocked && rows.some((r) => r.trust >= 75)
-  ? `<p class="muted">These tools do not check that the change is tested. A high score here does not make up for the missing proof.</p>` : "");
+  ? `<p class="muted score-note">Blast radius and Monte Carlo swarm do not check that the change is tested. A high trust score from them does not make up for the missing proof.</p>` : "");
 function scoresHtml() {
   const rows = scoreRows();
   return `<div class="scores">${rows.map((r) => `<button type="button" class="score" data-act="tool" data-scope="${r.scope}" title="Open ${esc(r.name)}">
