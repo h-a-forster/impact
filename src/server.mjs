@@ -9,7 +9,7 @@ import { buildBlast } from "./lib/blast.mjs";
 import { buildSwarm } from "./lib/swarm.mjs";
 import { decisionView, recordDecision } from "./lib/decisions.mjs";
 import { findPr, prSummary } from "./lib/github.mjs";
-import { DEMO, REVISIONS_FILE, ROOT, SAMPLE_REPO } from "./lib/paths.mjs";
+import { DECISIONS_FILE, DEMO, REVISIONS_FILE, ROOT, SAMPLE_REPO } from "./lib/paths.mjs";
 
 const PORT = Number(process.env.PORT ?? 4317);
 const PUBLIC = path.join(ROOT, "src", "public");
@@ -112,6 +112,11 @@ const handler = async (req, res) => {
       const model = buildModel(revisions, input.pr, input.sha);
       const result = recordDecision(model, input);
       return json(res, result.ok ? 200 : 400, result);
+    }
+    if (url.pathname === "/api/reset" && req.method === "POST") {
+      // "Reset demo" in the chat UI: forget every saved sign-off, so a merge can be shown again.
+      fs.rmSync(DECISIONS_FILE, { force: true });
+      return json(res, 200, { ok: true });
     }
     // Static files.
     const rel = url.pathname === "/" ? "index.html" : url.pathname.slice(1);

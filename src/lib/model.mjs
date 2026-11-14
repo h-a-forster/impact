@@ -101,7 +101,8 @@ function buildTietoModel(pr, sha) {
         .filter((f) => !(o?.dropFindings ?? []).some((t) => f.title.includes(t)))
         .map((f) => {
           const plain = (saved.plainReview?.findings ?? []).find((x) => f.title.includes(x.match));
-          return plain ? { ...f, title: plain.title, detail: plain.detail } : f;
+          // `fix` is the one-line "what to do about it", shown under the problem in the chat.
+          return plain ? { ...f, title: plain.title, detail: plain.detail, fix: plain.fix ?? null } : f;
         }),
       couldNotDecide: m.review.couldNotDecide.map((q, i) => {
         const plain = saved.plainReview?.questions?.[i];

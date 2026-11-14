@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,64 +9,97 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <header class="topbar">
-      <a id="backLink" class="back" href="#">← Back to GitHub</a>
-      <strong class="brand">Impact Map</strong>
-      <select id="prSelect" class="pr-picker" aria-label="Pull request"></select>
-      <nav id="revPills" class="pills" aria-label="Commit"></nav>
-      <button id="themeBtn" type="button" class="theme-btn" aria-label="Switch light or dark mode"></button>
-    </header>
-
-    <div id="notice" class="notice" hidden></div>
-
-    <main class="layout">
-      <section class="col-main">
-        <div id="prView" class="stack">
-        <div id="routeCard" class="card"></div>
-        <div id="intentCard" class="card"></div>
-        <div class="card" id="mapCard">
-          <div class="card-head">
-            <div class="head-left">
-              <h2>Impact map</h2>
-              <div class="tabs" id="scopeTabs" role="group" aria-label="Map scope">
-                <button type="button" data-scope="pr">This PR</button>
-                <button type="button" data-scope="full">Full map</button>
-                <button type="button" data-scope="blast">Blast radius</button>
-                <button type="button" data-scope="swarm">Monte Carlo swarm</button>
-              </div>
-            </div>
-            <div class="tabs" id="levelTabs" role="group" aria-label="Map level">
-              <button type="button" data-level="concept">Concepts</button>
-              <button type="button" data-level="file">Files</button>
-              <button type="button" data-level="function">Functions</button>
-            </div>
-            <button type="button" class="card-toggle" data-card="mapCard" aria-expanded="true">▾ Hide</button>
-          </div>
-          <div id="fullBar" hidden>
-            <div id="fullHint" class="muted"></div>
-            <div class="timeline">
-              <button type="button" id="fullPrev" aria-label="One step back" title="One step back">←</button>
-              <button type="button" id="fullPlay">▶ Play</button>
-              <button type="button" id="fullNext" aria-label="One step forward" title="One step forward">→</button>
-              <div id="fullStep" class="timeline-label"></div>
-            </div>
-            <div id="fullDots" class="timeline-dots" aria-hidden="true"></div>
-          </div>
-          <div id="blastView" hidden></div>
-          <div id="swarmView" hidden></div>
-          <div id="graphWrap" class="graph-wrap"><div id="graphFlow"></div><div id="graphVis" hidden></div></div>
-          <div id="mapFoot" class="map-foot"></div>
+    <!-- Chat first. Left: the PRs. Middle: the chat. Right: a panel that opens only when a tool or a file is asked for. -->
+    <div id="app" class="app">
+      <aside id="rail" class="rail">
+        <div class="rail-top">
+          <strong class="brand">Impact Map</strong>
+          <button id="newReview" type="button" class="rail-new" title="Start this review again. Clears what you acknowledged on this commit.">↻ New review</button>
         </div>
-        <div id="reviewCard" class="card"></div>
-        <div id="decisionCard" class="card"></div>
+        <div class="rail-label">Pull requests</div>
+        <nav id="prList" class="rail-list" aria-label="Pull requests"></nav>
+        <div class="rail-foot">
+          <a id="backLink" class="back" href="#">← Back to GitHub</a>
+          <div class="rail-rules muted">Team rules: <button type="button" class="link" data-doc="REVIEW.md">REVIEW.md</button> · <button type="button" class="link" data-doc="review-policy.yml">review-policy.yml</button></div>
+          <div class="rail-row">
+            <button id="resetDemo" type="button" class="link muted" title="Forgets every saved sign-off and everything you acknowledged.">Reset demo</button>
+          </div>
+        </div>
+      </aside>
+
+      <section class="chat" aria-label="Review chat">
+        <header class="chat-head">
+          <button id="railBtn" type="button" class="rail-btn" aria-label="Show or hide the list of pull requests">☰</button>
+          <div id="chatTitle" class="chat-title"></div>
+          <nav id="revPills" class="pills" aria-label="Commit"></nav>
+        </header>
+        <div id="notice" class="notice" hidden></div>
+        <div id="thread" class="thread" aria-live="polite"></div>
+        <div class="composer">
+          <div id="quick" class="quick" role="group" aria-label="Tools">
+            <button type="button" data-act="merge">Merge</button>
+            <button type="button" data-act="tool" data-scope="pr">Impact Map</button>
+            <button type="button" data-act="tool" data-scope="blast">Blast radius</button>
+            <button type="button" data-act="tool" data-scope="swarm">Monte Carlo swarm</button>
+            <button type="button" data-act="ask">Ask the agent</button>
+          </div>
+          <form id="askForm" class="ask">
+            <input id="askInput" name="question" type="text" aria-label="Your message" placeholder="Ask about this PR…" autocomplete="off" />
+            <button class="send" type="submit" aria-label="Send">↑</button>
+          </form>
+          <div class="composer-note muted">Demo with saved data. No live model.</div>
         </div>
       </section>
-      <aside class="col-side">
-        <div id="sidePanel" class="card side"></div>
-      </aside>
-    </main>
-    <button id="agentBtn" type="button" class="agent-fab" hidden>Ask the agent</button>
-    <div id="agentChat" class="agent-chat" hidden></div>
+
+      <section id="canvas" class="canvas" hidden aria-label="Details">
+        <header class="canvas-head">
+          <strong id="canvasTitle"></strong>
+          <button id="canvasClose" type="button" class="close" aria-label="Close the panel">✕</button>
+        </header>
+        <div class="canvas-body">
+          <div id="pagePr" class="stack" hidden>
+            <div id="intentCard" class="card"></div>
+          </div>
+          <div id="pageReview" class="stack" hidden>
+            <div id="routeCard" class="card"></div>
+            <div id="reviewCard" class="card"></div>
+          </div>
+          <div class="card" id="mapCard" hidden>
+            <div class="card-head">
+              <div class="head-left">
+                <div class="tabs" id="scopeTabs" role="group" aria-label="Map scope">
+                  <button type="button" data-scope="pr">This PR</button>
+                  <button type="button" data-scope="full">Full map</button>
+                  <button type="button" data-scope="blast">Blast radius</button>
+                  <button type="button" data-scope="swarm">Monte Carlo swarm</button>
+                </div>
+              </div>
+              <div class="tabs" id="levelTabs" role="group" aria-label="Map level">
+                <button type="button" data-level="concept">Concepts</button>
+                <button type="button" data-level="file">Files</button>
+                <button type="button" data-level="function">Functions</button>
+              </div>
+            </div>
+            <div id="fullBar" hidden>
+              <div id="fullHint" class="muted"></div>
+              <div class="timeline">
+                <button type="button" id="fullPrev" aria-label="One step back" title="One step back">←</button>
+                <button type="button" id="fullPlay">▶ Play</button>
+                <button type="button" id="fullNext" aria-label="One step forward" title="One step forward">→</button>
+                <div id="fullStep" class="timeline-label"></div>
+              </div>
+              <div id="fullDots" class="timeline-dots" aria-hidden="true"></div>
+            </div>
+            <div id="blastView" hidden></div>
+            <div id="swarmView" hidden></div>
+            <div id="graphWrap" class="graph-wrap"><div id="graphFlow"></div><div id="graphVis" hidden></div></div>
+            <div id="mapFoot" class="map-foot"></div>
+          </div>
+        </div>
+        <!-- The code, a doc or a run result. Slides over the panel when something is picked. -->
+        <aside id="sidePanel" class="card side"></aside>
+      </section>
+    </div>
     <!-- Functions level: vis-network, the library Graphify's own graph.html uses. -->
     <script src="vendor/vis-network/vis-network.min.js"></script>
     <!-- Concepts and Files levels: React Flow + Dagre. Built from src/graph/main.jsx by `npm run build:graph`. -->

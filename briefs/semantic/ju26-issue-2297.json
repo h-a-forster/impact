@@ -15,22 +15,26 @@
       {
         "match": "user-declared partial resolver",
         "title": "The mark can break a user's build",
-        "detail": "The mark is put on a class that the user also writes part of. If the user already added the same mark, it appears twice and the build fails. It also hides the user's own code from coverage."
+        "detail": "The mark is put on a class that the user also writes part of. If the user already added the same mark, it appears twice and the build fails. It also hides the user's own code from coverage.",
+        "fix": "Do not put the mark on classes the user also writes."
       },
       {
         "match": "Guard leaves",
         "title": "Older project types get no change",
-        "detail": "The mark is switched off for netstandard2.0 and .NET Framework projects. For those users nothing changes, so the request is not met for them."
+        "detail": "The mark is switched off for netstandard2.0 and .NET Framework projects. For those users nothing changes, so the request is not met for them.",
+        "fix": "Say so in the docs, or find a mark that works for older projects."
       },
       {
         "match": "New test checks per file",
         "title": "The new unit test is weak",
-        "detail": "It passes if a file has the mark once, even when the file holds three classes. It runs only one of the two generators. It ignores build errors."
+        "detail": "It passes if a file has the mark once, even when the file holds three classes. It runs only one of the two generators. It ignores build errors.",
+        "fix": "Check every class, run both generators, and fail on build errors."
       },
       {
         "match": "Shared nesting-type emitter",
         "title": "A shared helper now writes an extra line break",
-        "detail": "This is needed for the new mark. But it changes the output text for some types that are not part of this request."
+        "detail": "This is needed for the new mark. But it changes the output text for some types that are not part of this request.",
+        "fix": "Only write the line break when the mark is written."
       }
     ],
     "questions": [

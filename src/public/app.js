@@ -4,8 +4,9 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const short = (sha) => (sha ?? "").slice(0, 7);
 const chip = (text, cls) => `<span class="chip ${esc(cls ?? text)}">${esc(text)}</span>`;
 
-// The AI PR, Impact map and Review steps cards start hidden. Hide / Show opens them.
-const state = { hidden: { intentCard: true, mapCard: true, reviewCard: true }, revisions: null, prId: null, sha: null, level: "function", sel: null, model: null, notice: null, mapScope: "pr", full: null, fullStep: 0, fullRun: 0, fullTimer: null, blast: {} };
+// The screen is a chat (see "chat" below). The AI PR, Impact map and Review steps cards live in the
+// right panel and open only when asked for, so they are never collapsed (`hidden` stays false).
+const state = { hidden: { intentCard: false, mapCard: false, reviewCard: false }, revisions: null, prId: null, sha: null, level: "file", sel: null, model: null, notice: null, mapScope: "pr", full: null, fullStep: 0, fullRun: 0, fullTimer: null, blast: {} };
 const sourceCache = new Map();
 
 // ---------- data ----------
@@ -89,7 +90,16 @@ function selectNode(id) {
 // ---------- header ----------
 const GITHUB_URL = "http://localhost:3000"; // the GitHub replica
 function renderHeader() {
-  $("prSelect").innerHTML = state.revisions.prs.map((p) => `<option value="${esc(p.id)}" ${p.id === state.prId ? "selected" : ""}>#${p.number} ${esc(p.title)}</option>`).join("");
+  // Left rail: one row per PR, like a list of chats.
+  $("prList").innerHTML = state.revisions.prs.map((p) => `<button type="button" class="rail-pr ${p.id === state.prId ? "active" : ""}" data-pr="${esc(p.id)}" title="${esc(p.title)}"><span class="rail-num">#${p.number}</span><span class="rail-title">${esc(p.title)}</span></button>`).join("");
+  for (const b of $("prList").querySelectorAll("button")) b.onclick = () => {
+    const next = state.revisions.prs.find((p) => p.id === b.dataset.pr);
+    state.notice = null;
+    ui.canvas = null; // a new PR starts as a plain chat
+    $("app").classList.remove("rail-open");
+    load(next.id, next.commits[0].sha, { keepSelection: false });
+  };
+  $("chatTitle").innerHTML = `<strong>PR #${currentPr().number}</strong><span>${esc(currentPr().title)}</span>`;
   $("revPills").innerHTML = revList().map((r) => `<button type="button" class="pill ${r.sha === state.sha ? "active" : ""}" data-sha="${r.sha}" title="${esc(r.message)}">${esc(r.label)} <span class="mono">${r.short}</span></button>`).join("");
   for (const b of $("revPills").querySelectorAll("button")) b.onclick = () => load(state.prId, b.dataset.sha);
   $("backLink").href = `${GITHUB_URL}/${currentPr().repo}/pull/${currentPr().number}`;
@@ -129,11 +139,8 @@ function renderVerdict() {
   for (const b of el.querySelectorAll("[data-run]")) b.onclick = () => select({ type: "run" });
   for (const b of el.querySelectorAll("[data-node]")) b.onclick = () => selectNode(b.dataset.node);
   for (const b of el.querySelectorAll("[data-jump]")) b.onclick = () => {
-    // Open a hidden card before jumping to it.
-    if (state.hidden[b.dataset.jump]) {
-      state.hidden = { ...state.hidden, [b.dataset.jump]: false };
-      applyCardToggles();
-    }
+    // The sign-off happens in the chat. The AI review sits below, on the same page.
+    if (b.dataset.jump === "decisionCard") return startMerge();
     $(b.dataset.jump).scrollIntoView({ behavior: "smooth", block: "start" });
   };
 }
@@ -157,27 +164,9 @@ function renderDescription() {
   for (const b of el.querySelectorAll("[data-ctx]")) b.onclick = openContext;
 }
 
-// ---------- show / hide for the big cards: AI PR, Impact map, Review steps ----------
-const cardToggle = (id) => `<button type="button" class="card-toggle" data-card="${id}" aria-expanded="${!state.hidden?.[id]}">${state.hidden?.[id] ? "▸ Show" : "▾ Hide"}</button>`;
-function applyCardToggles() {
-  for (const id of ["intentCard", "mapCard", "reviewCard"]) {
-    const hidden = Boolean(state.hidden?.[id]);
-    $(id)?.classList.toggle("collapsed", hidden);
-    const b = $(id)?.querySelector(".card-toggle");
-    if (b) {
-      b.textContent = hidden ? "▸ Show" : "▾ Hide";
-      b.setAttribute("aria-expanded", String(!hidden));
-    }
-  }
-}
-document.addEventListener("click", (ev) => {
-  const b = ev.target.closest?.(".card-toggle");
-  if (!b) return;
-  state.hidden = { ...state.hidden, [b.dataset.card]: !state.hidden?.[b.dataset.card] };
-  applyCardToggles();
-  // The map is drawn to fit its box, so draw it again when it comes back.
-  if (b.dataset.card === "mapCard" && !state.hidden.mapCard) renderGraph();
-});
+// The big cards (AI PR, Impact map, Review steps) used to have Hide / Show buttons. They now open
+// from the chat, in the right panel, so there is nothing to toggle.
+const cardToggle = () => "";
 
 // ---------- graph ----------
 // Two ways to draw, picked by level (see drawGraph):
@@ -409,10 +398,13 @@ function renderGraph() {
   $("swarmView").hidden = !swarm;
   if (!swarm) stopSwarm();
   if (!blast) stopBlast();
-  else if (swarmUI.pr !== state.prId) renderSwarm();
   $("fullBar").hidden = !full;
   if (blast) return renderBlast();
-  if (swarm) return;
+  if (swarm) {
+    // The swarm view draws itself once per PR. After that it keeps its own state (menus, a run in play).
+    if (swarmUI.pr !== state.prId) renderSwarm();
+    return;
+  }
   if (full) return renderFull();
   const edges = m.graph.edges.filter((e) => e.level === state.level), nodes = m.graph.nodes.filter((n) => n.level === state.level);
   drawGraph(nodes, edges, selectNode, (id) => select({ type: "edge", id }));
@@ -659,20 +651,44 @@ function blastTestsHtml(b) {
     <span class="muted">Recorded ${esc(t.recordedAt.slice(0, 10))} with .NET SDK ${esc(t.sdk)}, by <code>scripts/blast-tests.mjs</code>. No model was called.</span></div>`;
 }
 
-/** Blast radius TL;DR: the trust label, the sizes side by side, and what a person must check. */
-function blastTldr(b) {
-  const real = b.columns.find((c) => c.id === "real");
-  const agents = b.columns.filter((c) => c.id !== "real" && !c.noChange);
-  if (!real || !agents.length) return "";
-  const lo = Math.min(...agents.map((c) => c.files)), hi = Math.max(...agents.map((c) => c.files));
-  const files = (n) => `${n} file${n === 1 ? "" : "s"}`;
-  const span = lo === hi ? files(lo) : `${lo} to ${files(hi)}`;
-  const first = `<b>${esc(b.label.text)}.</b> The 3 agents changed ${span}; the real change changed ${files(real.files)} (+${real.added} −${real.removed}).`;
-  const extra = b.tests?.onlyReal?.length;
-  const second = extra
-    ? ` But ${extra === 1 ? "one of its unit tests fails" : `${extra} of its unit tests fail`} on every agent's fix: it does something no agent thought was needed. A person should check it was asked for.`
-    : b.label.tone === "ok" ? " No sign it did too much or too little." : " Check the files outside every zone before you trust it.";
-  return tldrBox(extra ? "warn" : b.label.tone, first + second);
+// ---------- trust scores: each trust skill (Blast radius, Monte Carlo swarm) ends in one number out of 100 ----------
+// A fixed rule works each one out. No AI. 75 or more is green, 45 to 74 amber, under 45 red.
+const trustTone = (score) => (score >= 75 ? "ok" : score >= 45 ? "warn" : "bad");
+/** The top of a skill's result: the score, a few words for it, and one line on what the skill does. */
+const trustHtml = (t, what) => `<div class="trust ${t.tone}"><div class="trust-num"><b>${t.score}</b><small>/ 100</small><span>Trust score</span></div>
+  <div class="trust-text"><strong>${esc(t.verdict)}</strong><p>${what}</p></div></div>`;
+/** Why the score is what it is: one short line per reason. */
+const whyHtml = (t) => `<ul class="why">${t.why.map((w) => `<li class="${w.tone}"><i aria-hidden="true">${w.tone === "ok" ? "✓" : "!"}</i><span>${rich(w.text)}</span></li>`).join("")}</ul>`;
+const BLAST_WHAT = "3 agents did the same task. We check that the real change stays where they worked.";
+const SWARM_WHAT = "Many agents did the same task. If most make the same change, the real change is likely right.";
+/**
+ * Blast radius trust score. Each code file the real change edits (not docs, not unit tests) gets points
+ * for where it sits: 100 if the careful agent edited it too, 85 the normal agent, 60 only the agent that
+ * changes too much, 20 no agent. The score is the average, minus 20 for each of the real change's
+ * unit tests that fails on every agent's fix.
+ */
+function blastScore(b) {
+  const POINTS = { tight: 100, normal: 85, wide: 60, outside: 20 };
+  const files = b.items.filter((x) => x.level === "file" && x.by.real && x.kind !== "test" && x.kind !== "doc");
+  const base = files.length ? Math.round(files.reduce((a, x) => a + POINTS[x.zone], 0) / files.length) : 100;
+  const extra = b.tests?.onlyReal?.length ?? 0, n = files.length;
+  const score = Math.max(0, base - 20 * extra);
+  const outside = files.filter((x) => x.zone === "outside").length, wide = files.filter((x) => x.zone === "wide").length;
+  const where = outside ? { tone: "bad", text: `The real change edits ${things(outside, "code file", "code files")} that no agent touched.` }
+    : wide ? { tone: "warn", text: `The real change edits ${things(wide, "code file", "code files")} that only the agent that changes too much touched.` }
+    : { tone: "ok", text: `The real change edits ${things(n, "code file", "code files")}. The agents edited ${n === 1 ? "it" : "them"} too.` };
+  const tests = extra ? { tone: "warn", text: `${things(extra, "of its unit tests fails", "of its unit tests fail")} on every agent's fix. So it does something no agent thought was needed.` }
+    : b.tests ? { tone: "ok", text: "Its unit tests also pass on the agents' fixes." } : null;
+  return { score, tone: trustTone(score), verdict: b.label.text, why: [where, tests].filter(Boolean) };
+}
+/** Monte Carlo swarm trust score: the share of agents whose change is like the real one, as a number out of 100. */
+function swarmScore(runs) {
+  const v = swarmVerdict(runs), n = runs.length;
+  const score = Math.round((100 * v.near) / n);
+  const why = [];
+  if (v.near) why.push({ tone: "ok", text: `${things(v.near, "agent", "agents")} made a change like the real one.` });
+  if (v.near < n) why.push({ tone: "warn", text: `${things(n - v.near, "agent", "agents")} did it differently.${v.topMiss ? ` Most skipped \`${v.topMiss[0]}\`. Check the real change needs it.` : ""}` });
+  return { score, tone: trustTone(score), verdict: `${v.near} of ${n} agents agree`, why };
 }
 function renderBlast() {
   const el = $("blastView"), b = state.blast[state.prId];
@@ -742,8 +758,14 @@ function renderBlast() {
   // The picture and the table are always shown. The extras are small "show more" links.
   const fold = (id, title, hint, body) => (id === "zones" || id === "files" ? body : `<details class="blast-runs"><summary>${title}: ${hint}</summary>${body}</details>`);
   const realCol = cols.find((c) => c.id === "real");
-  el.innerHTML = `<div class="blast-top"><p class="blast-what">We gave the same task to 3 agents: one careful, one normal, one that changes too much. The coloured zones show the files they touched. The thick outline is the real change.</p><button type="button" id="blastAgain">↻ Run again</button></div>
-    ${blastTldr(b)}
+  // The simple view: the trust score, why, and how many files each one changed. The rest sits in one fold.
+  const trust = blastScore(b), most = Math.max(1, ...cols.map((c) => c.files));
+  if (state.sel?.type === "blast") blastRun.details = true; // a picked file lives in the fold: keep it open
+  el.innerHTML = `<div class="blast-top">${trustHtml(trust, BLAST_WHAT)}<button type="button" id="blastAgain">↻ Run again</button></div>
+    ${whyHtml(trust)}
+    <div class="bars"><div class="bars-title">Files each one changed</div>${cols.map((c) => `<div class="bar-row${c.id === "real" ? " real" : ""}"><span>${esc(BLAST_SHORT[c.id] ?? c.label)}${c.id === "real" ? "" : " agent"}</span><span class="bar"><i style="width:${Math.round((100 * c.files) / most)}%"></i></span><b>${c.files} file${c.files === 1 ? "" : "s"}</b></div>`).join("")}</div>
+    <details class="tool-details" id="blastDetails" ${blastRun.details ? "open" : ""}><summary>Show the details</summary>
+    <p class="blast-what">The coloured zones show the files the 3 agents touched. The thick outline is the real change.</p>
     <div class="blast-label ${esc(b.label.tone)}"><span class="stamp-label">Trust label</span><strong>${esc(b.label.text)}</strong><span>${esc(b.label.how)}</span></div>
     ${blastTestsHtml(b)}
     ${fold("zones", "Zone picture", "Which files each agent touched, and where the real change sits", `
@@ -779,7 +801,10 @@ function renderBlast() {
       ${b.runs.filter((r) => r.id !== "real").map((r) => `<div class="blast-run"><b>${esc(r.label)}</b> <span class="muted">${secs(r) ? `· took ${secs(r)}` : ""}</span><div>Told: ${esc(r.instruction ?? "")}</div>
         <details><summary>What it said when it was done</summary><pre class="raw doc">${esc(r.reply ?? "No reply was saved.")}</pre></details>
         <details><summary>The full prompt, word for word</summary><pre class="raw doc">${esc(r.prompt ?? "")}</pre></details></div>`).join("")}
-      <p class="muted">${esc(b.how.functions)} Callers come from ${esc(b.graphTool ?? "the recorded data")} (a saved run) and the recorded compiler data for this PR.</p>`)}`;
+      <p class="muted">${esc(b.how.functions)} Callers come from ${esc(b.graphTool ?? "the recorded data")} (a saved run) and the recorded compiler data for this PR.</p>
+      <p class="muted">Trust score: each code file the real change edits gets 100 if the careful agent edited it too, 85 for the normal agent, 60 for only the agent that changes too much, 20 for no agent. We take the average, then 20 off for each of its unit tests that fails on every agent's fix. A fixed rule, no AI.</p>`)}
+    </details>`;
+  $("blastDetails").ontoggle = (ev) => (blastRun.details = ev.target.open);
   for (const btn of el.querySelectorAll("[data-blast]")) btn.onclick = () => selectBlast(btn.dataset.blast);
   $("blastAgain").onclick = () => playBlast();
   // Just after a run: the result fades in, part by part.
@@ -851,7 +876,8 @@ async function renderSwarm({ autoplay = false, model = null, count = null } = {}
   await swarmUI.loading;
   if (swarmUI.pr !== state.prId) return;
   const s = swarmUI.data;
-  const wrap = (body) => `<div class="swarm"><div class="swarm-head"><h3>Monte Carlo swarm</h3><span class="muted">Give the same task to many agents. How often does one end up close to the real change?</span></div>${body}</div>`;
+  // The panel's title already names the tool, and the trust score says what it does.
+  const wrap = (body) => `<div class="swarm">${body}</div>`;
   if (!s?.recorded) {
     el.innerHTML = wrap(`<div class="muted">${esc(s?.message ?? "")}</div>`);
     return;
@@ -898,11 +924,6 @@ function playSwarm() {
   note.hidden = !swarmUI.note;
   note.textContent = swarmUI.note ?? "";
   const runs = swarmSet(swarmUI.model).runs.slice(0, swarmUI.count).map(swarmRun);
-  // Second score per agent: how like the other agents it is (average over the others, by files and functions).
-  const peers = runs.map((r, i) => {
-    const others = runs.filter((_, j) => j !== i);
-    return others.length ? Math.round(others.reduce((a, o) => a + swarmJac(r.things, o.things), 0) / others.length) : null;
-  });
   const stage = $("swarmStage");
   stage.hidden = false;
   const fast = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -922,6 +943,8 @@ function playSwarm() {
         <span class="swarm-bar"><i></i></span>
         <span class="swarm-status">waiting</span></button>`).join("")}</div>
     </div>
+    <div class="swarm-result" id="swarmResult" hidden></div>
+    <details class="tool-details" id="swarmDetails" hidden><summary>Show the details</summary>
     <div class="swarm-scale">
       <div class="swarm-scale-label muted">How similar each agent's change is to the real change</div>
       <div class="swarm-track">
@@ -931,7 +954,8 @@ function playSwarm() {
       </div>
       <div class="swarm-axis"><span style="left:0">0%</span><span style="left:50%">50%</span><span style="left:100%">100%</span></div>
     </div>
-    <div class="swarm-result" id="swarmResult" hidden></div>`;
+    <div id="swarmMore"></div>
+    </details>`;
   for (const b of stage.querySelectorAll("[data-run]")) b.onclick = () => select({ type: "swarm", key: b.dataset.run, agent: runs.findIndex((r) => r.key === b.dataset.run) + 1 });
   const rows = [...stage.querySelectorAll(".swarm-agent")];
   const dots = [...stage.querySelectorAll(".swarm-dot")];
@@ -953,40 +977,20 @@ function playSwarm() {
       rows[i].classList.add("done", r.similar ? "near" : "far");
       rows[i].querySelector(".swarm-status").innerHTML = !r.ok ? `<span class="bad-text">the run failed</span>` : r.noChange
         ? "made no change"
-        : `${r.files} file${r.files === 1 ? "" : "s"} · <span class="plus">+${r.added}</span> <span class="minus">−${r.removed}</span> · <b>${r.score}%</b> like the real change${peers[i] === null ? "" : ` · <b>${peers[i]}%</b> like the other agents`}`;
+        : `<b>${r.similar ? "✓ Same as the real change" : "✕ Different"}</b> · ${r.score}% alike`;
       dots[i].classList.add("in", r.similar ? "near" : "far");
     });
     end = Math.max(end, start + work);
   });
   // 4. The answer.
   later(end + 500, () => {
-    const near = runs.filter((r) => r.similar).length;
-    let pairs = 0, sum = 0;
-    for (let i = 0; i < runs.length; i++) for (let j = i + 1; j < runs.length; j++) {
-      pairs++;
-      sum += swarmJac(runs[i].things, runs[j].things) / 100;
-    }
-    const count = (list) => {
-      const m = new Map();
-      for (const x of list) m.set(x, (m.get(x) ?? 0) + 1);
-      return [...m].sort((a, b) => b[1] - a[1])[0];
-    };
-    const topMiss = count(runs.flatMap((r) => r.missed));
-    const topExtra = count(runs.flatMap((r) => r.extra));
-    const avg = Math.round(runs.reduce((a, r) => a + r.score, 0) / runs.length);
-    const tone = near / runs.length >= 0.7 ? "ok" : near / runs.length >= 0.4 ? "warn" : "bad";
-    const byModel = [...new Set(runs.map((r) => r.modelLabel))].map((l) => {
-      const mine = runs.filter((r) => r.modelLabel === l);
-      return `${l}: ${mine.filter((r) => r.similar).length} of ${mine.length}`;
-    });
-    const res = $("swarmResult");
+    const { near, pairs, sum, topMiss, topExtra, avg, tone, byModel } = swarmVerdict(runs);
+    // The simple view: the trust score and why. The scale, the numbers and the matrix sit in the fold.
+    const trust = swarmScore(runs), res = $("swarmResult");
     res.hidden = false;
-    const share = near / runs.length;
-    const verdict = share >= 0.7 ? "So the change looks right-sized."
-      : topMiss ? `Most agents skipped <code>${esc(topMiss[0])}</code>: check the real change needs it.`
-      : share >= 0.4 ? "Mixed: look at where they differ." : "Most agents did it differently: look closely.";
-    const tldr = tldrBox(tone, `<b>${near} of ${runs.length} agent${runs.length === 1 ? "" : "s"} made a change like the real one</b> (${avg}% alike on average). ${verdict}`);
-    res.innerHTML = `${tldr}<div class="blast-label ${tone}"><span class="stamp-label">Swarm result${runs.some((r) => r.madeUp) ? " · made up for the demo" : ""}</span>
+    res.innerHTML = `${trustHtml(trust, SWARM_WHAT)}${whyHtml(trust)}<p class="muted">Click an agent above to see its change.</p>`;
+    $("swarmDetails").hidden = false;
+    $("swarmMore").innerHTML = `<div class="blast-label ${tone}"><span class="stamp-label">Swarm result${runs.some((r) => r.madeUp) ? " · made up for the demo" : ""}</span>
         <strong>${near} of ${runs.length} agent${runs.length === 1 ? "" : "s"} ended up similar to the real change</strong>
         <span>"Similar" means ${s.similarAt}% or more. Average similarity: ${avg}%.${pairs ? ` The agents agree with each other ${Math.round((sum / pairs) * 100)}% of the time.` : ""}${byModel.length > 1 ? ` By model: ${byModel.join(" · ")}.` : ""}</span></div>
       <ul class="swarm-facts">
@@ -999,10 +1003,35 @@ function playSwarm() {
         <p><b>By files and functions</b> (the main score). We list what each change touches in product code (not docs, not unit tests): the files, and the functions in them that already existed. The real change touches: ${s.real.map((x) => `<code>${esc(x)}</code>`).join(", ")}. Similarity = things both changes touch, divided by things either one touches. 100% means the very same files and functions.</p>
         <p><b>By changed lines.</b> We list every code line each change adds or removes in product code (blank lines left out, spaces squeezed). Similarity = lines both changes add or remove, divided by lines either one does. This one sees inside a function: two different fixes in the same function score low. The real change adds or removes ${s.realLines.length} lines.</p>
         <p>${esc(s.how)}</p>
+        <p>Trust score = the share of agents whose change is similar to the real one, out of 100. A fixed rule, no AI.</p>
         <details><summary>The prompt every agent got, word for word</summary><pre class="raw doc">${esc(s.prompt.text)}</pre></details>
       </details>`;
     renderSwarmMatrix(runs);
   });
+}
+/** The swarm's answer for a set of runs: the counts, and the TL;DR box. Used by the tab and by the chat. */
+function swarmVerdict(runs) {
+  const near = runs.filter((r) => r.similar).length;
+  let pairs = 0, sum = 0;
+  for (let i = 0; i < runs.length; i++) for (let j = i + 1; j < runs.length; j++) {
+    pairs++;
+    sum += swarmJac(runs[i].things, runs[j].things) / 100;
+  }
+  const count = (list) => {
+    const m = new Map();
+    for (const x of list) m.set(x, (m.get(x) ?? 0) + 1);
+    return [...m].sort((a, b) => b[1] - a[1])[0];
+  };
+  const topMiss = count(runs.flatMap((r) => r.missed));
+  const topExtra = count(runs.flatMap((r) => r.extra));
+  const avg = Math.round(runs.reduce((a, r) => a + r.score, 0) / runs.length);
+  const share = near / runs.length;
+  const tone = share >= 0.7 ? "ok" : share >= 0.4 ? "warn" : "bad";
+  const byModel = [...new Set(runs.map((r) => r.modelLabel))].map((l) => {
+    const mine = runs.filter((r) => r.modelLabel === l);
+    return `${l}: ${mine.filter((r) => r.similar).length} of ${mine.length}`;
+  });
+  return { near, pairs, sum, topMiss, topExtra, avg, tone, byModel };
 }
 /** Jaccard of two lists, in whole percent: shared / all. */
 function swarmJac(a, b) {
@@ -1068,48 +1097,6 @@ function renderReview() {
       ${c2.blockers.length ? `<div>${esc(c2.reason)}</div>` : ""}</div>`;
   for (const b of el.querySelectorAll("[data-doc]")) b.onclick = () => select({ type: "doc", file: b.dataset.doc });
   for (const b of el.querySelectorAll("[data-src]")) b.onclick = () => select({ type: "source", file: b.dataset.src, line: Number(b.dataset.line) });
-}
-
-// ---------- human decision ----------
-const NOTE_LABEL = { "request-check": "Check to request", escalate: "Reason", "sign-off": "Risk you accept (write: none)" };
-function renderDecision() {
-  const m = state.model, el = $("decisionCard"), d = m.decisions;
-  const suggested = m.classifier2.blockers.find((b) => b.suggestedCheck)?.suggestedCheck ?? "";
-  const verb = { "sign-off": "Signed off", escalate: "Escalated", "request-check": "Requested a check" };
-  const historyHtml = d.history.length
-    ? `<ul class="history">${[...d.history].reverse().map((h) => `<li class="${h.appliesToSelection ? "" : "other"}"><strong>${esc(verb[h.action])}</strong> by ${esc(h.name)} on commit ${h.commitIndex} <span class="mono">${short(h.commit)}</span>${h.appliesToSelection ? "" : ` <span class="muted">· other commit, no effect here</span>`}${h.requestedCheck || h.residualRisk ? `<div class="muted">${esc(h.requestedCheck || h.residualRisk)}</div>` : ""}</li>`).join("")}</ul>`
-    : "";
-  el.innerHTML = `<div class="card-head"><h2>Your decision</h2><span class="muted">For ${esc(stepText(m))} only</span></div>
-    <form id="decisionForm" class="form-grid">
-      <label for="dName">Your name</label><input id="dName" name="name" type="text" autocomplete="name" />
-      <span>Action</span><div class="actions">
-        <label><input type="radio" name="action" value="request-check" ${d.canSignOff ? "" : "checked"}/> Request a check</label>
-        <label><input type="radio" name="action" value="escalate"/> Escalate</label>
-        <label><input type="radio" name="action" value="sign-off" ${d.canSignOff ? "checked" : "disabled"}/> Sign off${d.canSignOff ? "" : ` <span class="muted">(blocked: a check is missing)</span>`}</label></div>
-      <label for="dNote" id="dNoteLabel"></label><textarea id="dNote" name="note"></textarea>
-      <span></span><div><button class="primary" type="submit">Record decision</button><div id="decisionError" class="error"></div></div>
-    </form>${historyHtml}`;
-  const action = () => el.querySelector('input[name="action"]:checked')?.value;
-  const syncNote = () => {
-    $("dNoteLabel").textContent = NOTE_LABEL[action()];
-    $("dNote").value = action() === "request-check" ? suggested : "";
-  };
-  for (const r of el.querySelectorAll('input[name="action"]')) r.onchange = syncNote;
-  syncNote();
-  $("decisionForm").onsubmit = async (ev) => {
-    ev.preventDefault();
-    const note = $("dNote").value;
-    const res = await api("/api/decisions", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ pr: state.prId, sha: state.sha, name: $("dName").value, action: action(), requestedCheck: action() === "request-check" ? note : "", residualRisk: action() === "sign-off" ? note : "", checkedByHuman: action() === "escalate" ? note : "" }),
-    });
-    if (!res.ok) {
-      $("decisionError").textContent = res.error;
-      return;
-    }
-    await load(state.prId, state.sha);
-  };
 }
 
 // ---------- side panel ----------
@@ -1303,7 +1290,8 @@ async function renderSide() {
   const html = await sideHtml();
   if (token !== sideToken) return;
   const el = $("sidePanel");
-  document.querySelector(".layout").classList.toggle("has-sel", Boolean(state.sel));
+  el.hidden = !state.sel;
+  applyCanvas();
   el.innerHTML = state.sel ? `<button type="button" id="closeSel" class="close" aria-label="Close">✕</button>${html}` : "";
   if ($("closeSel")) $("closeSel").onclick = () => select(null);
   for (const b of el.querySelectorAll("[data-node]")) b.onclick = () => selectNode(b.dataset.node);
@@ -1326,69 +1314,535 @@ function render() {
   if (!state.model) return;
   renderVerdict();
   renderDescription();
-  renderGraph();
+  if (ui.canvas === "map") renderGraph();
   renderReview();
-  renderDecision();
-  renderAgent();
   renderSide();
-  applyCardToggles();
+  applyCanvas();
+  // One chat per (PR, commit). A new one starts with the summary. The same one only refreshes its issue list.
+  if (ui.key !== reviewKey()) {
+    ui.key = reviewKey();
+    startThread();
+  } else refreshIssues();
 }
 
-// ---------- ask the agent that wrote the PR (demo: sample answers saved with the PR) ----------
-const chat = { open: false, logs: {} };
-function renderAgent() {
-  const a = state.model.agent, btn = $("agentBtn"), box = $("agentChat");
-  btn.hidden = !a;
-  box.hidden = !a || !chat.open;
-  if (!a) return;
-  btn.onclick = () => {
-    chat.open = !chat.open;
-    renderAgent();
+// ---------- right panel: opens only when a tool, a page or a file is asked for ----------
+// `canvas` is what the panel shows: null (closed), "pr" (full AI PR), "review" (stamps + review steps) or "map"
+// (Impact map card: This PR / Full map / Blast radius / Monte Carlo swarm). A picked file, doc or run
+// (`state.sel`) slides over it. With no page behind it, the panel shows only that.
+const ui = { canvas: null, key: null, threads: {}, queue: Promise.resolve(), first: {}, scores: {}, openMore: new Set() };
+const CANVAS_TITLE = { pr: "The full PR description", review: "Review steps", detail: "" };
+const SCOPE_TITLE = { pr: "Impact Map", full: "Impact Map · the whole repo", blast: "Blast radius", swarm: "Monte Carlo swarm" };
+function applyCanvas() {
+  const open = Boolean(ui.canvas || state.sel);
+  $("app").classList.toggle("canvas-open", open);
+  $("canvas").hidden = !open;
+  $("canvas").dataset.kind = ui.canvas ?? "detail";
+  $("canvasTitle").textContent = ui.canvas === "map" ? SCOPE_TITLE[state.mapScope] : CANVAS_TITLE[ui.canvas ?? "detail"];
+  $("pagePr").hidden = ui.canvas !== "pr";
+  $("pageReview").hidden = ui.canvas !== "review";
+  $("mapCard").hidden = ui.canvas !== "map";
+}
+async function openCanvas(kind, scope) {
+  ui.canvas = kind;
+  state.sel = null;
+  applyCanvas();
+  // The map is drawn to fit its box, so it is drawn after the panel is on screen.
+  if (kind === "map") await setScope(scope ?? state.mapScope);
+  else render();
+}
+function closeCanvas() {
+  ui.canvas = null;
+  state.sel = null;
+  stopFull();
+  stopSwarm();
+  stopBlast();
+  writeHash();
+  render();
+}
+
+// ---------- chat: the main screen ----------
+// The chat says the PR and the review in one or two lines each, lists the issues, and asks what to do.
+// Every issue must be acknowledged (or fixed by a later commit) before the PR can merge.
+const reviewKey = () => `${state.prId}:${state.sha}`;
+const things = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const calm = () => Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
+
+// What the person acknowledged, per (PR, commit). Kept in this browser. An acknowledgement, like a
+// sign-off, counts for one commit only.
+const ACKS_KEY = "impact-map-acks";
+let acks = {};
+try { acks = JSON.parse(localStorage.getItem(ACKS_KEY)) ?? {}; } catch {}
+const saveAcks = () => { try { localStorage.setItem(ACKS_KEY, JSON.stringify(acks)); } catch {} };
+const acked = (id) => Boolean(acks[reviewKey()]?.[id]);
+function setAck(ids, on) {
+  const mine = (acks[reviewKey()] ??= {});
+  for (const id of ids) {
+    if (on) mine[id] = true;
+    else delete mine[id];
+  }
+  saveAcks();
+  refreshIssues();
+}
+
+/**
+ * The issues of one commit, each as one line of problem and one line of fix.
+ * - "block": proof is missing. The rules refuse a sign-off, so it cannot be acknowledged.
+ * - "major": the rule that raised the risk, and the AI review's important findings.
+ * - "minor": the AI review's small findings. Shown folded.
+ */
+function issueList(m) {
+  const c2 = m.classifier2, out = [];
+  c2.blockers.forEach((b, i) => out.push({ id: `proof-${i}`, level: "block", title: b.text, fix: "Ask the author for a unit test that proves it." }));
+  if (!c2.blockers.length && c2.rule === "T-contradicted") {
+    out.push({ id: "rule", level: "major", title: c2.reason.split(". ")[0].replace(/\.$/, ""), fix: "Accept the change on purpose, or ask for a smaller fix.", detail: [c2.reason, ...c2.notes.map((n) => n.text)].join(" "), run: Boolean(m.run) });
+  }
+  for (const f of m.review.findings) out.push({ id: f.id, level: f.category === "Minor" ? "minor" : "major", title: f.title, fix: f.fix ?? f.suggestedCheck, detail: f.detail, citations: f.citations });
+  return out;
+}
+/** Issues of the PR's first commit that are gone at the selected commit. */
+function fixedList() {
+  const m = state.model, first = ui.first[state.prId];
+  if (m.selected.index < 2 || !first) return [];
+  const now = new Set(issueList(m).map((x) => x.id));
+  return issueList(first).filter((x) => !now.has(x.id));
+}
+const openIssues = () => issueList(state.model).filter((x) => !acked(x.id));
+
+function issueHtml(x) {
+  const done = acked(x.id), merged = state.model.decisions.signedOff;
+  const cites = (x.citations ?? []).filter((c) => c.valid).slice(0, 3).map((c) => `<button type="button" class="link mono" data-act="src" data-src="${esc(c.file)}" data-line="${c.line}" title="${esc(c.file)}">${esc(c.file.split("/").pop())}:${c.line}</button>`).join(", ");
+  const btn = x.level === "block" ? `<span class="tag bad">Must be fixed</span>`
+    : merged ? ""
+    : done ? `<button type="button" data-act="unack" data-id="${esc(x.id)}">Undo</button>`
+    : `<button type="button" class="primary" data-act="ack" data-id="${esc(x.id)}">Acknowledge</button>`;
+  const more = x.detail || cites || x.run
+    ? `<details class="issue-more" data-more="${esc(x.id)}" ${ui.openMore.has(x.id) ? "open" : ""}><summary>More</summary>${x.detail ? `<p>${esc(x.detail)}</p>` : ""}${cites ? `<p class="muted">Code: ${cites}</p>` : ""}${x.run ? `<p><button type="button" class="link" data-act="run">Open the unit test run</button></p>` : ""}</details>`
+    : "";
+  return `<div class="issue ${x.level}${done ? " done" : ""}">
+    <div class="issue-main"><span class="issue-mark" aria-hidden="true">${done ? "✓" : x.level === "block" ? "✕" : "!"}</span>
+      <div class="issue-text"><strong>${esc(x.title)}</strong>${x.fix ? `<div class="issue-fix"><b>Fix:</b> ${rich(x.fix)}</div>` : ""}${done ? `<div class="issue-state">Acknowledged</div>` : ""}</div>
+      <div class="issue-btn">${btn}</div></div>${more}</div>`;
+}
+function issuesHtml() {
+  const m = state.model, all = issueList(m), fixed = fixedList(), open = all.filter((x) => !acked(x.id));
+  const merged = m.decisions.signedOff;
+  if (!all.length && !fixed.length) return `<p><b>Nothing needs your OK.</b> The review found no issues on this commit.</p>`;
+  const main = all.filter((x) => x.level !== "minor"), minor = all.filter((x) => x.level === "minor"), minorOpen = minor.filter((x) => !acked(x.id));
+  const head = !all.length ? `<p><b>Nothing is left open.</b></p>`
+    : open.length ? `<p><b>${things(all.length, "thing needs", "things need")} your OK before this can merge.</b></p>`
+    : `<p><b>All ${things(all.length, "issue is", "issues are")} acknowledged.</b> Nothing is left open.</p>`;
+  const meter = all.length ? `<div class="meter" title="${all.length - open.length} of ${all.length} done"><i style="width:${Math.round((100 * (all.length - open.length)) / all.length)}%"></i><span>${all.length - open.length} of ${all.length} done</span></div>` : "";
+  const minorHtml = minor.length
+    ? `<details class="minor" data-more="minor" ${ui.openMore.has("minor") ? "open" : ""}><summary><span>${things(minor.length, "smaller point", "smaller points")}${minorOpen.length ? "" : " · all acknowledged"}</span>${minorOpen.length && !merged ? `<button type="button" data-act="ackminor">Acknowledge all ${minorOpen.length}</button>` : ""}</summary>${minor.map(issueHtml).join("")}</details>`
+    : "";
+  const fixedHtml = fixed.map((x) => `<div class="issue fixed"><div class="issue-main"><span class="issue-mark" aria-hidden="true">✓</span>
+      <div class="issue-text"><strong>${esc(x.title)}</strong><div class="issue-state">Fixed in commit ${m.selected.index}${m.selected.madeUp ? ` <span class="tag warn">made up</span>` : ""}</div></div></div></div>`).join("");
+  const foot = merged ? `<div class="okbox"><b>Merged.</b> ${esc(m.decisions.signOff.name)} signed off ${esc(stepText(m))}.</div>`
+    : !open.length ? `<div class="issue-foot"><button type="button" class="primary" data-act="merge">Merge this PR</button></div>` : "";
+  return `${head}${meter}${main.map(issueHtml).join("")}${minorHtml}${fixedHtml}${foot}`;
+}
+/**
+ * The short form, for the first screen: a count, and one line per important issue. No fixes, no buttons.
+ * The full list (fix, "More", Acknowledge) only comes when the person asks for it.
+ */
+function briefHtml() {
+  const m = state.model, all = issueList(m), fixed = fixedList(), open = all.filter((x) => !acked(x.id));
+  if (!all.length) return `<p><b>Nothing needs your OK.</b> ${fixed.length ? `${things(fixed.length, "issue was", "issues were")} fixed since commit 1.` : "The review found no issues on this commit."}</p>`;
+  const main = all.filter((x) => x.level !== "minor"), minor = all.length - main.length, done = all.length - open.length;
+  const head = open.length ? `${things(all.length, "thing needs", "things need")} your OK before this can merge.` : `All ${things(all.length, "issue is", "issues are")} acknowledged.`;
+  const foot = m.decisions.signedOff ? `<div class="okbox"><b>Merged.</b> ${esc(m.decisions.signOff.name)} signed off ${esc(stepText(m))}.</div>`
+    : open.length ? `<div class="choices"><button type="button" class="choice" data-act="issues"><b>Go through them</b><span>One line each, with the fix.</span></button></div>`
+    : `<div class="choices"><button type="button" class="choice main" data-act="merge"><b>Merge this PR</b><span>Sign off with your name.</span></button></div>`;
+  return `<p><b>${head}</b>${done ? ` <span class="muted">${done} of ${all.length} done.</span>` : ""}</p>
+    <ul class="brief">${main.map((x) => `<li class="${x.level}${acked(x.id) ? " done" : ""}">${esc(x.title)}</li>`).join("")}${minor ? `<li class="minor">${main.length ? "and " : ""}${things(minor, "smaller point", "smaller points")}</li>` : ""}</ul>
+    ${fixed.length ? `<p class="muted">${things(fixed.length, "issue was", "issues were")} fixed since commit 1${m.selected.madeUp ? " (made up)" : ""}.</p>` : ""}${foot}`;
+}
+/** Every issue list in the chat shows the same live state. */
+function refreshIssues() {
+  for (const el of $("thread").querySelectorAll(".advice-live")) el.innerHTML = adviceHtml();
+  for (const el of $("thread").querySelectorAll(".scores-live")) el.innerHTML = scoresHtml();
+  for (const el of $("thread").querySelectorAll(".issues-brief")) el.innerHTML = briefHtml();
+  for (const el of $("thread").querySelectorAll(".issues-live")) el.innerHTML = issuesHtml();
+}
+
+// ----- the first message: the PR in short, the review in short -----
+function introHtml() {
+  const m = state.model, d = m.description, c2 = m.classifier2, r = m.review;
+  // Two chips only: how risky, and who decides. Unit test counts and the AI review sit behind "See the review steps".
+  const need = c2.route.startsWith("Waiting") ? ["Waiting for proof", "bad"] : c2.route.startsWith("Auto") ? ["Could merge by itself", "ok"] : ["A person must sign off", "info"];
+  const chips = [
+    `<span class="tag ${SEVERITY_TONE[c2.severity] ?? ""}" title="Set by fixed rules (rule ${esc(c2.rule)})">Risk: ${esc(c2.severity)}</span>`,
+    `<span class="tag ${need[1]}" title="Set by fixed rules after the AI review">${need[0]}</span>`,
+  ].join("");
+  const prShort = d.ai?.tldr?.text ?? d.ai?.summary ?? d.author.text;
+  return `<h1 class="pr-title">${esc(m.pr.title)}</h1>
+    <div class="pr-sub muted">PR #${m.pr.number} · Tieto's AI-written branch, shown as a PR · ${esc(stepText(m))}${m.selected.madeUp ? ` <span class="tag warn">made up</span>` : ""}</div>
+    <div class="advice-live"></div>
+    <div class="short ${esc(d.ai?.tldr?.tone ?? "plain")}"><span class="short-label">The PR in short</span><p>${rich(prShort)}</p>
+      <button type="button" class="link" data-act="page" data-page="pr">Read the full PR description</button></div>
+    <div class="short ${SEVERITY_TONE[c2.severity] ?? "plain"}"><span class="short-label">The review in short</span><p>${esc(r.summary)}</p>
+      <div class="tags">${chips}</div>
+      ${m.since ? `<details class="since-line"><summary><span class="tag warn">made up</span> What changed since commit ${m.since.from}</summary><p>${m.since.items.map(rich).join(" · ")} · <button type="button" class="link" data-act="since">Show the code change</button></p></details>` : ""}
+      <button type="button" class="link" data-act="page" data-page="review">See the review steps</button></div>`;
+}
+// ----- tool scores: worked out up front, so the person can merge straight away or drill down -----
+// One row per tool: its name, its score, one line of why. A click opens the tool in the right panel.
+// The Blast radius and swarm numbers are per PR (recorded runs against the PR's first commit).
+function loadScores() {
+  const id = state.prId;
+  if (ui.scores[id]) return;
+  ui.scores[id] = {};
+  loadBlast().then((b) => {
+    ui.scores[id].blast = b;
+    if (state.prId === id) refreshIssues();
+  });
+  api("/api/swarm?pr=" + encodeURIComponent(id)).then((s) => {
+    ui.scores[id].swarm = s;
+    if (state.prId === id) refreshIssues();
+  });
+}
+function scoreRows() {
+  const m = state.model, sc = ui.scores[state.prId] ?? {}, rows = [];
+  const files = m.diff.files.length, red = m.graph.nodes.some((x) => x.evidence === "contradicted");
+  rows.push({ scope: "pr", name: "Impact Map", tone: red ? "bad" : "info", score: `${things(files, "file", "files")} edited`, why: red ? "A unit test fails in code this PR edits." : m.classifier1.reason });
+  const b = sc.blast;
+  if (!b) rows.push({ scope: "blast", name: "Blast radius", wait: true });
+  else if (!b.recorded) rows.push({ scope: "blast", name: "Blast radius", tone: "plain", score: "No runs yet", why: "No agent runs are saved for this PR." });
+  else {
+    const t = blastScore(b), extra = b.tests?.onlyReal?.length;
+    rows.push({ scope: "blast", name: "Blast radius", tone: t.tone, score: `Trust ${t.score} / 100`, why: `${b.label.text}.${extra ? ` But ${things(extra, "unit test fails", "unit tests fail")} on every other agent's fix.` : ""}` });
+  }
+  const s = sc.swarm;
+  if (!s) rows.push({ scope: "swarm", name: "Monte Carlo swarm", wait: true });
+  else if (!s.recorded) rows.push({ scope: "swarm", name: "Monte Carlo swarm", tone: "plain", score: "No runs yet", why: "No agent runs are saved for this PR." });
+  else {
+    const set = s.sets.find((x) => x.id === s.defaultSet), runs = set.runs.map((k) => s.runs.find((r) => r.key === k));
+    const t = swarmScore(runs);
+    rows.push({ scope: "swarm", name: "Monte Carlo swarm", tone: t.tone, score: `Trust ${t.score} / 100`, why: `${t.verdict}: they made a change like the real one.`, madeUp: set.madeUp });
+  }
+  return rows;
+}
+/**
+ * The advice on the first screen: a merge score out of 100, what to do, and what to look at first.
+ * A fixed rule, no AI: start at 100 and take points off for what the review and the tools found.
+ * Missing proof means 0: the rules refuse a sign-off there.
+ */
+function advice() {
+  const m = state.model, c2 = m.classifier2, sc = ui.scores[state.prId] ?? {}, parts = [];
+  const take = (n, why) => parts.push([n, why]);
+  const important = m.review.findings.filter((f) => f.category !== "Minor").length, minor = m.review.findings.length - important;
+  const blocked = c2.blockers.length > 0, red = c2.rule === "T-contradicted";
+  if (red) take(25, "A unit test passes on the old code and fails on the new code.");
+  if (important) take(10 * important, `${things(important, "important finding", "important findings")} in the AI review.`);
+  if (minor) take(3 * minor, `${things(minor, "smaller point", "smaller points")} in the AI review.`);
+  if (c2.severity === "High") take(10, "The rules set the risk to High.");
+  else if (c2.severity === "Medium") take(5, "The rules set the risk to Medium.");
+  // The two trust skills: 5 off for every 10 points a trust score is under 100, at most 20 each.
+  const off = (score) => Math.min(20, Math.round((100 - score) / 10) * 5);
+  const b = sc.blast?.recorded ? blastScore(sc.blast) : null;
+  const blastFlag = Boolean(b && b.score < 100);
+  if (blastFlag && off(b.score)) take(off(b.score), `Blast radius trust score is ${b.score} of 100.`);
+  const s = sc.swarm?.recorded ? sc.swarm : null;
+  let swarmLow = false;
+  if (s) {
+    const t = swarmScore(s.sets.find((x) => x.id === s.defaultSet).runs.map((k) => s.runs.find((r) => r.key === k)));
+    swarmLow = t.score < 70;
+    if (off(t.score)) take(off(t.score), `Monte Carlo swarm trust score is ${t.score} of 100.`);
+  }
+  const score = blocked ? 0 : Math.max(0, 100 - parts.reduce((a, p) => a + p[0], 0));
+  const verdict = blocked ? ["Cannot merge yet", "bad"] : score >= 75 ? ["Fine to merge", "ok"] : score >= 45 ? ["Look closer first", "warn"] : ["Do not merge yet", "bad"];
+  const next = currentPr().commits.find((c) => c.index > m.selected.index);
+  const look = blocked ? (next ? { act: "commit", sha: next.sha, name: `Commit ${next.index}${next.madeUp ? " (made up)" : ""}`, why: "It adds the missing proof." } : { act: "issues", name: "The open issues", why: "Proof is missing. The author must add it." })
+    : red ? { act: "tool", scope: "pr", name: "Impact Map", why: "It shows where the unit test fails, and what else uses that code." }
+    : blastFlag ? { act: "tool", scope: "blast", name: "Blast radius", why: "It shows what only this change does." }
+    : swarmLow ? { act: "tool", scope: "swarm", name: "Monte Carlo swarm", why: "It shows where the other agents did it differently." }
+    : m.review.findings.length ? { act: "issues", name: "The issues", why: important ? "Read the important ones, with their fix." : "Only small points are left." }
+    : null;
+  return { score, verdict, parts, blocked, look, waiting: !sc.blast || !sc.swarm };
+}
+function adviceHtml() {
+  const a = advice();
+  const look = a.look
+    ? `<p><b>Look at this first:</b> <button type="button" class="link" data-act="${a.look.act}" data-scope="${a.look.scope ?? ""}" data-sha="${a.look.sha ?? ""}">${esc(a.look.name)}</button>. ${esc(a.look.why)}</p>`
+    : `<p>Nothing needs a closer look.</p>`;
+  return `<div class="short advice ${a.verdict[1]}"><span class="short-label">My advice</span>
+    <div class="advice-main"><strong>${a.verdict[0]}</strong><span class="advice-score" title="Merge score. 100 = nothing found.">${a.waiting ? "…" : a.score}<small> / 100</small></span></div>
+    ${look}
+    <details class="since-line" data-more="advice" ${ui.openMore.has("advice") ? "open" : ""}><summary>How the score is worked out</summary>
+      <p>It starts at 100. A fixed rule takes points off. No AI is used.${a.blocked ? " Proof is missing, so the score is 0." : ""}</p>
+      <ul class="advice-parts">${a.parts.map(([n, why]) => `<li><b>−${n}</b> ${esc(why)}</li>`).join("") || "<li>Nothing was taken off.</li>"}</ul>
+      <p>75 or more: fine to merge. 45 to 74: look closer first. Under 45: do not merge yet.</p></details></div>`;
+}
+const scoresHtml = () => `<div class="scores">${scoreRows().map((r) => `<button type="button" class="score" data-act="tool" data-scope="${r.scope}" title="Open ${esc(r.name)}">
+    <b>${esc(r.name)}</b>${r.wait ? `<span class="muted">working it out…</span><span></span>` : `<span class="tag ${esc(r.tone)}">${esc(r.score)}</span><span class="score-why">${esc(r.why)}${r.madeUp ? ` <span class="tag warn">made up</span>` : ""}</span>`}<i aria-hidden="true">›</i></button>`).join("")}</div>`;
+const nextHtml = () => `<p><b>What the tools say.</b> <span class="muted">Click one to drill down.</span></p>
+  <div class="scores-live"></div>
+  <p class="next-ask">Merge now, or look closer first?</p>
+  <div class="choices"><button type="button" class="choice main" data-act="merge"><b>Merge this PR</b><span>Sign off with your name.</span></button>
+    <button type="button" class="choice" data-act="ask"><b>Ask the agent</b><span>Why it was written this way.</span></button></div>`;
+
+// ----- messages -----
+const threadOf = (key = reviewKey()) => (ui.threads[key] ??= []);
+const msgHtml = (x) => (x.who === "me"
+  ? `<div class="msg me"><div class="bubble">${esc(x.text)}</div></div>`
+  : `<div class="msg bot"><div class="bot-mark" aria-hidden="true"></div><div class="bot-body">${x.html}</div></div>`);
+function paintThread() {
+  $("thread").innerHTML = `<div class="thread-inner" id="threadInner">${threadOf().map(msgHtml).join("")}</div>`;
+  refreshIssues();
+}
+function addMsg(x, key) {
+  threadOf(key).push(x);
+  if (key !== reviewKey() || !$("threadInner")) return;
+  $("threadInner").insertAdjacentHTML("beforeend", msgHtml(x));
+  const el = $("threadInner").lastElementChild;
+  el.classList.add("new");
+  refreshIssues();
+  el.scrollIntoView({ behavior: calm() ? "auto" : "smooth", block: x.who === "me" ? "end" : "start" });
+}
+/** The person's own line. Messages keep their order, also while the reviewer is "typing". */
+function me(text) {
+  const key = reviewKey();
+  ui.queue = ui.queue.then(() => addMsg({ who: "me", text }, key));
+}
+/** The reviewer's line. A short "typing" pause first, so it reads like a chat. */
+function bot(html, wait = 450) {
+  const key = reviewKey();
+  ui.queue = ui.queue.then(async () => {
+    if (key === reviewKey() && $("threadInner") && wait && !calm()) {
+      $("threadInner").insertAdjacentHTML("beforeend", `<div class="msg bot typing"><div class="bot-mark" aria-hidden="true"></div><div class="bot-body"><span class="dots"><i></i><i></i><i></i></span></div></div>`);
+      const typing = $("threadInner").lastElementChild;
+      typing.scrollIntoView({ behavior: "smooth", block: "end" });
+      await sleep(wait);
+      typing.remove();
+    }
+    addMsg({ who: "bot", html }, key);
+  });
+  return ui.queue;
+}
+function startThread() {
+  const m = state.model, t = threadOf();
+  if (!t.length) t.push({ who: "bot", html: introHtml() }, { who: "bot", html: `<div class="issues-brief"></div>` }, { who: "bot", html: nextHtml() });
+  loadScores();
+  paintThread();
+  $("thread").scrollTop = 0;
+  // On a later commit: load the first commit once, to show what was fixed since.
+  if (m.selected.index > 1 && !ui.first[state.prId]) {
+    const id = state.prId;
+    api(`/api/model?pr=${encodeURIComponent(id)}&sha=${currentPr().commits[0].sha}`).then((first) => {
+      if (first.error) return;
+      ui.first[id] = first;
+      if (state.prId === id) refreshIssues();
+    });
+  }
+}
+
+// ----- tools: each one opens in the right panel, and says its result in one or two lines here -----
+const TOOL_ASK = { pr: "Show me the Impact Map", full: "Show me the whole repo", blast: "Run the blast radius", swarm: "Run the Monte Carlo swarm" };
+function mapSummary() {
+  const m = state.model, n = m.diff.files.length;
+  const red = m.graph.nodes.some((x) => x.evidence === "contradicted");
+  return `<p>This PR edits <b>${things(n, "file", "files")}</b>. ${esc(m.classifier1.reason)}</p>
+    <p class="muted">The map is open on the right. Orange = edited. Blue = affected, not edited.${red ? " Red = a unit test fails there." : ""} Click a box to see its code.</p>
+    <div class="choices"><button type="button" class="choice" data-act="tool" data-scope="full"><b>See the whole repo</b><span>Every PR, one commit at a time.</span></button></div>`;
+}
+async function useTool(scope, said) {
+  me(said ?? TOOL_ASK[scope]);
+  await openCanvas("map", scope);
+  if (scope === "pr") return bot(mapSummary());
+  if (scope === "full") return bot(`<p>This is the <b>whole repo</b>, by area. It plays one commit at a time, across all ${state.revisions.prs.length} PRs.</p><p class="muted">Orange = edited. Blue = affected, not edited. Use ← Play → on the right.</p>`);
+  if (scope === "blast") {
+    const b = await loadBlast();
+    if (!b.recorded) return bot(`<p>${esc(b.message)}</p>`);
+    playBlast();
+    const t = blastScore(b);
+    return bot(`${trustHtml(t, BLAST_WHAT)}${whyHtml(t)}<p class="muted">It is playing on the right. Replays saved runs. No agent runs now.</p>`, 900);
+  }
+  await renderSwarm({ autoplay: true });
+  const s = swarmUI.data;
+  if (!s?.recorded) return bot(`<p>${esc(s?.message ?? "No runs are recorded for this PR yet.")}</p>`);
+  const set = swarmSet(swarmUI.model), runs = set.runs.slice(0, swarmUI.count).map(swarmRun);
+  const t = swarmScore(runs);
+  return bot(`${trustHtml(t, SWARM_WHAT)}${whyHtml(t)}${set.madeUp ? `<p><span class="tag warn">Made up for the demo</span> ${esc(set.note.replace(/^Made up for the demo\.\s*/, ""))}</p>` : ""}<p class="muted">It is playing on the right. Click an agent there to see its change. Replays saved runs. No agent runs now.</p>`, 900);
+}
+function showPage(page, said) {
+  me(said ?? (page === "pr" ? "Show me the full PR description" : "Show me the review steps"));
+  openCanvas(page);
+  return bot(page === "pr"
+    ? `<p>The full PR description is open on the right. AI wrote it, in the team's PR shape.</p>`
+    : `<p>The review steps are open on the right: fixed rules, then the AI review, then fixed rules again.</p><p class="muted">The AI review is advice only. The rules set the risk.</p>`);
+}
+
+// ----- merge: flag open issues, ask "are you sure", then a named sign-off -----
+const nameForm = (lead) => `${lead}<p>Type your name to sign off. It is saved with ${esc(stepText(state.model))} only.</p>
+  <form class="name-form" data-form="merge"><input name="name" type="text" placeholder="Your name" aria-label="Your name" autocomplete="name" /><button class="primary" type="submit">Sign off and merge</button><div class="error" role="alert"></div></form>`;
+function startMerge(said) {
+  me(said ?? "Merge this PR");
+  const m = state.model, all = issueList(m), open = all.filter((x) => !acked(x.id)), hard = open.filter((x) => x.level === "block");
+  if (m.decisions.signedOff) return bot(`<p><b>Already merged.</b> ${esc(m.decisions.signOff.name)} signed off ${esc(stepText(m))}.</p>`);
+  if (hard.length) {
+    const next = currentPr().commits.find((c) => c.index > m.selected.index);
+    return bot(`<div class="warnbox bad"><b>I can't merge this yet.</b> ${things(hard.length, "thing has", "things have")} no proof:<ul>${hard.map((x) => `<li>${esc(x.title)}</li>`).join("")}</ul></div>
+      <p>A sign-off cannot cover missing proof. The author must add it first.</p>
+      ${next ? `<div class="choices"><button type="button" class="choice" data-act="commit" data-sha="${next.sha}"><b>Look at commit ${next.index}${next.madeUp ? " · made up" : ""}</b><span>${esc(next.message)}</span></button></div>` : ""}`);
+  }
+  if (open.length) {
+    return bot(`<div class="warnbox"><b>Are you sure?</b> ${things(open.length, "issue is", "issues are")} still open:<ul>${open.map((x) => `<li>${esc(x.title)}</li>`).join("")}</ul></div>
+      <p>Each one needs your OK before the PR can merge.</p>
+      <div class="choices"><button type="button" class="choice main" data-act="issues"><b>Go through them</b><span>Read each one, then acknowledge it.</span></button>
+      <button type="button" class="choice" data-act="ackall"><b>Acknowledge all ${open.length} and merge</b><span>You accept them as they are.</span></button></div>`);
+  }
+  return bot(nameForm(all.length ? `<p><b>All clear.</b> Every issue is acknowledged.</p>` : `<p><b>All clear.</b> There are no open issues.</p>`));
+}
+async function signOff(form) {
+  const name = form.elements.name.value.trim(), err = form.querySelector(".error");
+  err.textContent = "";
+  if (!name) return void (err.textContent = "Type your name first.");
+  if (openIssues().length) return void (err.textContent = "Some issues are open again. Acknowledge them first.");
+  const titles = issueList(state.model).map((x) => x.title);
+  const res = await api("/api/decisions", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ pr: state.prId, sha: state.sha, name, action: "sign-off", residualRisk: titles.length ? `Acknowledged: ${titles.join("; ")}` : "none" }),
+  });
+  if (!res.ok) return void (err.textContent = res.error);
+  for (const x of form.querySelectorAll("input, button")) x.disabled = true;
+  me(`Sign off as ${name}`);
+  await load(state.prId, state.sha);
+  bot(`<div class="okbox"><b>Merged.</b> ${esc(name)} signed off ${esc(stepText(state.model))}.</div>
+    <p class="muted">Demo: the sign-off is saved with this commit. Nothing is pushed to GitHub.</p>
+    <p>If this PR breaks something later, mark it. It then becomes a test for the AI reviewer.</p>
+    <button type="button" class="danger" data-act="evalcase">Eval test case</button>`);
+}
+
+// ----- ask the agent that wrote the PR (demo: saved answers that come with the PR's context.md) -----
+const suggestHtml = (list) => `<div class="choices">${list.map((c) => `<button type="button" class="choice" data-act="q" data-q="${esc(c.q)}"><b>${esc(c.q)}</b></button>`).join("")}</div>`;
+function agentIntro(said) {
+  me(said ?? "Ask the agent that wrote this PR");
+  const a = state.model.agent;
+  if (!a) return bot(`<p>This PR has no saved notes from its coding agent.</p>`);
+  bot(`<p>Ask why the PR was written this way. The answers come from <button type="button" class="link" data-act="ctx">context.md</button>: the coding agent's own notes, saved with the PR.</p>
+    ${suggestHtml(a.chat)}
+    <div class="byline">${esc(a.model)} · snapshot ${esc(a.snapshot)} · made up for the demo: saved answers, no live model.</div>`);
+  $("askInput").focus();
+}
+function askAgent(q) {
+  me(q);
+  const a = state.model.agent;
+  if (!a) return bot(`<p>This PR has no saved notes from its coding agent.</p>`);
+  const words = q.toLowerCase().match(/[a-z]{4,}/g) ?? [];
+  const best = a.chat.map((c) => ({ c, n: words.filter((w) => `${c.q} ${c.keys ?? ""}`.toLowerCase().includes(w)).length })).sort((x, y) => y.n - x.n)[0];
+  if (!best?.n) return bot(`<p>The demo only has saved answers. Try one of these:</p>${suggestHtml(a.chat)}`);
+  const left = a.chat.filter((c) => c !== best.c && !threadOf().some((x) => x.who === "me" && x.text === c.q));
+  return bot(`<p>${rich(best.c.a)}</p><div class="byline">Saved answer from <button type="button" class="link" data-act="ctx">context.md</button> · ${esc(a.model)} · no live model</div>${left.length ? suggestHtml(left) : ""}`, 700);
+}
+/** Free text: a tool name or "merge" does that. Anything else is a question for the agent. */
+function handleText(q) {
+  const s = q.toLowerCase();
+  if (/\b(merge|sign.?off|approve|ship it)\b/.test(s)) return startMerge(q);
+  if (/blast/.test(s)) return useTool("blast", q);
+  if (/swarm|monte/.test(s)) return useTool("swarm", q);
+  if (/whole repo|full map/.test(s)) return useTool("full", q);
+  if (/impact|\bmap\b/.test(s)) return useTool("pr", q);
+  if (/description/.test(s)) return showPage("pr", q);
+  if (/review steps|classifier|rules/.test(s)) return showPage("review", q);
+  if (/\b(issues?|problems?|findings?)\b/.test(s)) {
+    me(q);
+    return bot(`<div class="issues-live"></div>`);
+  }
+  return askAgent(q);
+}
+
+// ----- clicks: every button in the chat carries a data-act -----
+async function act(b) {
+  const a = b.dataset.act, m = state.model;
+  if (!m) return;
+  if (a === "merge") return startMerge();
+  if (a === "tool") return useTool(b.dataset.scope);
+  if (a === "page") return showPage(b.dataset.page);
+  if (a === "ask") return agentIntro();
+  if (a === "q") return askAgent(b.dataset.q);
+  if (a === "ack") return setAck([b.dataset.id], true);
+  if (a === "unack") return setAck([b.dataset.id], false);
+  if (a === "ackminor") return setAck(openIssues().filter((x) => x.level === "minor").map((x) => x.id), true);
+  if (a === "ackall") {
+    me("Acknowledge all and merge");
+    setAck(openIssues().filter((x) => x.level !== "block").map((x) => x.id), true);
+    return bot(nameForm(`<p><b>Done.</b> Every issue is acknowledged.</p>`));
+  }
+  if (a === "issues") {
+    me("Show me the open issues");
+    return bot(`<div class="issues-live"></div>`);
+  }
+  if (a === "src") return select({ type: "source", file: b.dataset.src, line: Number(b.dataset.line) });
+  if (a === "ctx") return openContext();
+  if (a === "since") return select({ type: "since" });
+  if (a === "run") return select({ type: "run" });
+  if (a === "commit") return load(state.prId, b.dataset.sha);
+  if (a === "evalcase") {
+    await api("/api/evalcase", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pr: state.prId, on: true }) });
+    me("Mark it as an eval test case");
+    await load(state.prId, state.sha);
+    return bot(`<p><b>Saved.</b> This PR is now a test for the AI reviewer: a good reviewer must flag it.</p><p class="muted">You can remove the mark under “See the review steps”.</p>`);
+  }
+}
+function initChat() {
+  const onAct = (ev) => {
+    const b = ev.target.closest?.("[data-act]");
+    if (!b) return;
+    ev.preventDefault(); // a button inside a fold's title must not open the fold
+    act(b);
   };
-  if (!chat.open) return;
-  const log = (chat.logs[state.prId] ??= []);
-  const open = a.chat.filter((c) => !log.some((x) => x.text === c.q));
-  box.innerHTML = `<div class="agent-head"><div><strong>Ask the agent that wrote this PR</strong><div class="muted" title="Snapshot ${esc(a.snapshot)}. It holds: ${esc(a.context)}.">${esc(a.model)} · answers from <button type="button" class="link" data-ctx="1">context.md</button></div></div><button type="button" id="agentClose" class="close" aria-label="Close">✕</button></div>
-    <div class="agent-log" id="agentLog">${log.map((x) => `<div class="msg ${x.who}">${rich(x.text)}</div>`).join("")}</div>
-    <div class="agent-suggest">${open.map((c) => `<button type="button" data-q="${esc(c.q)}">${esc(c.q)}</button>`).join("")}</div>
-    <form id="agentForm"><input id="agentInput" name="question" type="text" aria-label="Your question" placeholder="Ask a question…" autocomplete="off" /><button class="primary" type="submit">Send</button></form>
-    <div class="byline">Demo: saved answers, no live model.</div>`;
-  const ask = (q) => {
-    const words = q.toLowerCase().match(/[a-z]{4,}/g) ?? [];
-    const best = a.chat.map((c) => ({ c, n: words.filter((w) => `${c.q} ${c.keys ?? ""}`.toLowerCase().includes(w)).length })).sort((x, y) => y.n - x.n)[0];
-    log.push({ who: "me", text: q }, { who: "agent", text: best.n ? best.c.a : "The demo only has answers to the suggested questions." });
-    renderAgent();
-  };
-  $("agentClose").onclick = () => {
-    chat.open = false;
-    renderAgent();
-  };
-  for (const b of box.querySelectorAll("[data-q]")) b.onclick = () => ask(b.dataset.q);
-  for (const b of box.querySelectorAll("[data-ctx]")) b.onclick = openContext;
-  $("agentForm").onsubmit = (ev) => {
+  $("thread").addEventListener("click", onAct);
+  $("quick").addEventListener("click", onAct);
+  // Remember which "More" folds are open, so they stay open when the list is drawn again.
+  $("thread").addEventListener("toggle", (ev) => {
+    const id = ev.target.dataset?.more;
+    if (!id) return;
+    if (ev.target.open) ui.openMore.add(id);
+    else ui.openMore.delete(id);
+  }, true);
+  $("thread").addEventListener("submit", (ev) => {
     ev.preventDefault();
-    const q = $("agentInput").value.trim();
-    if (q) ask(q);
+    if (ev.target.dataset.form === "merge") signOff(ev.target);
+  });
+  $("askForm").onsubmit = (ev) => {
+    ev.preventDefault();
+    const q = $("askInput").value.trim();
+    if (!q || !state.model) return;
+    $("askInput").value = "";
+    handleText(q);
   };
-  $("agentLog").scrollTop = $("agentLog").scrollHeight;
+  $("canvasClose").onclick = closeCanvas;
+  $("railBtn").onclick = () => $("app").classList.toggle("rail-open");
+  for (const b of $("rail").querySelectorAll("[data-doc]")) b.onclick = () => select({ type: "doc", file: b.dataset.doc });
+  // "New review": this commit's chat starts again and what was acknowledged on it is forgotten.
+  $("newReview").onclick = () => {
+    if (!state.model) return;
+    delete acks[reviewKey()];
+    saveAcks();
+    delete ui.threads[reviewKey()];
+    ui.openMore.clear();
+    closeCanvas();
+    startThread();
+  };
+  // "Reset demo": also forgets every saved sign-off, on every PR.
+  $("resetDemo").onclick = async () => {
+    await api("/api/reset", { method: "POST" });
+    acks = {};
+    saveAcks();
+    ui.threads = {};
+    ui.key = null;
+    ui.canvas = null;
+    state.sel = null;
+    await load(state.prId, state.sha);
+  };
 }
 
 // ---------- light / dark ----------
+// The app is always dark (user's choice, 2026-11-14). The light colours stay in style.css, unused.
 function initTheme() {
-  const root = document.documentElement, btn = $("themeBtn");
-  let saved = null;
-  try { saved = localStorage.getItem("impact-map-theme"); } catch {}
-  const apply = (t) => {
-    root.dataset.theme = t;
-    btn.textContent = t === "dark" ? "☀ Light" : "☾ Dark";
-    if (state.model) renderGraph(); // the graph's colours are set in code, so draw it again
-  };
-  apply(new URLSearchParams(location.search).get("theme") ?? saved ?? "light");
-  btn.onclick = () => {
-    const next = root.dataset.theme === "dark" ? "light" : "dark";
-    apply(next);
-    try { localStorage.setItem("impact-map-theme", next); } catch {}
-  };
+  document.documentElement.dataset.theme = "dark";
 }
 
 async function init() {
@@ -1398,31 +1852,29 @@ async function init() {
   // Link form used by the GitHub replica: /?repo=<owner/name>&pr=<number>&sha=<sha>&embed=1
   const q = new URLSearchParams(location.search);
   if (q.get("embed") === "1") document.body.classList.add("embed");
-  if (q.get("chat") === "1") chat.open = true;
-  // Cards start hidden. A link to a map view shows the Impact map card. ?show=intentCard,mapCard,reviewCard shows those; ?hide= hides them.
-  if (q.get("map")) state.hidden.mapCard = false;
-  for (const id of (q.get("show") ?? "").split(",").filter(Boolean)) state.hidden[id] = false;
-  for (const id of (q.get("hide") ?? "").split(",").filter(Boolean)) state.hidden[id] = true;
+  initChat();
+  // The right panel starts closed. ?map=<pr|full|blast|swarm> opens it on the Impact map card.
+  // ?show=intentCard opens the full PR description, ?show=reviewCard the review steps.
+  const show = (q.get("show") ?? "").split(",");
+  if (q.get("map") || show.includes("mapCard")) ui.canvas = "map";
+  else if (show.includes("reviewCard")) ui.canvas = "review";
+  else if (show.includes("intentCard")) ui.canvas = "pr";
   const linkedRepo = q.get("repo");
   const linkedPr = q.get("pr") ? state.revisions.prs.find((p) => String(p.number) === q.get("pr") && (!linkedRepo || p.repo === linkedRepo)) : null;
   if (linkedRepo && !linkedPr) {
     // Never show another repo's analysis under this PR's name.
-    document.querySelector("main").innerHTML = `<div class="card"><h2>No impact map for this pull request</h2>
-      <p><span class="mono">${esc(linkedRepo)}</span> PR #${esc(q.get("pr"))} has not been analysed.</p></div>`;
-    document.querySelector(".topbar").classList.add("bare");
+    $("thread").innerHTML = `<div class="thread-inner"><div class="card"><h2>No impact map for this pull request</h2>
+      <p><span class="mono">${esc(linkedRepo)}</span> PR #${esc(q.get("pr"))} has not been analysed.</p></div></div>`;
+    $("app").classList.add("bare");
     return;
   }
   if (!h.rev && linkedPr && q.get("sha")) h.rev = q.get("sha");
   const pr = state.revisions.prs.find((p) => p.id === h.pr) ?? linkedPr ?? state.revisions.prs[0];
   if (["concept", "file", "function"].includes(h.level)) state.level = h.level;
   const sha = pr.commits.some((c) => c.sha === h.rev) ? h.rev : pr.commits[0].sha;
-  $("prSelect").onchange = (ev) => {
-    const next = state.revisions.prs.find((p) => p.id === ev.target.value);
-    state.notice = null;
-    load(next.id, next.commits[0].sha, { keepSelection: false });
-  };
   if (h.sel) state.sel = { type: "node", id: h.sel, label: h.sel.split("#").pop() };
   await load(pr.id, sha, { keepSelection: Boolean(h.sel) });
+  if (q.get("chat") === "1") agentIntro(); // ?chat=1 starts on "Ask the agent"
   if (q.get("since") === "1" && state.model.since) select({ type: "since" });
   if (q.get("doc") === "context") openContext();
   else if (q.get("doc")) select({ type: "doc", file: q.get("doc") });
