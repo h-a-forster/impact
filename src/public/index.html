@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Code Review Impact Map</title>
+    <link rel="stylesheet" href="graph.bundle.css" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -46,12 +47,12 @@
             <span><i class="sw sw-edited"></i> edited</span>
             <span><i class="sw sw-downstream"></i> affected, not edited</span>
             <span><i class="sw sw-failing"></i> a targeted unit test fails</span>
-            <span class="muted">Click a box to see its code.</span>
+            <span class="muted">Click a box to see its code. Drag to move the map. Zoom with the + and − buttons, or hold Ctrl and scroll.</span>
           </div>
           <div class="legend" id="legendFull" hidden>
             <span><i class="sw sw-edited"></i> edited by the picked commits</span>
             <span><i class="sw sw-downstream"></i> affected, not edited</span>
-            <span class="muted">An arrow points from the user to the thing it uses. Click a box for details.</span>
+            <span class="muted">An arrow points from the user to the thing it uses. Click a box for details. Drag to move the map. Zoom with the + and − buttons, or hold Ctrl and scroll.</span>
           </div>
         </div>
         <div id="reviewCard" class="card"></div>
@@ -64,6 +65,8 @@
     </main>
     <button id="agentBtn" type="button" class="agent-fab" hidden>Ask the agent</button>
     <div id="agentChat" class="agent-chat" hidden></div>
+    <!-- React Flow + Dagre graph. Built from src/graph/main.jsx by `npm run build:graph`. -->
+    <script src="graph.bundle.js"></script>
     <script type="module" src="app.js"></script>
   </body>
 </html>

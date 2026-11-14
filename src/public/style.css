@@ -118,36 +118,43 @@ button.primary { background: var(--accent); color: var(--card); border-color: va
 .tabs button.active { background: var(--ink); color: var(--card); }
 
 /* Graph */
-.graph-wrap { border: 1px solid var(--line); border-radius: 8px; background: var(--bg); overflow: auto; }
-.graph-wrap svg { display: block; width: 100%; height: auto; min-width: 760px; }
-.node { cursor: pointer; }
-.node rect.box { fill: var(--card); stroke: var(--line); stroke-width: 1.2; }
-.node text { font-size: 12.5px; fill: var(--ink); pointer-events: none; }
-.node text.sub { font-size: 10px; fill: var(--muted); font-family: var(--mono); }
-.node text.badge { font-size: 9px; font-weight: 700; letter-spacing: .05em; fill: var(--muted); }
-.node text.badge.ok { fill: var(--ok); } .node text.badge.bad { fill: var(--bad); } .node text.badge.warn { fill: var(--warn); }
-.node text.badge.info { fill: var(--down); } .node text.badge.edited { fill: var(--edited); }
-.node.dim { opacity: .4; }
-.node.edited rect.box { fill: var(--edited-bg); stroke: var(--edited); stroke-width: 2; }
-.node.downstream rect.box { fill: var(--down-bg); stroke: var(--down); stroke-width: 1.6; }
-.node.failing rect.box { fill: var(--bad-bg); stroke: var(--bad); stroke-width: 2.4; }
-.node.test rect.box, .node.testfile rect.box, .node[data-node="concept:tests"] rect.box { fill: var(--test-bg); stroke: var(--test); }
-.node.pr rect.box { fill: var(--ink); stroke: var(--ink); }
-.node.pr text { fill: var(--card); }
-.node.pr text.sub { fill: var(--card); opacity: .7; }
-.node.requirement rect.box { fill: var(--req-bg); stroke: var(--req); }
-.node.selected rect.box { stroke: var(--ink); stroke-width: 3; stroke-dasharray: none; }
-.arrowhead { fill: var(--muted); }
-.edge path.vis { fill: none; stroke: var(--muted); stroke-width: 1.4; }
-.edge.tests path.vis { stroke: var(--test); stroke-dasharray: 2 4; }
-.edge.edits path.vis { stroke: var(--edited); stroke-width: 2; }
-.edge.may-affect path.vis { stroke: var(--down); stroke-dasharray: 7 4; }
-.edge.implements path.vis { stroke: var(--req); }
-.edge.inferred path.vis { stroke-dasharray: 7 4; }
-.edge.added path.vis { stroke-width: 2.6; }
-.edge.selected path.vis { stroke: var(--ink); stroke-width: 3; }
-.edge path.hit { fill: none; stroke: transparent; stroke-width: 14; cursor: pointer; }
-.edge.dim { opacity: .3; }
+.graph-wrap { border: 1px solid var(--line); border-radius: 8px; background: var(--bg); overflow: hidden; height: 420px; }
+/* React Flow's own parts take their colours from the variables above, in light and dark. */
+.graph-wrap .react-flow {
+  --xy-background-color: var(--bg);
+  --xy-edge-stroke: var(--muted);
+  --xy-controls-button-background-color: var(--card);
+  --xy-controls-button-background-color-hover: var(--soft);
+  --xy-controls-button-color: var(--ink);
+  --xy-controls-button-color-hover: var(--ink);
+  --xy-controls-button-border-color: var(--line);
+  --xy-controls-box-shadow: 0 0 0 1px var(--line);
+  --xy-attribution-background-color: transparent;
+  --xy-node-border-radius: 8px;
+}
+.graph-wrap .react-flow__attribution a { color: var(--muted); }
+.graph-wrap .react-flow__node { cursor: pointer; }
+.graph-wrap .react-flow__handle { opacity: 0; pointer-events: none; min-width: 1px; min-height: 1px; width: 1px; height: 1px; border: 0; }
+.gnode { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 3px 10px; border: 1.2px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); font-size: 12.5px; line-height: 1.25; text-align: left; }
+.gnode:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gnode-label, .gnode-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gnode-sub { font-size: 10px; color: var(--muted); font-family: var(--mono); }
+.gnode-badges { display: flex; justify-content: space-between; gap: 6px; }
+.gnode-badge { font-size: 9px; font-weight: 700; letter-spacing: .05em; color: var(--muted); white-space: nowrap; }
+.gnode-badge.ok { color: var(--ok); } .gnode-badge.bad { color: var(--bad); } .gnode-badge.warn { color: var(--warn); }
+.gnode-badge.info { color: var(--down); } .gnode-badge.edited { color: var(--edited); }
+.gnode.dim { opacity: .4; }
+.gnode.edited { background: var(--edited-bg); border: 2px solid var(--edited); }
+.gnode.downstream { background: var(--down-bg); border: 1.6px solid var(--down); }
+.gnode.failing { background: var(--bad-bg); border: 2.4px solid var(--bad); }
+.gnode.test, .gnode.testfile, .gnode.tests { background: var(--test-bg); border-color: var(--test); }
+.gnode.pr { background: var(--ink); border-color: var(--ink); color: var(--card); }
+.gnode.pr .gnode-sub { color: var(--card); opacity: .7; }
+.gnode.requirement { background: var(--req-bg); border-color: var(--req); }
+.gnode.selected { border-color: var(--ink); box-shadow: 0 0 0 2px var(--ink); }
+.graph-wrap .react-flow__edge.gedge { cursor: default; }
+.graph-wrap .react-flow__edge.gedge.pick { cursor: pointer; }
+.graph-wrap .react-flow__edge.gedge.dim { opacity: .3; }
 .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; }
 .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; border: 1.5px solid; }
 .sw-edited { background: var(--edited-bg); border-color: var(--edited); }

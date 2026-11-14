@@ -152,59 +152,6 @@ function renderDescription() {
 }
 
 // ---------- graph ----------
-const NODE_W = 196, NODE_H = 48, COL_GAP = 46, ROW_GAP = 14, PAD = 16;
-function layout(nodes, edges) {
-  const byId = new Map(nodes.map((n) => [n.id, n]));
-  const out = new Map();
-  for (const e of edges) if (e.kind === "calls" || e.kind === "tests") (out.get(e.from) ?? out.set(e.from, []).get(e.from)).push(e.to);
-  const depthMemo = new Map();
-  const depth = (id, seen = new Set()) => {
-    if (depthMemo.has(id)) return depthMemo.get(id);
-    if (seen.has(id)) return 0;
-    seen.add(id);
-    const d = Math.max(-1, ...(out.get(id) ?? []).filter((t) => byId.has(t)).map((t) => depth(t, seen))) + 1;
-    depthMemo.set(id, d);
-    return d;
-  };
-  const hasPr = nodes.some((n) => n.type === "pr");
-  const hasReq = nodes.some((n) => n.type === "requirement");
-  const offset = (hasPr ? 1 : 0) + (hasReq ? 1 : 0);
-  const cols = new Map();
-  for (const n of nodes) {
-    const col = n.type === "requirement" ? 0 : n.type === "pr" ? (hasReq ? 1 : 0) : offset + depth(n.id);
-    (cols.get(col) ?? cols.set(col, []).get(col)).push(n);
-  }
-  const pos = new Map();
-  const rank = { edited: 0, downstream: 1, none: 2 };
-  const colIds = [...cols.keys()].sort((a, b) => a - b);
-  for (const col of colIds) {
-    const list = cols.get(col);
-    const bary = (n) => {
-      const ys = (out.get(n.id) ?? []).map((t) => pos.get(t)?.row).filter((r) => r !== undefined);
-      return ys.length ? ys.reduce((a, b) => a + b, 0) / ys.length : null;
-    };
-    list.sort((a, b) => {
-      const ba = bary(a), bb = bary(b);
-      if (ba !== null && bb !== null && ba !== bb) return ba - bb;
-      if ((ba === null) !== (bb === null)) return ba === null ? 1 : -1;
-      return rank[a.state ?? "none"] - rank[b.state ?? "none"] || a.label.localeCompare(b.label);
-    });
-    list.forEach((n, row) => pos.set(n.id, { row, col }));
-  }
-  const maxRows = Math.max(...[...cols.values()].map((l) => l.length));
-  const height = PAD * 2 + maxRows * NODE_H + (maxRows - 1) * ROW_GAP;
-  for (const col of colIds) {
-    const list = cols.get(col);
-    const colH = list.length * NODE_H + (list.length - 1) * ROW_GAP;
-    const top = col < offset ? (height - colH) / 2 : PAD; // centre the PR and requirement
-    list.forEach((n, row) => {
-      const p = pos.get(n.id);
-      p.x = PAD + colIds.indexOf(col) * (NODE_W + COL_GAP);
-      p.y = top + row * (NODE_H + ROW_GAP);
-    });
-  }
-  return { pos, width: PAD * 2 + colIds.length * NODE_W + (colIds.length - 1) * COL_GAP, height };
-}
 const clip = (s, n) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
 function badgeFor(n) {
   if (n.badge !== undefined) return n.badge;
@@ -238,48 +185,32 @@ function renderGraph() {
   if (full) return renderFull();
   drawGraph($("graphWrap"), m.graph.nodes.filter((n) => n.level === state.level), m.graph.edges.filter((e) => e.level === state.level), selectNode, (id) => select({ type: "edge", id }));
 }
+/** Hands the boxes and links to the React Flow graph (src/graph/main.jsx, built into graph.bundle.js). */
 function drawGraph(el, nodes, edges, onNode, onEdge) {
-  const { pos, width, height } = layout(nodes, edges);
   const affected = (n) => n.state !== "none" || n.type === "pr" || n.type === "requirement";
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
   // A test is "in focus" when it reaches something affected.
   const focusTests = new Set(edges.filter((e) => e.kind === "tests" && affected(nodeById.get(e.to) ?? {})).map((e) => e.from));
-  const lit = (n) => affected(n) || focusTests.has(n.id);
-
-  let svg = `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Impact map">
-    <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead" d="M0 0 L10 5 L0 10 z"/></marker></defs>`;
-  for (const e of edges) {
-    const a = pos.get(e.from), b = pos.get(e.to);
-    if (!a || !b) continue;
-    const leftToRight = a.x < b.x;
-    const x1 = leftToRight ? a.x + NODE_W : a.x, x2 = leftToRight ? b.x : b.x + NODE_W;
-    const y1 = a.y + NODE_H / 2, y2 = b.y + NODE_H / 2;
-    const dx = Math.max(30, Math.abs(x2 - x1) / 2) * (leftToRight ? 1 : -1);
-    const d = a.x === b.x ? `M${a.x} ${y1} C${a.x - 40} ${y1}, ${b.x - 40} ${y2}, ${b.x} ${y2}` : `M${x1} ${y1} C${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
-    const dim = !(lit(nodeById.get(e.from)) && lit(nodeById.get(e.to)));
-    const sel = state.sel?.type === "edge" && state.sel.id === e.id;
-    svg += `<g class="edge ${e.kind} ${e.resolution === "inferred" && e.kind === "calls" ? "inferred" : ""} ${e.change === "added" ? "added" : ""} ${dim ? "dim" : ""} ${sel ? "selected" : ""}" data-edge="${esc(e.id)}"><title>${esc(e.kind)}${e.change === "added" ? " · new in this PR" : ""}${e.anchor ? ` · ${esc(e.anchor.file)}:${e.anchor.line}` : ""}</title><path class="vis" d="${d}" marker-end="url(#arrow)"/><path class="hit" d="${d}"/></g>`;
-  }
-  for (const n of nodes) {
-    const p = pos.get(n.id);
-    const cls = ["node", n.type, n.state !== "none" ? n.state : "", n.evidence === "contradicted" ? "failing" : "", lit(n) ? "" : "dim", ["node", "fullnode"].includes(state.sel?.type) && state.sel.id === n.id ? "selected" : ""].join(" ");
-    const badge = badgeFor(n);
-    const extra = n.change === "added" ? "NEW" : null;
-    svg += `<g class="${cls}" data-node="${esc(n.id)}" transform="translate(${p.x},${p.y})" tabindex="0" role="button" aria-label="${esc(n.label)}"><title>${esc(n.label)}\n${esc(n.sub ?? "")}</title>
-      <rect class="box" width="${NODE_W}" height="${NODE_H}" rx="8"/>
-      <text x="10" y="${badge || extra ? 27 : 20}">${esc(clip(n.label, 29))}</text>
-      <text class="sub" x="10" y="${badge || extra ? 40 : 35}">${esc(clip(n.sub ?? "", 33))}</text>
-      ${badge ? `<text class="badge ${badge[1]}" x="10" y="13">${esc(badge[0])}</text>` : ""}
-      ${extra ? `<text class="badge ok" x="${NODE_W - 10}" y="13" text-anchor="end">${extra}</text>` : ""}
-    </g>`;
-  }
-  svg += `</svg>`;
-  el.innerHTML = svg;
-  for (const g of el.querySelectorAll("[data-node]")) {
-    g.onclick = () => onNode(g.dataset.node);
-    g.onkeydown = (ev) => (ev.key === "Enter" || ev.key === " ") && onNode(g.dataset.node);
-  }
-  if (onEdge) for (const g of el.querySelectorAll("[data-edge]")) g.onclick = () => onEdge(g.dataset.edge);
+  const lit = (n) => Boolean(n) && (affected(n) || focusTests.has(n.id));
+  const full = state.mapScope === "full";
+  window.ImpactGraph.render(el, {
+    // The graph fits itself to the view again only when this key changes.
+    viewKey: full ? `full|${state.level}` : `pr|${state.prId}|${state.sha}|${state.level}`,
+    nodes: nodes.map((n) => ({
+      id: n.id, type: n.type, state: n.state ?? "none", label: n.label, sub: n.sub ?? "",
+      badge: badgeFor(n), isNew: n.change === "added", failing: n.evidence === "contradicted", dim: !lit(n),
+      selected: ["node", "fullnode"].includes(state.sel?.type) && state.sel.id === n.id,
+    })),
+    edges: edges.map((e) => ({
+      id: e.id, from: e.from, to: e.to, kind: e.kind,
+      inferred: e.resolution === "inferred" && e.kind === "calls", added: e.change === "added",
+      dim: !(lit(nodeById.get(e.from)) && lit(nodeById.get(e.to))),
+      selected: state.sel?.type === "edge" && state.sel.id === e.id,
+      title: `${e.kind}${e.change === "added" ? " · new in this PR" : ""}${e.anchor ? ` · ${e.anchor.file}:${e.anchor.line}` : ""}`,
+    })),
+    onNode,
+    onEdge,
+  });
 }
 
 // ---------- full map: the whole repo, with commits from every PR laid over it ----------

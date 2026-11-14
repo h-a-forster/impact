@@ -38,6 +38,7 @@ and no Graphify install.
 | `npm run setup:fresh` | Also re-run the tests and Graphify on every commit. Needs Graphify: `uv tool install graphifyy --python 3.12` |
 | `npm run review:live` | Re-run the independent AI review for every PR commit. Needs the `claude` CLI, signed in. |
 | `npm start` | Start the app only. |
+| `npm run build:graph` | Rebuild the map graph (React Flow + Dagre) from `src/graph/main.jsx` into `src/public/graph.bundle.js`. Only needed after editing that file; the built bundle is committed. |
 | `npm run evals` | Run the 94 review evals. |
 | `npm run planted` | Plant known bugs into each REQ-17 commit and measure what the tests and the map catch. Writes `docs/measurement.md`. |
 | `npm run gate -- <pr id or number> [owner/name]` | Merge gate. Exit 0 only when the latest step is signed off by a named person. |
