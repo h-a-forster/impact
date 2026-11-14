@@ -11,6 +11,7 @@
     "review:live": "node scripts/setup.mjs --live-review",
     "start": "node src/server.mjs",
     "evals": "node evals/run.mjs",
+    "fastlane": "node evals/fast-lane.mjs",
     "reset": "node -e \"require('fs').rmSync('.demo/decisions.json',{force:true});console.log('Decisions cleared.')\"",
     "export:replica": "node scripts/export-replica.mjs",
     "planted": "node scripts/planted.mjs",

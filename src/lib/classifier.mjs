@@ -25,6 +25,12 @@ function globToRegExp(glob) {
 }
 export const matchesAny = (file, globs = []) => (globs ?? []).some((g) => globToRegExp(g).test(file));
 
+// Auto-merge allowlist: a folder alone is not enough, because code can live in a docs folder.
+// Unless the policy lists extensions for an entry, only text documents qualify.
+const DOCUMENT_EXTENSIONS = [".md", ".txt"];
+const hasExtension = (file, extensions) => extensions.some((e) => file.toLowerCase().endsWith(e));
+const isPlainPath = (file) => !file.startsWith("/") && !file.split("/").includes("..");
+
 /**
  * The approved policy always comes from the base commit.
  * A PR that edits review-policy.yml cannot grant itself lighter checks.
@@ -160,10 +166,12 @@ export function classifier2(policy, input) {
     reason = "Required checks or evidence are missing, failed, stale or pending. See the blockers.";
   } else {
     const allow = (policy.auto_merge_dry_run?.allow ?? []).find(
-      (a) => a.severity === severity && files.length > 0 && files.every((f) => matchesAny(f, a.paths)),
+      (a) => a.severity === severity && files.length > 0 && files.every((f) => isPlainPath(f) && matchesAny(f, a.paths) && hasExtension(f, a.extensions ?? DOCUMENT_EXTENSIONS)),
     );
     const reviewAvailable = review && review.available;
-    if (severity === "Low" && allow && reviewAvailable && !actionRequired.length) {
+    // The fast lane fails closed: at least one check ran, and the reviewer reported no finding of any kind.
+    const reviewerSilent = reviewAvailable && !(review.findings ?? []).length;
+    if (severity === "Low" && allow && checks.length && reviewerSilent) {
       route = ROUTES.AUTO;
       rule = "C2-ALLOWLIST";
       reason = `Low severity, required checks passed, AI review available with no action required, and every changed file is on the dry-run allowlist (${allow.paths.join(", ")}). Dry run only. Nothing is merged.`;
@@ -175,7 +183,9 @@ export function classifier2(policy, input) {
           ? "High severity. A named engineer must do a full review."
           : !reviewAvailable && severity === "Low"
             ? "The AI review is unavailable, so this cannot qualify for auto-merge. A named engineer decides."
-            : "Required checks and evidence are in. A named engineer decides.";
+            : reviewAvailable && severity === "Low" && !reviewerSilent
+              ? "The AI reviewer reported a finding, so this cannot qualify for auto-merge. A named engineer decides."
+              : "Required checks and evidence are in. A named engineer decides.";
       if (actionRequired.length) reason += " The reviewer reported a problem that needs resolution.";
     }
   }
