@@ -122,17 +122,20 @@ much ("wide"). What they touched is the zone a fix can reasonably reach. The rea
 ### Monte Carlo swarm (bottom of the Blast radius tab)
 
 Press **Run Monte Carlo swarm** to watch N agents get the same requirements, each write a fix,
-and land on a 0 to 100% similarity scale next to the real change. It replays real runs:
-5 agents on Sonnet 5.5 (`claude-sonnet-5-5`), recorded 2026-11-14, each alone in a clean copy of the
-base commit, all with the normal agent's prompt (`blast-prompts/normal.txt`). No agent runs in the demo.
+and land on a 0 to 100% similarity scale next to the real change. It replays real runs, recorded
+2026-11-14, each agent alone in a clean copy of the base commit, all with the normal agent's prompt
+(`blast-prompts/normal.txt`). No agent runs in the demo.
 
+- **Demo default:** a mix of 5 agents: 1 Opus 5.5, 2 Sonnet 5.5, 2 Haiku 5.5. Also recorded:
+  5 Sonnet 5.5 agents. The menus offer more (Fable 5.2, up to 10 agents); a pick that is not
+  recorded plays the demo mix and says so on screen.
 - Record: `data/tieto/ju26-issue-2283/swarm.json`. Rebuild with
   `node scripts/record-swarm.mjs --setup`, then `--run`, then `--record` (`--model`, `--count`).
 - Maths: `src/lib/swarm.mjs`, served by `GET /api/swarm?pr=<id>`.
 - **Similarity rule.** Each change is a set: the product code files it touches, plus the functions in
   them it edits that already existed (no docs, no unit tests). Similarity = shared / all (Jaccard).
   "Similar" = 50% or more. "Agents agree with each other" = the average over every pair of agents.
-- Deep link: `?map=blast&swarm=1` plays it; `&agent=<n>` opens one agent in the side panel.
+- Deep link: `?map=blast&swarm=1` plays it; `&model=<id|mix>&n=<count>` picks first; `&agent=<n>` opens one agent.
 
 ## What is real, what is recorded, what is rule-based
 

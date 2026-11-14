@@ -6,7 +6,7 @@
 //   in them it edits that already existed. Docs and unit tests are left out, as in the trust label.
 //   Similarity = things both changes touch / things either change touches   (Jaccard, 0 to 100%)
 //   A run is "similar" to the real change when its similarity is 50% or more.
-//   "Agents agree with each other" = the average similarity over every pair of agents.
+//   "Agents agree with each other" = the average similarity over every pair of agents (worked out on the page).
 import fs from "node:fs";
 import path from "node:path";
 import { DATA } from "./paths.mjs";
@@ -43,7 +43,11 @@ export function buildSwarm(prId) {
       const mine = sets[i];
       const score = similarity(mine, real);
       return {
+        key: `${id}:${r.n}`,
+        model: id,
+        modelLabel: m.label,
         n: r.n,
+        things: [...mine.keys()],
         ok: r.exitCode === 0,
         noChange: r.files.length === 0,
         score: pct(score),
@@ -61,13 +65,17 @@ export function buildSwarm(prId) {
         changes: r.files.map((f) => ({ file: f.file, kind: f.kind, added: f.added, removed: f.removed, patch: f.patch })),
       };
     });
-    let pairs = 0, sum = 0;
-    for (let i = 0; i < sets.length; i++) for (let j = i + 1; j < sets.length; j++) {
-      pairs++;
-      sum += similarity(sets[i], sets[j]);
-    }
-    return { id, label: m.label, count: runs.length, runs, agentsAgree: pairs ? pct(sum / pairs) : null };
+    return { id, label: m.label, runs };
   });
+  // What the Run button can play: each model on its own, and the demo mix. Only recorded runs, never made up.
+  const runOf = (model, n) => models.find((m) => m.id === model)?.runs.find((r) => r.n === n);
+  const sets = models.map((m) => ({ id: m.id, label: m.label, runs: m.runs.map((r) => r.key) }));
+  const mix = (rec.mix ?? []).map(([model, n]) => runOf(model, n)).filter(Boolean);
+  if (mix.length) {
+    // In the order the mix lists them.
+    const parts = [...new Set(mix.map((r) => r.modelLabel))].map((l) => [l, mix.filter((r) => r.modelLabel === l).length]);
+    sets.unshift({ id: "mix", label: `Mix: ${parts.map(([l, k]) => `${k} ${l}`).join(", ")}`, runs: mix.map((r) => r.key) });
+  }
   return {
     pr: prId,
     recorded: true,
@@ -77,6 +85,13 @@ export function buildSwarm(prId) {
     notBuilt: rec.notBuilt,
     similarAt: pct(SIMILAR_AT),
     real: [...real.values()].map((t) => t.label),
-    models,
+    // The demo default: the first set (the mix when there is one), all of its runs.
+    defaultSet: sets[0].id,
+    // Shown in the model list even when nothing is recorded for them.
+    choices: ["mix", "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-2"],
+    choiceLabels: { "claude-opus-5-5": "Opus 5.5", "claude-sonnet-5-5": "Sonnet 5.5", "claude-haiku-5-5": "Haiku 5.5", "claude-fable-5-2": "Fable 5.2" },
+    maxAgents: 10,
+    sets,
+    runs: models.flatMap((m) => m.runs),
   };
 }

@@ -656,59 +656,82 @@ function blastSideHtml(id) {
 
 // ---------- Monte Carlo swarm: the same task, many agents, how often do they land near the real change? ----------
 // Data: GET /api/swarm?pr=<id> (recorded runs, scored in src/lib/swarm.mjs). The button replays them. No agent runs now.
-const swarmUI = { pr: null, data: null, model: null, count: null, timers: [] };
+// You can pick any model and 1 to 10 agents. Only recorded runs are ever shown: when the pick is not recorded,
+// Run goes back to the demo set and says so.
+const swarmUI = { pr: null, data: null, model: null, count: null, timers: [], note: null };
 function stopSwarm() {
   for (const t of swarmUI.timers) clearTimeout(t);
   swarmUI.timers = [];
 }
-async function renderSwarm({ autoplay = false } = {}) {
+const swarmSet = (id) => swarmUI.data.sets.find((x) => x.id === id);
+const swarmRun = (key) => swarmUI.data.runs.find((r) => r.key === key);
+function swarmDefault() {
+  const s = swarmUI.data;
+  swarmUI.model = s.defaultSet;
+  swarmUI.count = swarmSet(s.defaultSet).runs.length;
+}
+async function renderSwarm({ autoplay = false, model = null, count = null } = {}) {
   const el = $("swarmView");
   if (swarmUI.pr !== state.prId) {
     stopSwarm();
     swarmUI.pr = state.prId;
     swarmUI.data = null;
+    swarmUI.note = null;
     el.innerHTML = "";
     swarmUI.data = await api("/api/swarm?pr=" + encodeURIComponent(state.prId));
     if (swarmUI.pr !== state.prId) return;
-    const first = swarmUI.data.models?.[0];
-    swarmUI.model = first?.id ?? null;
-    swarmUI.count = first?.count ?? 0;
+    if (swarmUI.data.recorded) swarmDefault();
   }
   const s = swarmUI.data;
   if (!s?.recorded) {
     el.innerHTML = `<div class="swarm"><div class="swarm-head"><h3>Monte Carlo swarm</h3></div><div class="muted">${esc(s?.message ?? "")}</div></div>`;
     return;
   }
-  const m = s.models.find((x) => x.id === swarmUI.model);
+  const label = (id) => (id === "mix" ? swarmSet("mix")?.label ?? "Mix" : s.choiceLabels[id] ?? id);
+  const def = swarmSet(s.defaultSet);
   el.innerHTML = `<div class="swarm">
     <div class="swarm-head"><h3>Monte Carlo swarm</h3>
       <span class="muted">Give the same task to many agents. How often does one end up close to the real change?</span></div>
     <div class="swarm-controls">
-      <label>Model <select id="swarmModel">${s.models.map((x) => `<option value="${esc(x.id)}" ${x.id === swarmUI.model ? "selected" : ""}>${esc(x.label)}</option>`).join("")}</select></label>
-      <label>Agents <select id="swarmCount">${Array.from({ length: m.count }, (_, i) => i + 1).map((n) => `<option value="${n}" ${n === swarmUI.count ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+      <label>Model <select id="swarmModel">${s.choices.map((id) => `<option value="${esc(id)}" ${id === swarmUI.model ? "selected" : ""}>${esc(label(id))}</option>`).join("")}</select></label>
+      <label>Agents <select id="swarmCount">${Array.from({ length: s.maxAgents }, (_, i) => i + 1).map((n) => `<option value="${n}" ${n === swarmUI.count ? "selected" : ""}>${n}</option>`).join("")}</select></label>
       <button type="button" class="primary" id="swarmGo">▶ Run Monte Carlo swarm</button>
-      <span class="muted swarm-rec">Replays ${m.count} real runs of ${esc(m.label)}, recorded ${esc(s.recordedAt.slice(0, 10))}. No agent runs now.</span>
     </div>
+    <div class="muted swarm-rec">Replays real runs recorded ${esc(s.recordedAt.slice(0, 10))}. No agent runs now. Recorded for the demo: ${esc(def.label)}.</div>
+    <div id="swarmNote" class="swarm-note" ${swarmUI.note ? "" : "hidden"}>${esc(swarmUI.note ?? "")}</div>
     <div id="swarmStage" class="swarm-stage" hidden></div>
   </div>`;
   $("swarmModel").onchange = (ev) => {
     stopSwarm();
     swarmUI.model = ev.target.value;
-    swarmUI.count = s.models.find((x) => x.id === swarmUI.model).count;
-    renderSwarm();
   };
   $("swarmCount").onchange = (ev) => {
     stopSwarm();
     swarmUI.count = Number(ev.target.value);
-    $("swarmStage").hidden = true;
   };
   $("swarmGo").onclick = () => playSwarm();
-  if (autoplay) playSwarm();
+  if (autoplay) {
+    // A deep link can pick the model and the count first (&model=<id>&n=<count>).
+    if (model) swarmUI.model = model;
+    if (count) swarmUI.count = count;
+    playSwarm();
+  }
 }
 function playSwarm() {
   stopSwarm();
-  const s = swarmUI.data, m = s.models.find((x) => x.id === swarmUI.model);
-  const runs = m.runs.slice(0, swarmUI.count);
+  const s = swarmUI.data;
+  // Play the pick if it is recorded. Otherwise go back to the demo set, and say so.
+  const picked = swarmSet(swarmUI.model);
+  if (!picked || swarmUI.count > picked.runs.length) {
+    const want = `${swarmUI.count} × ${swarmUI.model === "mix" ? "the mix" : s.choiceLabels[swarmUI.model] ?? swarmUI.model}`;
+    swarmDefault();
+    swarmUI.note = `${want} is not recorded for this demo, so this plays the recorded set: ${swarmSet(swarmUI.model).label}.`;
+    renderSwarm();
+  } else swarmUI.note = null;
+  const note = $("swarmNote");
+  note.hidden = !swarmUI.note;
+  note.textContent = swarmUI.note ?? "";
+  const runs = swarmSet(swarmUI.model).runs.slice(0, swarmUI.count).map(swarmRun);
   const stage = $("swarmStage");
   stage.hidden = false;
   const fast = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -722,8 +745,8 @@ function playSwarm() {
   });
   stage.innerHTML = `<div class="swarm-flow">
       <div class="swarm-req" id="swarmReq"><b>Requirements</b><span>Same text for every agent</span></div>
-      <div class="swarm-agents">${runs.map((r) => `<button type="button" class="swarm-agent" data-run="${r.n}">
-        <span class="swarm-name">Agent ${r.n}</span>
+      <div class="swarm-agents">${runs.map((r, i) => `<button type="button" class="swarm-agent" data-run="${esc(r.key)}">
+        <span class="swarm-name">Agent ${i + 1}<span class="swarm-model">${esc(r.modelLabel)}</span></span>
         <span class="swarm-bar"><i></i></span>
         <span class="swarm-status">waiting</span></button>`).join("")}</div>
     </div>
@@ -732,12 +755,12 @@ function playSwarm() {
       <div class="swarm-track">
         <div class="swarm-near" style="left:${s.similarAt}%"><span>similar</span></div>
         <div class="swarm-real" style="left:100%" title="The real change"><span>Real change</span></div>
-        ${runs.map((r, i) => `<button type="button" class="swarm-dot" data-run="${r.n}" style="left:${r.score}%;bottom:${8 + stack[i] * 16}px" title="Agent ${r.n}: ${r.score}% similar"></button>`).join("")}
+        ${runs.map((r, i) => `<button type="button" class="swarm-dot" data-run="${esc(r.key)}" style="left:${r.score}%;bottom:${8 + stack[i] * 16}px" title="Agent ${i + 1} (${esc(r.modelLabel)}): ${r.score}% similar"></button>`).join("")}
       </div>
       <div class="swarm-axis"><span style="left:0">0%</span><span style="left:50%">50%</span><span style="left:100%">100%</span></div>
     </div>
     <div class="swarm-result" id="swarmResult" hidden></div>`;
-  for (const b of stage.querySelectorAll("[data-run]")) b.onclick = () => select({ type: "swarm", n: Number(b.dataset.run) });
+  for (const b of stage.querySelectorAll("[data-run]")) b.onclick = () => select({ type: "swarm", key: b.dataset.run, agent: runs.findIndex((r) => r.key === b.dataset.run) + 1 });
   const rows = [...stage.querySelectorAll(".swarm-agent")];
   const dots = [...stage.querySelectorAll(".swarm-dot")];
   // 1. The requirements go out to every agent, one after the other.
@@ -766,21 +789,33 @@ function playSwarm() {
   // 4. The answer.
   later(end + 500, () => {
     const near = runs.filter((r) => r.similar).length;
-    const pairs = [];
-    for (let i = 0; i < runs.length; i++) for (let j = i + 1; j < runs.length; j++) pairs.push([i, j]);
-    const misses = new Map();
-    for (const r of runs) for (const x of r.missed) misses.set(x, (misses.get(x) ?? 0) + 1);
-    const topMiss = [...misses].sort((a, b) => b[1] - a[1])[0];
-    const extras = new Map();
-    for (const r of runs) for (const x of r.extra) extras.set(x, (extras.get(x) ?? 0) + 1);
-    const topExtra = [...extras].sort((a, b) => b[1] - a[1])[0];
+    const jac = (a, b) => {
+      const A = new Set(a), all = new Set([...a, ...b]);
+      return all.size ? b.filter((x) => A.has(x)).length / all.size : 1;
+    };
+    let pairs = 0, sum = 0;
+    for (let i = 0; i < runs.length; i++) for (let j = i + 1; j < runs.length; j++) {
+      pairs++;
+      sum += jac(runs[i].things, runs[j].things);
+    }
+    const count = (list) => {
+      const m = new Map();
+      for (const x of list) m.set(x, (m.get(x) ?? 0) + 1);
+      return [...m].sort((a, b) => b[1] - a[1])[0];
+    };
+    const topMiss = count(runs.flatMap((r) => r.missed));
+    const topExtra = count(runs.flatMap((r) => r.extra));
     const avg = Math.round(runs.reduce((a, r) => a + r.score, 0) / runs.length);
     const tone = near / runs.length >= 0.7 ? "ok" : near / runs.length >= 0.4 ? "warn" : "bad";
+    const byModel = [...new Set(runs.map((r) => r.modelLabel))].map((l) => {
+      const mine = runs.filter((r) => r.modelLabel === l);
+      return `${l}: ${mine.filter((r) => r.similar).length} of ${mine.length}`;
+    });
     const res = $("swarmResult");
     res.hidden = false;
     res.innerHTML = `<div class="blast-label ${tone}"><span class="stamp-label">Swarm result</span>
         <strong>${near} of ${runs.length} agent${runs.length === 1 ? "" : "s"} ended up similar to the real change</strong>
-        <span>"Similar" means ${s.similarAt}% or more. Average similarity: ${avg}%.${runs.length > 1 && swarmUI.count === m.count ? ` The agents agree with each other ${m.agentsAgree}% of the time.` : ""}</span></div>
+        <span>"Similar" means ${s.similarAt}% or more. Average similarity: ${avg}%.${pairs ? ` The agents agree with each other ${Math.round((sum / pairs) * 100)}% of the time.` : ""}${byModel.length > 1 ? ` By model: ${byModel.join(" · ")}.` : ""}</span></div>
       <ul class="swarm-facts">
         ${topMiss ? `<li><b>The real change does this, the agents did not:</b> <code>${esc(topMiss[0])}</code> (missed by ${topMiss[1]} of ${runs.length})</li>` : `<li>Every agent touched everything the real change touched.</li>`}
         ${topExtra ? `<li><b>Agents did this, the real change did not:</b> <code>${esc(topExtra[0])}</code> (${topExtra[1]} of ${runs.length})</li>` : `<li>No agent touched code the real change left alone.</li>`}
@@ -795,12 +830,11 @@ function playSwarm() {
   });
 }
 /** Side panel for one swarm agent: its score and its change. */
-function swarmSideHtml(n) {
-  const s = swarmUI.data, m = s?.models.find((x) => x.id === swarmUI.model);
-  const r = m?.runs.find((x) => x.n === n);
+function swarmSideHtml(sel) {
+  const r = swarmUI.data?.runs.find((x) => x.key === sel.key);
   if (!r) return "";
   const list = (arr) => (arr.length ? arr.map((x) => `<code>${esc(x)}</code>`).join(", ") : "nothing");
-  return `<h2>Agent ${r.n} · ${esc(m.label)}</h2><div class="where">Monte Carlo swarm · took ${r.seconds ?? "?"} s · recorded ${esc(s.recordedAt.slice(0, 10))}</div>
+  return `<h2>Agent ${sel.agent ?? r.n} · ${esc(r.modelLabel)}</h2><div class="where">Monte Carlo swarm · took ${r.seconds ?? "?"} s · recorded ${esc(swarmUI.data.recordedAt.slice(0, 10))}</div>
     <div class="callout ${r.similar ? "ok" : "bad"}"><strong>${r.score}% similar</strong> to the real change.</div>
     <dl class="kv"><dt>Both touched</dt><dd>${list(r.shared)}</dd><dt>Only the real change</dt><dd>${list(r.missed)}</dd><dt>Only this agent</dt><dd>${list(r.extra)}</dd></dl>
     <h3>What it changed</h3>${r.changes.length ? r.changes.map((f) => changeBlock(f.file, parseHunks(f.patch), `${f.added} added, ${f.removed} removed`)).join("<div style='height:8px'></div>") : `<div class="muted">No change.</div>`}
@@ -937,7 +971,7 @@ async function sideHtml() {
   if (!sel) return "";
   if (sel.type === "fullnode") return fullNodeHtml(sel.id);
   if (sel.type === "blast") return blastSideHtml(sel.id);
-  if (sel.type === "swarm") return swarmSideHtml(sel.n);
+  if (sel.type === "swarm") return swarmSideHtml(sel);
   if (sel.type === "doc") {
     const text = await (await fetch(`demo/${sel.file}`)).text();
     const note = sel.file.startsWith("context/") ? "Demo version, made up. The coding agent saves this file with the pull request. The Q&A agent reads it to answer your questions." : "Demo version. In a real repo this file sits at the top of the repo, and the copy on the base branch is the one that counts.";
@@ -1189,10 +1223,15 @@ async function init() {
     await loadBlast();
     render();
     if (q.get("box")) selectBlast(q.get("box"));
-    // &swarm=1 plays the Monte Carlo swarm. &agent=<n> also opens that agent in the side panel.
+    // &swarm=1 plays the Monte Carlo swarm (&model=<id>&n=<count> to pick first). &agent=<n> also opens that agent in the side panel.
     if (q.get("swarm") === "1") {
-      await renderSwarm({ autoplay: true });
-      if (q.get("agent")) select({ type: "swarm", n: Number(q.get("agent")) });
+      await renderSwarm({ autoplay: true, model: q.get("model"), count: Number(q.get("n")) || null });
+      if (q.get("agent")) {
+        // &agent=<n>: the n-th agent of the set that just played.
+        const n = Number(q.get("agent"));
+        const key = swarmSet(swarmUI.model)?.runs[n - 1];
+        if (key) select({ type: "swarm", key, agent: n });
+      }
     }
   }
   if (q.get("map") === "full") {

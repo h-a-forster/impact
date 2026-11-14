@@ -119,8 +119,10 @@ if (has("record")) {
     recordedAt: new Date().toISOString(),
     base: baseSha,
     prompt: { file: `data/tieto/${prId}/blast-prompts/normal.txt`, text: unix(fs.readFileSync(promptFile, "utf8")), note: "Every agent got this prompt, word for word: the same one the normal agent got." },
-    how: "Each agent ran once with `claude -p --model <model>`, alone, in its own copy of the code from before the fix. No shell, no git, no web. The agents ran at the same time.",
+    how: "Each agent ran once with `claude -p --model <model>`, alone, in its own copy of the code from before the fix. No shell, no git, no web. Agents of the same model ran at the same time.",
     notBuilt: "This machine has no .NET SDK. Nobody built the code or ran the unit tests. We do not know if any agent's fix works.",
+    // The demo mix the Run button plays by default: [model, run number]. Picked before looking at the results.
+    mix: [["claude-opus-5-5", 1], ["claude-sonnet-5-5", 1], ["claude-sonnet-5-5", 2], ["claude-haiku-5-5", 1], ["claude-haiku-5-5", 2]],
     models,
   };
   fs.writeFileSync(path.join(prDir, "swarm.json"), JSON.stringify(out, null, 1) + "\n");
