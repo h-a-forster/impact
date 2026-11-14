@@ -666,14 +666,14 @@ const whyHtml = (t) => `<ul class="why">${t.why.map((w) => `<li class="${w.tone}
 const BLAST_WHAT = "3 agents did the same task. We check that the real change stays where they worked.";
 const SWARM_WHAT = "Many agents did the same task. If most make the same change, the real change is likely right.";
 /**
- * Blast radius trust score. Each code file the real change edits (not docs, not unit tests) gets points
+ * Blast radius trust score. Each code file the real change edits (as the server's label counts them) gets points
  * for where it sits: 100 if the careful agent edited it too, 85 the normal agent, 60 only the agent that
  * changes too much, 20 no agent. The score is the average, minus 20 for each of the real change's
  * unit tests that fails on every agent's fix.
  */
 function blastScore(b) {
   const POINTS = { tight: 100, normal: 85, wide: 60, outside: 20 };
-  const files = b.items.filter((x) => x.level === "file" && x.by.real && x.kind !== "test" && x.kind !== "doc");
+  const files = b.items.filter((x) => x.level === "file" && x.by.real && x.kind === "code");
   const base = files.length ? Math.round(files.reduce((a, x) => a + POINTS[x.zone], 0) / files.length) : 100;
   const extra = b.tests?.onlyReal?.length ?? 0, n = files.length;
   const score = Math.max(0, base - 20 * extra);
