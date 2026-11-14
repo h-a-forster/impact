@@ -267,17 +267,17 @@ function loadDescription(pr, brief, commit) {
     ai: ai ? { generatedBy: saved.generatedBy, ...ai } : null,
   };
 }
+export function loadBrief(prId) {
+  const file = path.join(BRIEFS, `${prId}.json`);
+  return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : null;
+}
+
 /** The coding agent's saved answers for the chat, for the one commit they were written for (shop sample). */
 function loadChat(prId, sha) {
   const file = path.join(BRIEFS, "chat", `${prId}.json`);
   if (!fs.existsSync(file)) return null;
   const chat = JSON.parse(fs.readFileSync(file, "utf8"));
   return chat.commit === sha ? chat : null;
-}
-
-export function loadBrief(prId) {
-  const file = path.join(BRIEFS, `${prId}.json`);
-  return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : null;
 }
 
 /** Concept mapper (rule-based): folder group, with a behaviour label when the team config has one. */
