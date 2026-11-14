@@ -11,6 +11,7 @@ import { decisionView, recordDecision } from "../src/lib/decisions.mjs";
 import { findPr, prSummary } from "../src/lib/github.mjs";
 import { buildSwarm } from "../src/lib/swarm.mjs";
 import { buildLedgerModel, ledgerPrs } from "../src/lib/ledger.mjs";
+import { prComment } from "../src/lib/comment.mjs";
 import { DATA } from "../src/lib/paths.mjs";
 import { ROOT } from "../src/lib/paths.mjs";
 
@@ -257,6 +258,27 @@ group = "Contested claims";
   check("a Minor finding alone does not contest a claim", by("CLM-4"), ["Verified", []]);
   const attack = buildModel(revisions, "req-21", revisions.prs.find((p) => p.id === "req-21").commits[0].sha);
   check("shop sample: Action required finding on the edited lines contests the author's claim", attack.claims.find((c) => c.id === "c1").label, "Contested");
+}
+
+// ---- 11. PR comment -----------------------------------------------------------
+group = "PR comment";
+{
+  // req-17 commit 1, as the first screen shows it: proof for Order Import is missing.
+  const m = buildModel(revisions, "req-17", c1);
+  const points = [
+    ...m.review.findings.map((f) => ({ level: f.category === "Minor" ? "minor" : "major", title: f.title })),
+    ...m.classifier2.blockers.map((b) => ({ level: "block", title: b.text })),
+  ];
+  const url = "http://localhost:4317/#pr=req-17";
+  const lines = prComment({ model: m, verdict: "Cannot merge yet", score: 0, points, notRun: [], url }).trimEnd().split("\n");
+  const at = (start) => lines.findIndex((l) => l.startsWith(start));
+  check("req-17 commit 1: verdict and score lead", lines[0], "### Impact Map review: Cannot merge yet (0 / 100)");
+  check("req-17 commit 1: route says it waits for proof", lines[1].startsWith(`**Route:** ${m.classifier2.route}`) && m.classifier2.route.startsWith("Waiting"), true);
+  check("req-17 commit 1: the missing Order Import proof is the first open point", /^- \*\*Blocker:\*\* .*importOrder\(\)/.test(lines[at("**Open points") + 1]), true);
+  check("req-17 commit 1: the unverified import claim is under Not checked", lines.slice(at("**Not checked**")).some((l) => /^- Claim unverified: Order Import/.test(l)), true);
+  check("req-17 commit 1: ends with the link back", lines.at(-1), `[Open in Impact Map](${url})`);
+  const many = prComment({ model: m, verdict: "Look closer first", score: 50, points: Array.from({ length: 7 }, (_, i) => ({ level: "minor", title: `Point ${i}` })), url }).split("\n");
+  check("open points stop at 5, then one line for the rest", [many.filter((l) => /^- Minor: Point/.test(l)).length, many.includes("- …and 2 more in the Impact Map")], [5, true]);
 }
 
 // ---- Report ---------------------------------------------------------------

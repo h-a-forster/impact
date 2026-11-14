@@ -13,7 +13,9 @@ import { DECISIONS_FILE, DEMO, REVISIONS_FILE, ROOT, SAMPLE_REPO } from "./lib/p
 
 const PORT = Number(process.env.PORT ?? 4317);
 const PUBLIC = path.join(ROOT, "src", "public");
-const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml" };
+const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".mjs": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml" };
+// Browser-safe lib modules the page imports, so the UI and the evals share one copy.
+const SHARED = new Map([["/lib/comment.mjs", path.join(ROOT, "src", "lib", "comment.mjs")]]);
 
 if (!fs.existsSync(REVISIONS_FILE) || !fs.existsSync(SAMPLE_REPO)) {
   console.error("The demo is not set up yet. Run:  npm run setup");
@@ -143,8 +145,8 @@ const handler = async (req, res) => {
     }
     // Static files.
     const rel = url.pathname === "/" ? "index.html" : url.pathname.slice(1);
-    const file = path.join(PUBLIC, rel);
-    if (!file.startsWith(PUBLIC) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+    const file = SHARED.get(url.pathname) ?? path.join(PUBLIC, rel);
+    if (!(file.startsWith(PUBLIC) || SHARED.has(url.pathname)) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
       res.writeHead(404);
       return res.end("not found");
     }
