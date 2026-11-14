@@ -1,6 +1,6 @@
 // Monte Carlo swarm: N agents of one model got the same task. How often did they end up close to the real change?
 // Recorded by scripts/record-swarm.mjs into data/tieto/<pr>/swarm.json. This file only does the maths.
-// The shop sample's runs live in data/shop/<pr>/swarm.json, which carries its own real change (it has no blast.json).
+// The shop sample's runs live in data/shop/<pr>/swarm.json (scripts/record-shop-swarm.mjs), which carries its own real change.
 //
 // THE SIMILARITY RULE (the README says the same):
 //   Each change is a set of "things": the product code files it touches, plus the functions
