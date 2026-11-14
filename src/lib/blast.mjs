@@ -88,6 +88,20 @@ export const fileKind = (file) =>
 // ---------- the maths ----------
 const file = (prId) => path.join(DATA, "tieto", prId, "blast.json");
 export const hasBlast = (prId) => fs.existsSync(file(prId));
+
+/**
+ * Unit tests run both ways, recorded by scripts/blast-tests.mjs on a machine with a .NET SDK, or null.
+ * `onlyReal` lists the unit tests of the real change that every agent's fix fails: they check
+ * something only the real change does, so a named person decides whether it was asked for.
+ */
+function recordedTests(prId) {
+  const testsFile = path.join(DATA, "tieto", prId, "blast-tests.json");
+  if (!fs.existsSync(testsFile)) return null;
+  const rec = JSON.parse(fs.readFileSync(testsFile, "utf8"));
+  const onFixes = rec.runs.filter((r) => r.ran && r.tests === "real" && r.on !== "base");
+  const onlyReal = onFixes.length ? onFixes[0].failed.filter((f) => onFixes.every((r) => r.failed.some((x) => x.name === f.name))) : [];
+  return { recordedAt: rec.recordedAt, sdk: rec.sdk, how: rec.how, runs: rec.runs, onlyReal };
+}
 const fnId = (f, key) => `${f}#${key}`;
 const tail = (f) => f.split("/").pop();
 
@@ -285,6 +299,7 @@ export function buildBlast(prId) {
     base: rec.base,
     how: rec.how,
     notBuilt: rec.notBuilt,
+    tests: recordedTests(prId),
     given: rec.given,
     graphTool: graph.tool,
     order,

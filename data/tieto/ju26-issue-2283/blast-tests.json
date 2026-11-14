@@ -1,0 +1,130 @@
+{
+  "schema": "impact-map/blast-tests/v1",
+  "pr": "ju26-issue-2283",
+  "recordedAt": "2026-11-14T14:30:28.464Z",
+  "sdk": "8.0.428",
+  "base": "32258fdbee4bcd653c79f51b4376b5103c6f4d27",
+  "real": "9df83c38409c8bfad0517aebffe48211eda4a5b4",
+  "how": "node scripts/blast-tests.mjs: git worktrees of the sample repository, the recorded changes applied with git apply, then dotnet test with a filter on the unit test classes. Run on a machine with a .NET SDK, not the one that recorded the agent runs.",
+  "runs": [
+    {
+      "id": "base-vs-wide-tests",
+      "on": "base",
+      "tests": "agent",
+      "by": "wide",
+      "classes": [
+        "ReferencedAssemblyTypeTests"
+      ],
+      "ran": true,
+      "total": 5,
+      "passed": 2,
+      "failed": [
+        {
+          "name": "ReferencedAssemblyTypeTests.ClosedGeneric_DefinedInReferencedAssembly(itemDeclaration: \"public partial record struct Item<T>([property: Ke\"···)",
+          "message": "Assert.All() Failure: 1 out of 1 items in the collection did not pass."
+        },
+        {
+          "name": "ReferencedAssemblyTypeTests.ClosedGeneric_DefinedInReferencedAssembly(itemDeclaration: \"public partial struct Item<T> { [Key(0)] public st\"···)",
+          "message": "Assert.All() Failure: 1 out of 1 items in the collection did not pass."
+        },
+        {
+          "name": "ReferencedAssemblyTypeTests.ClosedGeneric_DefinedInReferencedAssembly(itemDeclaration: \"public partial struct Item<T> { [Key(0)] public st\"···)",
+          "message": "Assert.All() Failure: 1 out of 1 items in the collection did not pass."
+        }
+      ]
+    },
+    {
+      "id": "real-vs-wide-tests",
+      "on": "real",
+      "tests": "agent",
+      "by": "wide",
+      "classes": [
+        "ReferencedAssemblyTypeTests"
+      ],
+      "ran": true,
+      "total": 5,
+      "passed": 5,
+      "failed": []
+    },
+    {
+      "id": "base-vs-real-tests",
+      "on": "base",
+      "tests": "real",
+      "by": null,
+      "classes": [
+        "GenericsFormatterTests"
+      ],
+      "ran": true,
+      "total": 19,
+      "passed": 16,
+      "failed": [
+        {
+          "name": "GenericsFormatterTests.ClosedGenericStruct_FromMetadataReference",
+          "message": "System.InvalidOperationException : Mismatch between number of diagnostics returned, expected \"0\" actual \"2\""
+        },
+        {
+          "name": "GenericsFormatterTests.ClosedGenericStruct_FromMetadataReference_UnkeyedMember",
+          "message": "System.InvalidOperationException : Mismatch between number of diagnostics returned, expected \"0\" actual \"3\""
+        },
+        {
+          "name": "GenericsFormatterTests.ClosedGenericRecordStruct_FromMetadataReference",
+          "message": "System.InvalidOperationException : Mismatch between number of diagnostics returned, expected \"0\" actual \"2\""
+        }
+      ]
+    },
+    {
+      "id": "minimal-fix-vs-real-tests",
+      "on": "minimal",
+      "tests": "real",
+      "by": null,
+      "classes": [
+        "GenericsFormatterTests"
+      ],
+      "ran": true,
+      "total": 19,
+      "passed": 18,
+      "failed": [
+        {
+          "name": "GenericsFormatterTests.ClosedGenericStruct_FromMetadataReference_UnkeyedMember",
+          "message": "System.InvalidOperationException : Mismatch between number of diagnostics returned, expected \"0\" actual \"2\""
+        }
+      ]
+    },
+    {
+      "id": "normal-fix-vs-real-tests",
+      "on": "normal",
+      "tests": "real",
+      "by": null,
+      "classes": [
+        "GenericsFormatterTests"
+      ],
+      "ran": true,
+      "total": 19,
+      "passed": 18,
+      "failed": [
+        {
+          "name": "GenericsFormatterTests.ClosedGenericStruct_FromMetadataReference_UnkeyedMember",
+          "message": "System.InvalidOperationException : Mismatch between number of diagnostics returned, expected \"0\" actual \"2\""
+        }
+      ]
+    },
+    {
+      "id": "wide-fix-vs-real-tests",
+      "on": "wide",
+      "tests": "real",
+      "by": null,
+      "classes": [
+        "GenericsFormatterTests"
+      ],
+      "ran": true,
+      "total": 19,
+      "passed": 18,
+      "failed": [
+        {
+          "name": "GenericsFormatterTests.ClosedGenericStruct_FromMetadataReference_UnkeyedMember",
+          "message": "System.InvalidOperationException : Mismatch between number of diagnostics returned, expected \"0\" actual \"2\""
+        }
+      ]
+    }
+  ]
+}

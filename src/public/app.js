@@ -537,6 +537,25 @@ function blastBox(x) {
     <span class="bbox-foot"><span class="pips">${blastPips(x.by)}</span>${tags}</span></button>`;
 }
 // The tab works at file level only: one box and one table row per file. Function numbers sit in a fold.
+/** Blast radius, second half: the agents' unit tests and the real change's unit tests, run on each other's code. */
+function blastTestsHtml(b) {
+  const t = b.tests;
+  if (!t) return "";
+  const who = (id) => (b.columns.find((c) => c.id === id)?.label ?? id).toLowerCase();
+  const score = (r) => (r.ran ? `${r.passed} of ${r.total} pass` : `not run: ${esc(r.why)}`);
+  const agentTests = t.runs.filter((r) => r.tests === "agent");
+  const blind = [...new Set(agentTests.map((r) => r.by))].map((by) => {
+    const on = (where) => agentTests.find((r) => r.by === by && r.on === where);
+    return `<li>The ${esc(who(by))} wrote unit tests without seeing the real change. On the old code: <strong>${score(on("base"))}</strong>. On the real change: <strong>${score(on("real"))}</strong>.</li>`;
+  });
+  const real = t.runs.filter((r) => r.tests === "real");
+  const fixes = real.map((r) => `${r.on === "base" ? "the old code" : `the ${esc(who(r.on))}'s fix`}: <strong>${score(r)}</strong>`).join("; ");
+  const only = t.onlyReal.map((f) => `<li class="only-real"><strong>${esc(f.name.split(".").pop())}</strong> fails on every agent's fix (${esc(f.message)}). It checks something only the real change does. A named person decides whether that was asked for.</li>`);
+  return `<div class="blast-tests ${t.onlyReal.length ? "warn" : "ok"}"><span class="stamp-label">Unit tests, run both ways</span>
+    <ul>${blind.join("")}<li>The real change's own unit tests, on ${fixes}.</li>${only.join("")}</ul>
+    <span class="muted">Recorded ${esc(t.recordedAt.slice(0, 10))} with .NET SDK ${esc(t.sdk)}, by <code>scripts/blast-tests.mjs</code>. No model was called.</span></div>`;
+}
+
 function renderBlast() {
   const el = $("blastView"), b = state.blast[state.prId];
   if (!b) {
@@ -588,6 +607,7 @@ function renderBlast() {
   const secs = (r) => (r.startedAt && r.endedAt ? `${Math.max(1, Math.round((new Date(r.endedAt) - new Date(r.startedAt)) / 1000))} s` : "");
   el.innerHTML = `<p class="blast-what">We gave the same task to 3 agents: one careful, one normal, one that changes too much. The coloured zones show the files they touched. The thick outline is the real change.</p>
     <div class="blast-label ${esc(b.label.tone)}"><span class="stamp-label">Trust label</span><strong>${esc(b.label.text)}</strong><span>${esc(b.label.how)}</span></div>
+    ${blastTestsHtml(b)}
     <div class="blast-zones">${zoneHtml(0)}
       <div class="bz bz-outside"><div class="bz-title">Outside every zone <span>No agent touched this. Only the real change did.</span></div>${boxesOr(inZone("outside"))}</div>
     </div>
@@ -599,7 +619,7 @@ function renderBlast() {
       <span class="muted">Click a file to see what each one changed in it.</span>
     </div>
     <table class="blast-table files">${head}<tbody>${fileRows}${totalRow}</tbody></table>
-    <div class="blast-key muted"><span class="plus">+</span> lines added, <span class="minus">−</span> lines removed, · not touched. The real change is Tieto's AI-written branch, shown as a PR. ${esc(b.notBuilt)}</div>
+    <div class="blast-key muted"><span class="plus">+</span> lines added, <span class="minus">−</span> lines removed, · not touched. The real change is Tieto's AI-written branch, shown as a PR. ${esc(b.tests ? "The agents could not build the code; the unit tests were run afterwards on another machine (see above)." : b.notBuilt)}</div>
     <details class="blast-runs"><summary>More numbers: functions, reach and overlap</summary>
       <table class="blast-table">${head}<tbody>
       ${row("Functions edited", (c) => num(c.functions) + (c.newFunctions ? note(`${c.newFunctions} of them new`) : ""), "in product code, not unit tests")}
