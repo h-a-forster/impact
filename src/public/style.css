@@ -558,6 +558,8 @@ body { overflow: hidden; }
 .advice-score small { font-size: 13px; font-weight: 500; color: var(--muted); }
 .advice.ok .advice-main { color: var(--ok); } .advice.warn .advice-main { color: var(--warn); } .advice.bad .advice-main { color: var(--bad); }
 .short.advice > p { font-size: 15px; }
+.short.advice > p.advice-tally { font-size: 13.5px; margin: -2px 0 6px; text-align: right; font-variant-numeric: tabular-nums; }
+.short.advice > p.advice-outside { font-size: 14px; }
 .advice-parts { margin: 6px 0; padding-left: 0; list-style: none; font-size: 13.5px; }
 .advice-parts b { display: inline-block; min-width: 34px; font-variant-numeric: tabular-nums; }
 

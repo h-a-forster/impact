@@ -1571,6 +1571,28 @@ function advice() {
     : null;
   return { score, verdict, parts, blocked, look, waiting: !sc.blast || !sc.swarm };
 }
+/**
+ * The rows behind the score, in one line. It counts what the first screen lists: the issues
+ * (open = to look at, acknowledged = clear) and the tool rows (warn or bad = to look at, no runs = not run).
+ */
+function tallyHtml() {
+  const issues = issueList(state.model), rows = scoreRows();
+  if (rows.some((r) => r.wait)) return "";
+  const notRun = rows.filter((r) => r.tone === "plain").length;
+  const look = issues.filter((x) => !acked(x.id)).length + rows.filter((r) => ["warn", "bad"].includes(r.tone)).length;
+  const clear = issues.length + rows.length - notRun - look;
+  const parts = [[clear, "clear"], [look, "to look at"], [notRun, "not run"]].filter(([n]) => n).map(([n, word]) => `${n} ${word}`);
+  return `<p class="advice-tally muted">${parts.join(" · ")}</p>`;
+}
+/** Code the change reaches but never edits, named at the broadest map level that has any. */
+function outsideHtml() {
+  const reached = state.model.graph.nodes.filter((n) => n.state === "downstream");
+  const level = ["concept", "file", "function"].find((l) => reached.some((n) => n.level === l));
+  if (!level) return "";
+  const names = reached.filter((n) => n.level === level).map((n) => n.label);
+  const more = names.length > 2 ? ` and ${names.length - 2} more` : "";
+  return `<p class="advice-outside"><b>Outside the diff:</b> ${names.slice(0, 2).map(esc).join(", ")}${more}. <span class="muted">Not edited, but ${names.length > 1 ? "they use" : "it uses"} edited code.</span></p>`;
+}
 function adviceHtml() {
   const a = advice();
   const look = a.look
@@ -1578,6 +1600,7 @@ function adviceHtml() {
     : `<p>Nothing needs a closer look.</p>`;
   return `<div class="short advice ${a.verdict[1]}"><span class="short-label">My advice</span>
     <div class="advice-main"><strong>${a.verdict[0]}</strong><span class="advice-score" title="Merge score. 100 = nothing found.">${a.waiting ? "…" : a.score}<small> / 100${a.blocked ? ": proof is missing" : ""}</small></span></div>
+    ${tallyHtml()}${outsideHtml()}
     ${look}
     <details class="since-line" data-more="advice" ${ui.openMore.has("advice") ? "open" : ""}><summary>How the score is worked out</summary>
       <p>It starts at 100. A fixed rule takes points off. No AI is used.${a.blocked ? " Proof is missing, so the score is 0." : ""}</p>
