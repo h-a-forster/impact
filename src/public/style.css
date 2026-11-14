@@ -177,6 +177,9 @@ div.vis-tooltip { position: absolute; white-space: pre-line; max-width: 420px; p
 .gnode.downstream { background: var(--down-bg); border: 1.6px solid var(--down); }
 .gnode.failing { background: var(--bad-bg); border: 2.4px solid var(--bad); }
 .gnode.test, .gnode.testfile, .gnode.tests { background: var(--test-bg); border-color: var(--test); }
+.gnode.tests.edited { background: var(--edited-bg); border-color: var(--edited); }
+/* Affected, and no test checks it: blue box, amber ring. The box has no class for it, so the ring follows its badge. */
+.gnode.downstream:has(.gnode-badge.warn) { border: 2.4px solid var(--warn); outline: 3px solid color-mix(in srgb, var(--warn) 30%, transparent); outline-offset: 1px; }
 .gnode.pr { background: var(--ink); border-color: var(--ink); color: var(--card); }
 .gnode.pr .gnode-sub { color: var(--card); opacity: .7; }
 .gnode.requirement { background: var(--req-bg); border-color: var(--req); }
@@ -189,11 +192,14 @@ div.vis-tooltip { position: absolute; white-space: pre-line; max-width: 420px; p
 .sw-edited { background: var(--edited-bg); border-color: var(--edited); }
 .sw-downstream { background: var(--down-bg); border-color: var(--down); }
 .sw-failing { background: var(--bad-bg); border-color: var(--bad); }
+.sw-untested { background: var(--down-bg); border: 2.4px solid var(--warn); }
 .sw-test { background: var(--card); border-color: var(--test); }
 .sw.dot { border-radius: 50%; }
 .sw.dot.sw-edited { background: var(--edited); }
 .sw.dot.sw-downstream { background: var(--down); }
 .sw.dot.sw-failing { background: var(--bad); }
+.sw.dot.sw-untested { background: var(--down); }
+.map-hidden { margin-bottom: 6px; }
 .sw-none { background: var(--line); border-color: var(--muted); }
 .sw-pr { background: var(--ink); border-color: var(--ink); transform: rotate(45deg) scale(.8); }
 .ln { display: inline-block; width: 26px; height: 0; vertical-align: 4px; border-top: 2px solid var(--muted); }
@@ -365,6 +371,8 @@ button.danger { background: var(--bad); color: var(--card); border-color: var(--
 .swarm-head h3 { margin: 0; font-size: 13px; color: var(--ink); }
 .swarm-controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 0; }
 .swarm-controls select { margin-left: 4px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); }
+.swarm-pick > summary { cursor: pointer; color: var(--accent); font-size: 13px; }
+.swarm-pick[open] { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .swarm-rec { font-size: 12px; }
 .swarm-stage { margin-top: 14px; border: 1px solid var(--line); border-radius: 10px; padding: 14px; background: var(--bg); }
 .swarm-flow { display: grid; grid-template-columns: 170px 1fr; gap: 18px; align-items: center; }
@@ -579,12 +587,14 @@ body { overflow: hidden; }
 .why i { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font-style: normal; font-size: 11px; font-weight: 800; background: var(--warn-bg); color: var(--warn); }
 .why li.ok i { background: var(--ok-bg); color: var(--ok); } .why li.bad i { background: var(--bad-bg); color: var(--bad); }
 /* Blast radius: how many files each one changed, as plain bars */
-.bars { border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px; }
-.bars-title { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-.bar-row { display: grid; grid-template-columns: 180px minmax(0, 1fr) 60px; gap: 12px; align-items: center; font-size: 14px; }
+/* One grid for all rows, so the bars line up and the last column fits "7 files (3 code, 3 test, 1 doc)". */
+.bars { border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; display: grid; grid-template-columns: 170px minmax(0, 1fr) max-content; gap: 8px 12px; align-items: center; font-size: 14px; }
+.bars-title { grid-column: 1 / -1; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.bar-row { display: contents; }
+.bar-row b .muted { font-weight: 400; }
 .bar { height: 10px; border-radius: 5px; background: var(--soft); overflow: hidden; }
 .bar i { display: block; height: 100%; border-radius: 5px; background: var(--muted); }
-.bar-row.real { font-weight: 700; } .bar-row.real .bar i { background: var(--ink); }
+.bar-row.real > * { font-weight: 700; } .bar-row.real .bar i { background: var(--ink); }
 .bar-row b { font-weight: inherit; text-align: right; white-space: nowrap; }
 /* Everything else a tool knows sits behind one fold. */
 .tool-details { margin-top: 4px; }
