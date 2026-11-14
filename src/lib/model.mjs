@@ -267,7 +267,7 @@ function loadDescription(pr, brief, commit) {
   };
 }
 /** A rollback is recorded only when the brief says how, in words. A blank or "none" is not a rollback. */
-const hasRollback = (text) => typeof text === "string" && text.trim().length > 0 && !/^(none|n\/?a|no|false|todo|tbd|no rollback\b.*|not possible\b.*|[-.?]+)$/i.test(text.trim());
+const hasRollback = (text) => typeof text === "string" && text.trim().length > 0 && !/^((none|nothing|nil|null|n\/?a|no|false|todo|tbd)[.!]*|no rollback\b.*|not possible\b.*|[-\u2013\u2014.?]+)$/i.test(text.trim());
 
 export function loadBrief(prId) {
   const file = path.join(BRIEFS, `${prId}.json`);

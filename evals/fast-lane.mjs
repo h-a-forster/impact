@@ -44,6 +44,7 @@ const ATTEMPTS = [
   ["the reviewer's instructions ride along", (c) => c.files.push("REVIEW.md")],
   ["a CI workflow rides along", (c) => c.files.push(".github/workflows/ci.yml")],
   ["the package manifest rides along", (c) => c.files.push("package.json")],
+  ["tests that always pass, in a folder not named like tests", (c) => c.files.push("src/backend/websocket/checks.mjs")],
   // It is not really a document.
   ["code placed inside the docs folder", (c) => (c.files = ["docs/helper.ts"])],
   ["a script placed inside the docs folder", (c) => (c.files = ["docs/build.sh"])],
@@ -96,6 +97,11 @@ const BROKEN_REVIEWER = [
   ["the summary is a filler word", (r) => ({ ...r, parsed: { ...r.parsed, summary: "TODO" } })],
   ["the rollback field is blank", (r) => r, (brief) => ({ ...brief, rollback: " " })],
   ["the rollback field says none", (r) => r, (brief) => ({ ...brief, rollback: "none" })],
+  ["the rollback field says None.", (r) => r, (brief) => ({ ...brief, rollback: "None." })],
+  ["the rollback field says n/a.", (r) => r, (brief) => ({ ...brief, rollback: "n/a." })],
+  ["the rollback field says N/A", (r) => r, (brief) => ({ ...brief, rollback: "N/A" })],
+  ["the rollback field says nothing", (r) => r, (brief) => ({ ...brief, rollback: "nothing" })],
+  ["the rollback field is a dash", (r) => r, (brief) => ({ ...brief, rollback: "-" })],
 ];
 
 const docsPr = revisions.prs.find((p) => p.id === "docs-example");
@@ -126,6 +132,12 @@ const THROUGH_GIT = [
   ["binary content in a file named like a document", (add) => add("100644", Buffer.from([0, 1, 2, 0, 255, 0]), "docs/data.md")],
   ["a document larger than 1 MB", (add) => add("100644", "word ".repeat(250_000), "docs/big.md")],
   ["a document with a script in it", (add) => add("100644", "# Notes\n\n<script>fetch('/collect')</script>\n", "docs/page.md")],
+  ["a document with an image that runs code on error", (add) => add("100644", "# Notes\n\n<img src=x onerror=\"fetch('/collect')\">\n", "docs/page.md")],
+  ["a document with a drawing that runs code on load", (add) => add("100644", "# Notes\n\n<svg onload=\"fetch('/collect')\"></svg>\n", "docs/page.md")],
+  ["a document that links a stylesheet", (add) => add("100644", "# Notes\n\n<link rel=\"stylesheet\" href=\"https://example.invalid/x.css\">\n", "docs/page.md")],
+  ["a document that redirects the page", (add) => add("100644", "# Notes\n\n<meta http-equiv=\"refresh\" content=\"0; url=https://example.invalid\">\n", "docs/page.md")],
+  ["a document that changes where links point", (add) => add("100644", "# Notes\n\n<base href=\"https://example.invalid/\">\n", "docs/page.md")],
+  ["a document with a form that sends data", (add) => add("100644", "# Notes\n\n<form action=\"https://example.invalid\"><input name=card></form>\n", "docs/page.md")],
   // The third entry sets up the base: code that reads the document at run time, so editing the document changes prices.
   [
     "a document that the code reads its prices from",

@@ -50,7 +50,8 @@ export function readFileAt(sha, file) {
 const REGULAR_FILE = "100644";
 const ABSENT = "000000";
 const OTHER_MODES = { 120000: "a link, not a file", 160000: "a submodule pointer", 100755: "an executable file" };
-const ACTIVE_CONTENT = /<\s*(script|iframe|object|embed)\b|javascript:/i;
+// Fails closed: any tag that runs code, loads or sends something, or changes the page, and any event-handler attribute.
+const ACTIVE_CONTENT = /<\s*(script|iframe|frame|frameset|object|embed|applet|svg|math|link|meta|base|form|style)\b|<[a-z][^>]*[\s/"']on[a-z]+\s*=|(javascript|vbscript):|data:text\/html/i;
 const MAX_PLAIN_BYTES = 1024 * 1024;
 
 /**
