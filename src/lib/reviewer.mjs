@@ -112,6 +112,7 @@ export function runLiveReview(sha, input) {
   );
   if (r.status !== 0) throw new Error(`claude CLI failed (${r.status}): ${(r.stderr || r.stdout || r.error?.message || "").slice(0, 500)}`);
   const envelope = JSON.parse(r.stdout);
+  if (envelope.is_error) throw new Error(`claude CLI reported an error: ${String(envelope.result ?? "").slice(0, 500)}`);
   const text = envelope.result ?? "";
   const record = {
     revision: sha,
@@ -185,14 +186,26 @@ function fallbackFindings(ctx) {
  * Turn a saved review (or nothing) into what the app shows.
  * A saved review only counts as available when it was produced from the same inputs.
  */
-// A saved review is used only when it is whole: a summary in words and a list of findings.
+// A saved review is used only when it is whole: who made it and when, a summary in words and a list of findings.
 // An empty or cut-off answer is a reviewer that did not do its job, not a reviewer with nothing to say.
-function isWholeReview(parsed) {
-  return Boolean(parsed) && typeof parsed.summary === "string" && parsed.summary.trim() !== "" && Array.isArray(parsed.findings) && (parsed.couldNotDecide === undefined || Array.isArray(parsed.couldNotDecide));
+const MIN_SUMMARY_LENGTH = 20; // "." or "TODO" is not a summary
+const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+function isWholeReview(record) {
+  const parsed = record.parsed;
+  return (
+    isRecord(parsed) &&
+    typeof record.model === "string" &&
+    typeof record.ranAt === "string" &&
+    typeof parsed.summary === "string" &&
+    parsed.summary.trim().length >= MIN_SUMMARY_LENGTH &&
+    Array.isArray(parsed.findings) &&
+    parsed.findings.every(isRecord) &&
+    (parsed.couldNotDecide === undefined || Array.isArray(parsed.couldNotDecide))
+  );
 }
 
 export function finalizeReview(record, ctx, input) {
-  if (record && record.mode === "llm" && isWholeReview(record.parsed)) {
+  if (isRecord(record) && record.mode === "llm" && isWholeReview(record)) {
     const inputsMatch = record.inputHash === input.inputHash && (record.revision === undefined || record.revision === ctx.sha);
     return {
       available: inputsMatch,

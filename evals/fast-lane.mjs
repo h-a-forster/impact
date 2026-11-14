@@ -4,10 +4,16 @@
 // Every altered case must leave the fast lane; the unaltered one must stay in it.
 // A second group breaks the AI reviewer itself (missing, stale, empty, cut off) and sends the
 // sample's docs-only pull request through the whole pipeline: a broken reviewer must never
-// count as a silent one.
+// count as a silent one. A third group goes through git itself: a link, a submodule pointer, an
+// executable or a binary file can all be named notes.md.
 //   Run with:  npm run fastlane
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { classifier1, classifier2, loadApprovedPolicy, ROUTES } from "../src/lib/classifier.mjs";
-import { buildModel, loadRevisions } from "../src/lib/model.mjs";
+import { changedFiles as gitChangedFiles } from "../src/lib/git.mjs";
+import { buildModel, loadBrief, loadRevisions } from "../src/lib/model.mjs";
 import { loadReview } from "../src/lib/reviewer.mjs";
 
 const revisions = loadRevisions();
@@ -15,6 +21,7 @@ const policy = loadApprovedPolicy(revisions.base.sha);
 
 const docsOnlyChange = () => ({
   files: ["docs/pricing.md"],
+  oddity: null, // what the diff says about the files: null means ordinary text files
   sharedEdits: [],
   rollbackRecorded: true,
   checks: [{ name: "unit-tests", status: "passed" }],
@@ -23,7 +30,7 @@ const docsOnlyChange = () => ({
 });
 
 function routeOf(change) {
-  const changedFiles = change.files.map((file) => ({ file }));
+  const changedFiles = change.changedFiles ?? change.files.map((file) => ({ file, oddity: change.oddity }));
   const initial = classifier1(policy, { changedFiles, editedCount: 0, downstreamCount: 0, sharedEdits: change.sharedEdits, workflowsReached: [], rollbackRecorded: change.rollbackRecorded });
   return classifier2(policy, { initial, checks: change.checks, evidence: change.evidence, review: change.review, changedFiles }).route;
 }
@@ -45,18 +52,29 @@ const ATTEMPTS = [
   ["a folder that only looks like docs (src/docs)", (c) => (c.files = ["src/docs/notes.md"])],
   ["a folder that only looks like docs (docs2)", (c) => (c.files = ["docs2/notes.md"])],
   ["no files at all", (c) => (c.files = [])],
+  ["a build file with a text extension", (c) => (c.files = ["docs/requirements.txt"])],
+  ["a build script named like a text file", (c) => (c.files = ["docs/CMakeLists.txt"])],
+  ["a hidden file", (c) => (c.files = ["docs/.hidden.md"])],
+  ["a workflow folder inside the docs folder", (c) => (c.files = ["docs/.github/workflows/x.md"])],
+  ["a name with two extensions", (c) => (c.files = ["docs/x.php.md"])],
+  ["the diff says a file is not an ordinary file", (c) => (c.oddity = "a link, not a file")],
+  ["nothing says what kind of file it is", (c) => (c.oddity = undefined)],
   // The evidence is not there.
   ["the required check failed", (c) => (c.checks[0].status = "failed")],
   ["the check result is for another commit", (c) => (c.checks[0].status = "stale")],
   ["the check has no result", (c) => (c.checks[0].status = "missing")],
   ["the check is still running", (c) => (c.checks[0].status = "pending")],
   ["no check ran at all", (c) => (c.checks = [])],
+  ["a check passed, but not the required one", (c) => (c.checks = [{ name: "lint", status: "passed" }])],
+  ["an affected part is contradicted", (c) => (c.evidence = [{ status: "contradicted", nodeId: "n", missing: "a test fails" }])],
   ["an affected part is unverified", (c) => (c.evidence = [{ status: "unverified", nodeId: "n", missing: "no test" }])],
   ["no rollback is recorded", (c) => (c.rollbackRecorded = false)],
   ["the edited thing has callers elsewhere", (c) => (c.sharedEdits = [{ label: "x()", callerConcepts: ["Checkout"] }])],
   // The reviewer is absent or not silent.
   ["the AI review is unavailable", (c) => (c.review = { available: false, findings: [] })],
   ["there is no AI review", (c) => (c.review = null)],
+  ["the review is marked available with a word, not a fact", (c) => (c.review.available = "false")],
+  ["the review has no list of findings", (c) => (c.review.findings = null)],
   ["the reviewer reports a problem", (c) => c.review.findings.push(finding("Action required"))],
   ["the reviewer reports a problem it could not cite", (c) => c.review.findings.push(finding("Action required", false))],
   ["the reviewer asks for evidence", (c) => c.review.findings.push(finding("Needs evidence"))],
@@ -73,16 +91,67 @@ const BROKEN_REVIEWER = [
   ["the saved review is cut off", (r) => ({ ...r, parsed: undefined })],
   ["the findings are not a list", (r) => ({ ...r, parsed: { ...r.parsed, findings: "none" } })],
   ["a finding of a kind the rules do not know", (r) => ({ ...r, parsed: { ...r.parsed, findings: [{ category: "Praise", title: "Nice change" }] } })],
+  ["a finding that is empty", (r) => ({ ...r, parsed: { ...r.parsed, findings: [null] } })],
+  ["the review has no date", (r) => ({ ...r, ranAt: undefined })],
+  ["the summary is a filler word", (r) => ({ ...r, parsed: { ...r.parsed, summary: "TODO" } })],
+  ["the rollback field is blank", (r) => r, (brief) => ({ ...brief, rollback: " " })],
+  ["the rollback field says none", (r) => r, (brief) => ({ ...brief, rollback: "none" })],
 ];
 
 const docsPr = revisions.prs.find((p) => p.id === "docs-example");
 const docsSha = docsPr.commits.at(-1).sha;
-/** The route of the docs-only pull request with its saved review replaced; a crash is reported, not hidden. */
-function pipelineRoute(alter) {
+/**
+ * The route of the docs-only pull request with its saved review, or its brief, replaced.
+ * A changed brief gets a review made for that brief, so only the brief is at fault. A crash is reported, not hidden.
+ */
+function pipelineRoute(alterReview, alterBrief) {
   try {
-    return buildModel(revisions, docsPr.id, docsSha, { reviewRecord: alter(structuredClone(loadReview(docsSha))) }).classifier2.route;
+    const record = alterReview(structuredClone(loadReview(docsSha)));
+    if (!alterBrief) return buildModel(revisions, docsPr.id, docsSha, { reviewRecord: record }).classifier2.route;
+    const brief = alterBrief(loadBrief(docsPr.id));
+    const inputHash = buildModel(revisions, docsPr.id, docsSha, { brief, reviewRecord: null }).reviewInput.inputHash;
+    return buildModel(revisions, docsPr.id, docsSha, { brief, reviewRecord: { ...record, inputHash } }).classifier2.route;
   } catch (error) {
     return `crashed: ${error.message}`;
+  }
+}
+
+// Through git itself: a throwaway repository built with plumbing commands, so links and file modes work on every system.
+const THROUGH_GIT = [
+  ["a link to a code file, named like a document", (add) => add("120000", "../src/payments/ledger.ts", "docs/link.md")],
+  ["a link to a secrets file, named like a document", (add) => add("120000", "../../.env", "docs/env.md")],
+  ["a document made executable", (add, text) => add("100755", text, "docs/notes.md")],
+  ["a document turned into a link", (add) => add("120000", "../src/payments/ledger.ts", "docs/notes.md")],
+  ["a submodule pointer, named like a document", (add) => add("160000", null, "docs/sub.md")],
+  ["binary content in a file named like a document", (add) => add("100644", Buffer.from([0, 1, 2, 0, 255, 0]), "docs/data.md")],
+  ["a document larger than 1 MB", (add) => add("100644", "word ".repeat(250_000), "docs/big.md")],
+  ["a document with a script in it", (add) => add("100644", "# Notes\n\n<script>fetch('/collect')</script>\n", "docs/page.md")],
+];
+const PLAIN_EDIT = (add, text) => add("100644", `${text}One more sentence.\n`, "docs/notes.md");
+
+function throughGit(cases) {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "fastlane-"));
+  const identity = { GIT_AUTHOR_NAME: "test", GIT_AUTHOR_EMAIL: "test@example.invalid", GIT_COMMITTER_NAME: "test", GIT_COMMITTER_EMAIL: "test@example.invalid" };
+  const git = (args, extra = {}) => execFileSync("git", args, { cwd: repo, input: extra.input, env: { ...process.env, ...identity, ...extra.env }, stdio: ["pipe", "pipe", "pipe"] }).toString().trim();
+  try {
+    git(["init", "--quiet", "--bare", "."]);
+    const text = "# Notes\n\nA sentence.\n";
+    const commit = (edit, parent) => {
+      const env = { GIT_INDEX_FILE: path.join(repo, `index-${Math.random().toString(16).slice(2)}`) };
+      if (parent) git(["read-tree", parent], { env });
+      edit((mode, content, file) => {
+        const object = mode === "160000" ? "1".repeat(40) : git(["hash-object", "-w", "--stdin"], { input: content });
+        git(["update-index", "--add", "--cacheinfo", `${mode},${object},${file}`], { env });
+      }, text);
+      return git(["commit-tree", git(["write-tree"], { env }), ...(parent ? ["-p", parent] : []), "-m", "change"]);
+    };
+    const base = commit((add) => add("100644", text, "docs/notes.md"));
+    return cases.map(([name, edit]) => {
+      const head = commit(edit, base);
+      return [name, routeOf({ ...docsOnlyChange(), changedFiles: gitChangedFiles(base, head, { cwd: repo }) })];
+    });
+  } finally {
+    fs.rmSync(repo, { recursive: true, force: true });
   }
 }
 
@@ -99,10 +168,12 @@ const results = ATTEMPTS.map(([name, alter]) => {
   const route = routeOf(change);
   return { name, route, held: route !== ROUTES.AUTO };
 });
-for (const [name, alter] of BROKEN_REVIEWER) {
-  const route = pipelineRoute(alter);
+for (const [name, alterReview, alterBrief] of BROKEN_REVIEWER) {
+  const route = pipelineRoute(alterReview, alterBrief);
   results.push({ name, route, held: route !== ROUTES.AUTO && !route.startsWith("crashed") });
 }
+const [[, gitBaseline], ...gitRoutes] = throughGit([["a plain edit to a document", PLAIN_EDIT], ...THROUGH_GIT]);
+for (const [name, route] of gitRoutes) results.push({ name, route, held: route !== ROUTES.AUTO });
 const leaks = results.filter((r) => !r.held);
 const pipelineBaseline = pipelineRoute((record) => record);
 
@@ -113,7 +184,7 @@ for (const [name, alter] of KNOWN_LIMITS) {
   alter(change);
   console.log(`  ${routeOf(change) === ROUTES.AUTO ? "allowed" : "held  "} ${name.padEnd(51)} -> ${routeOf(change)}  (known limit)`);
 }
-const baselines = [["the plain docs-only change", baselineRoute], ["the recorded docs-only pull request, whole pipeline", pipelineBaseline]];
+const baselines = [["the plain docs-only change", baselineRoute], ["the recorded docs-only pull request, whole pipeline", pipelineBaseline], ["a plain edit to a document, through git", gitBaseline]];
 console.log("");
 for (const [name, route] of baselines) console.log(`  ${route === ROUTES.AUTO ? "ok    " : "BROKEN"} ${name.padEnd(52)} -> ${route}`);
 console.log(`\n${results.length - leaks.length} of ${results.length} held. ${leaks.length} got through.`);
