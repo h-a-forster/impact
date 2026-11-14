@@ -1,0 +1,216 @@
+{
+  "pr": "req-17",
+  "generatedBy": "node scripts/planted.mjs (rule-based; no model is called)",
+  "ranAt": "2026-11-14T06:43:35.441Z",
+  "commits": [
+    {
+      "sha": "ae08cfbd40d82d45ac1dd7668a7e126acc194830",
+      "index": 1,
+      "route": "Waiting for checks or evidence",
+      "summary": {
+        "planted": 8,
+        "caughtByTests": 4,
+        "escapedTests": 4,
+        "escapedWhereMapSaidUnverified": [
+          "F5",
+          "F6"
+        ],
+        "escapedWhereMapSaidSupported": [
+          "F3"
+        ],
+        "escapedOutsideThePr": [
+          "F8"
+        ]
+      },
+      "faults": [
+        {
+          "id": "F1",
+          "node": "fn:src/pricing/discount.ts#applyDiscount",
+          "what": "The shared function rounds down again (the REQ-17 fix is undone).",
+          "applied": true,
+          "caughtByTests": true,
+          "failingTests": [
+            "REQ-17 checkout: 105 cents at 10% totals 94 cents"
+          ],
+          "mapFlag": "supported"
+        },
+        {
+          "id": "F2",
+          "node": "fn:src/pricing/discount.ts#applyDiscount",
+          "what": "Off by one: exact half-cents round down.",
+          "applied": true,
+          "caughtByTests": true,
+          "failingTests": [
+            "REQ-17 checkout: 105 cents at 10% totals 94 cents"
+          ],
+          "mapFlag": "supported"
+        },
+        {
+          "id": "F3",
+          "node": "fn:src/pricing/discount.ts#applyDiscount",
+          "what": "Discounts above 100% are no longer rejected.",
+          "applied": true,
+          "caughtByTests": false,
+          "failingTests": [],
+          "mapFlag": "supported"
+        },
+        {
+          "id": "F4",
+          "node": "fn:src/checkout/checkout.ts#checkoutTotal",
+          "what": "Checkout ignores the discount.",
+          "applied": true,
+          "caughtByTests": true,
+          "failingTests": [
+            "checkout: 200 cents at 10% totals 180 cents",
+            "REQ-17 checkout: 105 cents at 10% totals 94 cents"
+          ],
+          "mapFlag": "supported"
+        },
+        {
+          "id": "F5",
+          "node": "fn:src/import/orderImport.ts#importOrder",
+          "what": "Order Import keeps the old rounding (it stops using the shared function).",
+          "applied": true,
+          "caughtByTests": false,
+          "failingTests": [],
+          "mapFlag": "unverified"
+        },
+        {
+          "id": "F6",
+          "node": "fn:src/import/orderImport.ts#importOrder",
+          "what": "Order Import ignores the discount.",
+          "applied": true,
+          "caughtByTests": false,
+          "failingTests": [],
+          "mapFlag": "unverified"
+        },
+        {
+          "id": "F7",
+          "node": "fn:src/checkout/checkout.ts#cartSubtotal",
+          "what": "Cart subtotal ignores quantity. This function is not affected by the PR.",
+          "applied": true,
+          "caughtByTests": true,
+          "failingTests": [
+            "checkout: 200 cents at 10% totals 180 cents"
+          ],
+          "mapFlag": "not-affected"
+        },
+        {
+          "id": "F8",
+          "node": "fn:src/payments/ledger.ts#postCharge",
+          "what": "The ledger accepts small negative charges. This function is not affected by the PR.",
+          "applied": true,
+          "caughtByTests": false,
+          "failingTests": [],
+          "mapFlag": "not-affected"
+        }
+      ]
+    },
+    {
+      "sha": "3d67ab623a3ef3bd20051a4a4817cf3475aee914",
+      "index": 2,
+      "route": "Human review required",
+      "summary": {
+        "planted": 8,
+        "caughtByTests": 6,
+        "escapedTests": 2,
+        "escapedWhereMapSaidUnverified": [],
+        "escapedWhereMapSaidSupported": [
+          "F3"
+        ],
+        "escapedOutsideThePr": [
+          "F8"
+        ]
+      },
+      "faults": [
+        {
+          "id": "F1",
+          "node": "fn:src/pricing/discount.ts#applyDiscount",
+          "what": "The shared function rounds down again (the REQ-17 fix is undone).",
+          "applied": true,
+          "caughtByTests": true,
+          "failingTests": [
+            "REQ-17 checkout: 105 cents at 10% totals 94 cents",
+            "REQ-17 import: 105 cents at 10% totals 94 cents"
+          ],
+          "mapFlag": "supported"
+        },
+        {
+          "id": "F2",
+          "node": "fn:src/pricing/discount.ts#applyDiscount",
+          "what": "Off by one: exact half-cents round down.",
+          "applied": true,
+          "caughtByTests": true,
+          "failingTests": [
+            "REQ-17 checkout: 105 cents at 10% totals 94 cents",
+            "REQ-17 import: 105 cents at 10% totals 94 cents"
+          ],
+          "mapFlag": "supported"
+        },
+        {
+          "id": "F3",
+          "node": "fn:src/pricing/discount.ts#applyDiscount",
+          "what": "Discounts above 100% are no longer rejected.",
+          "applied": true,
+          "caughtByTests": false,
+          "failingTests": [],
+          "mapFlag": "supported"
+        },
+        {
+          "id": "F4",
+          "node": "fn:src/checkout/checkout.ts#checkoutTotal",
+          "what": "Checkout ignores the discount.",
+          "applied": true,
+          "caughtByTests": true,
+          "failingTests": [
+            "checkout: 200 cents at 10% totals 180 cents",
+            "REQ-17 checkout: 105 cents at 10% totals 94 cents"
+          ],
+          "mapFlag": "supported"
+        },
+        {
+          "id": "F5",
+          "node": "fn:src/import/orderImport.ts#importOrder",
+          "what": "Order Import keeps the old rounding (it stops using the shared function).",
+          "applied": true,
+          "caughtByTests": true,
+          "failingTests": [
+            "REQ-17 import: 105 cents at 10% totals 94 cents"
+          ],
+          "mapFlag": "supported"
+        },
+        {
+          "id": "F6",
+          "node": "fn:src/import/orderImport.ts#importOrder",
+          "what": "Order Import ignores the discount.",
+          "applied": true,
+          "caughtByTests": true,
+          "failingTests": [
+            "REQ-17 import: 105 cents at 10% totals 94 cents"
+          ],
+          "mapFlag": "supported"
+        },
+        {
+          "id": "F7",
+          "node": "fn:src/checkout/checkout.ts#cartSubtotal",
+          "what": "Cart subtotal ignores quantity. This function is not affected by the PR.",
+          "applied": true,
+          "caughtByTests": true,
+          "failingTests": [
+            "checkout: 200 cents at 10% totals 180 cents"
+          ],
+          "mapFlag": "not-affected"
+        },
+        {
+          "id": "F8",
+          "node": "fn:src/payments/ledger.ts#postCharge",
+          "what": "The ledger accepts small negative charges. This function is not affected by the PR.",
+          "applied": true,
+          "caughtByTests": false,
+          "failingTests": [],
+          "mapFlag": "not-affected"
+        }
+      ]
+    }
+  ]
+}

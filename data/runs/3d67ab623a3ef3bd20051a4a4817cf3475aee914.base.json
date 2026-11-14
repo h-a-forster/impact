@@ -1,0 +1,63 @@
+{
+  "check": "unit-tests",
+  "kind": "local",
+  "kindLabel": "Local run: this commit's tests against the base code",
+  "revision": "2e22bc2b2fe422595d6030cac407032205406315",
+  "testsFrom": "3d67ab623a3ef3bd20051a4a4817cf3475aee914",
+  "overlay": "tests/ taken from commit 3d67ab6, everything else from base 2e22bc2",
+  "command": "node --test \"tests/**/*.test.ts\"",
+  "exitCode": 1,
+  "status": "failed",
+  "counts": {
+    "total": 7,
+    "passed": 5,
+    "failed": 2
+  },
+  "tests": [
+    {
+      "id": "test:tests/checkout.test.ts#checkout: 200 cents at 10% totals 180 cents",
+      "file": "tests/checkout.test.ts",
+      "name": "checkout: 200 cents at 10% totals 180 cents",
+      "status": "passed"
+    },
+    {
+      "id": "test:tests/checkout.test.ts#REQ-17 checkout: 105 cents at 10% totals 94 cents",
+      "file": "tests/checkout.test.ts",
+      "name": "REQ-17 checkout: 105 cents at 10% totals 94 cents",
+      "status": "failed"
+    },
+    {
+      "id": "test:tests/checkout.test.ts#REQ-17 checkout: zero discount keeps the total at 105 cents",
+      "file": "tests/checkout.test.ts",
+      "name": "REQ-17 checkout: zero discount keeps the total at 105 cents",
+      "status": "passed"
+    },
+    {
+      "id": "test:tests/ledger.test.ts#ledger: a charge is posted with its amount",
+      "file": "tests/ledger.test.ts",
+      "name": "ledger: a charge is posted with its amount",
+      "status": "passed"
+    },
+    {
+      "id": "test:tests/orderImport.test.ts#import: a row with the wrong column count is rejected",
+      "file": "tests/orderImport.test.ts",
+      "name": "import: a row with the wrong column count is rejected",
+      "status": "passed"
+    },
+    {
+      "id": "test:tests/orderImport.test.ts#REQ-17 import: 105 cents at 10% totals 94 cents",
+      "file": "tests/orderImport.test.ts",
+      "name": "REQ-17 import: 105 cents at 10% totals 94 cents",
+      "status": "failed"
+    },
+    {
+      "id": "test:tests/orderImport.test.ts#REQ-17 import: zero discount keeps the total at 105 cents",
+      "file": "tests/orderImport.test.ts",
+      "name": "REQ-17 import: zero discount keeps the total at 105 cents",
+      "status": "passed"
+    }
+  ],
+  "rawOutput": "✔ checkout: 200 cents at 10% totals 180 cents \n✖ REQ-17 checkout: 105 cents at 10% totals 94 cents \n✔ REQ-17 checkout: zero discount keeps the total at 105 cents \n✔ ledger: a charge is posted with its amount \n✔ import: a row with the wrong column count is rejected \n✖ REQ-17 import: 105 cents at 10% totals 94 cents \n✔ REQ-17 import: zero discount keeps the total at 105 cents \nℹ tests 7\nℹ suites 0\nℹ pass 5\nℹ fail 2\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms -\n\n✖ failing tests:\n\ntest at tests\\checkout.test.ts:10:1\n✖ REQ-17 checkout: 105 cents at 10% totals 94 cents \n  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n  \n  95 !== 94\n  \n      at TestContext.<anonymous> (file:///C:/Users/param/orca/workspaces/Junction/One-Shot-Implementation/.demo/snapshots/3d67ab623a3ef3bd20051a4a4817cf3475aee914-on-base/tests/checkout.test.ts:12:10)\n      at Test.runInAsyncScope (node:async_hooks:226:14)\n      at Test.run (node:internal/test_runner/test:1402:25)\n      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)\n      at Test.postRun (node:internal/test_runner/test:1542:19)\n      at Test.run (node:internal/test_runner/test:1467:12)\n      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: 95,\n    expected: 94,\n    operator: 'strictEqual',\n    diff: 'simple'\n  }\n\ntest at tests\\orderImport.test.ts:9:1\n✖ REQ-17 import: 105 cents at 10% totals 94 cents \n  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n  \n  95 !== 94\n  \n      at TestContext.<anonymous> (file:///C:/Users/param/orca/workspaces/Junction/One-Shot-Implementation/.demo/snapshots/3d67ab623a3ef3bd20051a4a4817cf3475aee914-on-base/tests/orderImport.test.ts:10:10)\n      at Test.runInAsyncScope (node:async_hooks:226:14)\n      at Test.run (node:internal/test_runner/test:1402:25)\n      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)\n      at Test.postRun (node:internal/test_runner/test:1542:19)\n      at Test.run (node:internal/test_runner/test:1467:12)\n      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: 95,\n    expected: 94,\n    operator: 'strictEqual',\n    diff: 'simple'\n  }\n",
+  "nodeVersion": "v26.13.1",
+  "ranAt": "2026-11-14T06:43:16.863Z"
+}

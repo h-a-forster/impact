@@ -1,0 +1,169 @@
+{
+  "change_id": "ju26-issue-2283",
+  "classifier_1": {
+    "considered": [
+      {
+        "detail": "none of the 4 changed files matches a sensitive path",
+        "matched": false,
+        "rule": "S-sensitive-path",
+        "severity": "High"
+      },
+      {
+        "detail": "31 places counted, the policy asks for at least 1 (RCH-1, RCH-2, RCH-3, RCH-4, RCH-5 and 26 more)",
+        "matched": true,
+        "rule": "S-shared-code",
+        "severity": "Medium"
+      },
+      {
+        "detail": "1 changed file(s) are neither documentation nor test code: src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+        "matched": true,
+        "rule": "S-product-code",
+        "severity": "Medium"
+      },
+      {
+        "detail": "some changed files are product code",
+        "matched": false,
+        "rule": "S-docs-or-tests-only",
+        "severity": "Low"
+      }
+    ],
+    "reason": "changed code is reached from places outside the diff: 31 places counted, the policy asks for at least 1 (RCH-1, RCH-2, RCH-3, RCH-4, RCH-5 and 26 more)",
+    "rule": "S-shared-code",
+    "severity": "Medium"
+  },
+  "generated_by": "python -m impactledger.factory --all (rule-based; no model is called; do not edit by hand)",
+  "head": "9df83c38409c8bfad0517aebffe48211eda4a5b4",
+  "pack_sha256": "ae98473de23520da59ea4ba4f99f41f13886d7633081ff5445fba927319d5935",
+  "policy": {
+    "path": "review-policy.yml",
+    "sha256": "fd368f1829d2aa08df1eb1a848dbf17aad6d9283229e097c0631c0aa3a641641"
+  },
+  "schema": "impactledger.factory/1",
+  "stages": {
+    "after-targeted-checks": {
+      "classifier_2": {
+        "auto_merge": {
+          "dry_run": true,
+          "eligible": false,
+          "reason": "severity High is above auto_merge.max_severity Low",
+          "rule": "T-auto-merge"
+        },
+        "considered": [
+          {
+            "detail": "every required check has a result for the reviewed commit",
+            "matched": false,
+            "route": "waiting",
+            "rule": "T-required-check-missing"
+          },
+          {
+            "detail": "no required check has failed tests on the reviewed commit",
+            "matched": false,
+            "route": "waiting",
+            "rule": "T-required-check-failed"
+          },
+          {
+            "detail": "REQ-2283-8 still open or refused, but targeted check(s) have run on the head side: head-targeted",
+            "matched": false,
+            "route": "waiting",
+            "rule": "T-evidence-missing"
+          },
+          {
+            "detail": "REQ-2283-6, RCH-26 (2 rows; each row names its check)",
+            "matched": true,
+            "route": "human-review",
+            "rule": "T-contradicted"
+          },
+          {
+            "detail": "severity High is above auto_merge.max_severity Low",
+            "matched": false,
+            "route": "auto-merge-eligible",
+            "rule": "T-auto-merge"
+          },
+          {
+            "detail": "head-full: 170 passed, 0 failed on 9df83c38; no named evidence is missing",
+            "matched": true,
+            "route": "human-review",
+            "rule": "T-human-review"
+          }
+        ],
+        "initial_severity": "Medium",
+        "raised": true,
+        "route": "human-review",
+        "route_label": "Human review required",
+        "route_reason": "an executed check contradicts a row; accepting or rejecting that is a named human's decision: REQ-2283-6, RCH-26 (2 rows; each row names its check)",
+        "route_rule": "T-contradicted",
+        "severity": "High",
+        "severity_reason": "an executed check contradicts a row at this stage: REQ-2283-6, RCH-26 (2 rows; each row names its check)",
+        "severity_rule": "R-contradicted",
+        "waiting_on": []
+      }
+    },
+    "as-submitted": {
+      "classifier_2": {
+        "auto_merge": {
+          "dry_run": true,
+          "eligible": false,
+          "reason": "severity Medium is above auto_merge.max_severity Low",
+          "rule": "T-auto-merge"
+        },
+        "considered": [
+          {
+            "detail": "every required check has a result for the reviewed commit",
+            "matched": false,
+            "route": "waiting",
+            "rule": "T-required-check-missing"
+          },
+          {
+            "detail": "no required check has failed tests on the reviewed commit",
+            "matched": false,
+            "route": "waiting",
+            "rule": "T-required-check-failed"
+          },
+          {
+            "detail": "REQ-2283-6, REQ-2283-8 (2 requirement clauses; the check each one waits for is listed)",
+            "matched": true,
+            "route": "waiting",
+            "rule": "T-evidence-missing"
+          },
+          {
+            "detail": "no row is contradicted at this stage",
+            "matched": false,
+            "route": "human-review",
+            "rule": "T-contradicted"
+          },
+          {
+            "detail": "severity Medium is above auto_merge.max_severity Low",
+            "matched": false,
+            "route": "auto-merge-eligible",
+            "rule": "T-auto-merge"
+          },
+          {
+            "detail": "head-full: 170 passed, 0 failed on 9df83c38; no named evidence is missing",
+            "matched": true,
+            "route": "human-review",
+            "rule": "T-human-review"
+          }
+        ],
+        "initial_severity": "Medium",
+        "raised": false,
+        "route": "waiting",
+        "route_label": "Waiting for checks or evidence",
+        "route_reason": "a requirement clause is open or refused, the reviewer named a check that would settle it, and no targeted check has run yet: REQ-2283-6, REQ-2283-8 (2 requirement clauses; the check each one waits for is listed)",
+        "route_rule": "T-evidence-missing",
+        "severity": "Medium",
+        "severity_reason": "changed code is reached from places outside the diff: 31 places counted, the policy asks for at least 1 (RCH-1, RCH-2, RCH-3, RCH-4, RCH-5 and 26 more)",
+        "severity_rule": "S-shared-code",
+        "waiting_on": [
+          {
+            "row": "REQ-2283-6",
+            "what": "Add RunWithMetadataReferenceAsync cases for `class Item<T>` and `record class Item<T>` (including one whose members trigger a diagnostic) and run them on base and head, comparing the diagnostics."
+          },
+          {
+            "row": "REQ-2283-8",
+            "what": "A runtime round-trip test of the issue's Lib/App repro using the generated resolver, ideally in a trimmed or NativeAOT-published app."
+          }
+        ]
+      }
+    }
+  }
+}

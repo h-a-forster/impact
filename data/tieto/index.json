@@ -1,0 +1,76 @@
+{
+  "note": "Recorded review packs for the real Tieto sample PRs. Produced by the teammate project Impact Ledger. Read-only here.",
+  "source": "https://github.com/h-a-forster/junction26-earned-trust",
+  "sourceCommit": "8435e5b528eb9e9863ff295012ed4fc689383c0b",
+  "repo": "te-industry-tech-office/junction26-messagepack-csharp",
+  "changes": [
+    {
+      "number": 1,
+      "id": "ju26-issue-2283",
+      "requirement": "MessagePack-CSharp#2283",
+      "title": "Generator and analyzer crash with IndexOutOfRangeException on a closed generic struct from a referenced assembly",
+      "head": "9df83c38409c8bfad0517aebffe48211eda4a5b4",
+      "base": "32258fdbee4bcd653c79f51b4376b5103c6f4d27",
+      "stages": [
+        {
+          "id": "as-submitted",
+          "label": "As submitted"
+        },
+        {
+          "id": "after-targeted-checks",
+          "label": "After targeted checks"
+        }
+      ],
+      "packSha256": "ae98473de23520da59ea4ba4f99f41f13886d7633081ff5445fba927319d5935"
+    },
+    {
+      "number": 2,
+      "id": "ju26-issue-2234",
+      "requirement": "MessagePack-CSharp#2234",
+      "title": "The analyzer does not work if SuppressSourceGeneration = true",
+      "head": "9007cee1163c4a274fd60c3cc20c21ae63622786",
+      "base": "32258fdbee4bcd653c79f51b4376b5103c6f4d27",
+      "stages": [
+        {
+          "id": "as-submitted",
+          "label": "As submitted"
+        },
+        {
+          "id": "after-targeted-checks",
+          "label": "After targeted checks"
+        }
+      ],
+      "packSha256": "b72a7733e0c065dce782bd6f36dd8a86abf12f7522f0d32074a00dced93273d9"
+    },
+    {
+      "number": 3,
+      "id": "ju26-issue-2129",
+      "requirement": "MessagePack-CSharp#2129",
+      "title": "Feature Request: Allow generation of Formatter for a type in a referenced assembly",
+      "head": "083afd994c1c9a994cb2cd5aa0b6ad805a621457",
+      "base": "32258fdbee4bcd653c79f51b4376b5103c6f4d27",
+      "stages": [
+        {
+          "id": "as-submitted",
+          "label": "As submitted"
+        }
+      ],
+      "packSha256": "88182ec318589216c018885b1168f5fe2dfe6215f2d52791f3986e387850a9ff"
+    },
+    {
+      "number": 4,
+      "id": "ju26-issue-2297",
+      "requirement": "MessagePack-CSharp#2297",
+      "title": "Add ExcludeFromCodeCoverage attribute to generated code.",
+      "head": "a0aa5ab2de7f5a669d97e37184a89034c1de82b6",
+      "base": "32258fdbee4bcd653c79f51b4376b5103c6f4d27",
+      "stages": [
+        {
+          "id": "as-submitted",
+          "label": "As submitted"
+        }
+      ],
+      "packSha256": "08ca93287449dd39fd13d14c0759540b458a6777dfa956f4d3db357e20a1db23"
+    }
+  ]
+}

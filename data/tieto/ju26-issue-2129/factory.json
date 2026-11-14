@@ -1,0 +1,111 @@
+{
+  "change_id": "ju26-issue-2129",
+  "classifier_1": {
+    "considered": [
+      {
+        "detail": "3 changed file(s) match a sensitive path: tests/MessagePack.SourceGenerator.ExecutionTests/MessagePack.SourceGenerator.ExecutionTests.csproj (**/*.csproj: project files decide which dependencies and build steps are used), tests/MessagePack.SourceGenerator.ExternalTypes/MessagePack.SourceGenerator.ExternalTypes.csproj (**/*.csproj: project files decide which dependencies and build steps are used), tests/MessagePack.SourceGenerator.MapModeExecutionTests/MessagePack.SourceGenerator.MapModeExecutionTests.csproj (**/*.csproj: project files decide which dependencies and build steps are used)",
+        "matched": true,
+        "rule": "S-sensitive-path",
+        "severity": "High"
+      },
+      {
+        "detail": "41 places counted, the policy asks for at least 1 (RCH-13, RCH-14, RCH-15, RCH-16, RCH-17 and 36 more)",
+        "matched": true,
+        "rule": "S-shared-code",
+        "severity": "Medium"
+      },
+      {
+        "detail": "12 changed file(s) are neither documentation nor test code: src/MessagePack.Annotations/Attributes.cs, src/MessagePack.SourceGenerator/Analyzers/MsgPack00xMessagePackAnalyzer.cs, src/MessagePack.SourceGenerator/CodeAnalysis/GeneratedFormatterCollector.cs, src/MessagePack.SourceGenerator/CodeAnalysis/GeneratedFormatterRequest.cs, src/MessagePack.SourceGenerator/CodeAnalysis/ObjectSerializationInfo.cs and 7 more",
+        "matched": true,
+        "rule": "S-product-code",
+        "severity": "Medium"
+      },
+      {
+        "detail": "some changed files are product code",
+        "matched": false,
+        "rule": "S-docs-or-tests-only",
+        "severity": "Low"
+      }
+    ],
+    "reason": "a changed file matches a sensitive path: 3 changed file(s) match a sensitive path: tests/MessagePack.SourceGenerator.ExecutionTests/MessagePack.SourceGenerator.ExecutionTests.csproj (**/*.csproj: project files decide which dependencies and build steps are used), tests/MessagePack.SourceGenerator.ExternalTypes/MessagePack.SourceGenerator.ExternalTypes.csproj (**/*.csproj: project files decide which dependencies and build steps are used), tests/MessagePack.SourceGenerator.MapModeExecutionTests/MessagePack.SourceGenerator.MapModeExecutionTests.csproj (**/*.csproj: project files decide which dependencies and build steps are used)",
+    "rule": "S-sensitive-path",
+    "severity": "High"
+  },
+  "generated_by": "python -m impactledger.factory --all (rule-based; no model is called; do not edit by hand)",
+  "head": "083afd994c1c9a994cb2cd5aa0b6ad805a621457",
+  "pack_sha256": "88182ec318589216c018885b1168f5fe2dfe6215f2d52791f3986e387850a9ff",
+  "policy": {
+    "path": "review-policy.yml",
+    "sha256": "fd368f1829d2aa08df1eb1a848dbf17aad6d9283229e097c0631c0aa3a641641"
+  },
+  "schema": "impactledger.factory/1",
+  "stages": {
+    "as-submitted": {
+      "classifier_2": {
+        "auto_merge": {
+          "dry_run": true,
+          "eligible": false,
+          "reason": "severity High is above auto_merge.max_severity Low",
+          "rule": "T-auto-merge"
+        },
+        "considered": [
+          {
+            "detail": "every required check has a result for the reviewed commit",
+            "matched": false,
+            "route": "waiting",
+            "rule": "T-required-check-missing"
+          },
+          {
+            "detail": "no required check has failed tests on the reviewed commit",
+            "matched": false,
+            "route": "waiting",
+            "rule": "T-required-check-failed"
+          },
+          {
+            "detail": "REQ-2129-1, REQ-2129-3 (2 requirement clauses; the check each one waits for is listed)",
+            "matched": true,
+            "route": "waiting",
+            "rule": "T-evidence-missing"
+          },
+          {
+            "detail": "no row is contradicted at this stage",
+            "matched": false,
+            "route": "human-review",
+            "rule": "T-contradicted"
+          },
+          {
+            "detail": "severity High is above auto_merge.max_severity Low",
+            "matched": false,
+            "route": "auto-merge-eligible",
+            "rule": "T-auto-merge"
+          },
+          {
+            "detail": "head-full: 173 passed, 0 failed on 083afd99; no named evidence is missing",
+            "matched": true,
+            "route": "human-review",
+            "rule": "T-human-review"
+          }
+        ],
+        "initial_severity": "High",
+        "raised": false,
+        "route": "waiting",
+        "route_label": "Waiting for checks or evidence",
+        "route_reason": "a requirement clause is open or refused, the reviewer named a check that would settle it, and no targeted check has run yet: REQ-2129-1, REQ-2129-3 (2 requirement clauses; the check each one waits for is listed)",
+        "route_rule": "T-evidence-missing",
+        "severity": "High",
+        "severity_reason": "a changed file matches a sensitive path: 3 changed file(s) match a sensitive path: tests/MessagePack.SourceGenerator.ExecutionTests/MessagePack.SourceGenerator.ExecutionTests.csproj (**/*.csproj: project files decide which dependencies and build steps are used), tests/MessagePack.SourceGenerator.ExternalTypes/MessagePack.SourceGenerator.ExternalTypes.csproj (**/*.csproj: project files decide which dependencies and build steps are used), tests/MessagePack.SourceGenerator.MapModeExecutionTests/MessagePack.SourceGenerator.MapModeExecutionTests.csproj (**/*.csproj: project files decide which dependencies and build steps are used)",
+        "severity_rule": "S-sensitive-path",
+        "waiting_on": [
+          {
+            "row": "REQ-2129-1",
+            "what": "Run tests/MessagePack.SourceGenerator.ExecutionTests (GeneratedFormatterForExternalTypesTests.ContractlessClassRoundTrips, ContractlessStructRoundTrips, SurrogateControlsKeysAndMembership), or add a snapshot test in MessagePack.SourceGenerator.Tests with an additional project that has no MessagePack reference."
+          },
+          {
+            "row": "REQ-2129-3",
+            "what": "A generator test with LanguageVersion set to C# 12 or later whose formatter is declared with a semicolon instead of a body, checking the generated source and that it compiles."
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "change_id": "ju26-issue-2297",
+  "classifier_1": {
+    "considered": [
+      {
+        "detail": "none of the 237 changed files matches a sensitive path",
+        "matched": false,
+        "rule": "S-sensitive-path",
+        "severity": "High"
+      },
+      {
+        "detail": "6 places counted, the policy asks for at least 1 (RCH-1, RCH-2, RCH-3, RCH-4, RCH-5 and 1 more)",
+        "matched": true,
+        "rule": "S-shared-code",
+        "severity": "Medium"
+      },
+      {
+        "detail": "13 changed file(s) are neither documentation nor test code: src/MessagePack.SourceGenerator/Transforms/CompositeResolverTemplate.cs, src/MessagePack.SourceGenerator/Transforms/CompositeResolverTemplate.tt, src/MessagePack.SourceGenerator/Transforms/EnumTemplate.cs, src/MessagePack.SourceGenerator/Transforms/EnumTemplate.tt, src/MessagePack.SourceGenerator/Transforms/FormatterTemplate.cs and 8 more",
+        "matched": true,
+        "rule": "S-product-code",
+        "severity": "Medium"
+      },
+      {
+        "detail": "some changed files are product code",
+        "matched": false,
+        "rule": "S-docs-or-tests-only",
+        "severity": "Low"
+      }
+    ],
+    "reason": "changed code is reached from places outside the diff: 6 places counted, the policy asks for at least 1 (RCH-1, RCH-2, RCH-3, RCH-4, RCH-5 and 1 more)",
+    "rule": "S-shared-code",
+    "severity": "Medium"
+  },
+  "generated_by": "python -m impactledger.factory --all (rule-based; no model is called; do not edit by hand)",
+  "head": "a0aa5ab2de7f5a669d97e37184a89034c1de82b6",
+  "pack_sha256": "08ca93287449dd39fd13d14c0759540b458a6777dfa956f4d3db357e20a1db23",
+  "policy": {
+    "path": "review-policy.yml",
+    "sha256": "fd368f1829d2aa08df1eb1a848dbf17aad6d9283229e097c0631c0aa3a641641"
+  },
+  "schema": "impactledger.factory/1",
+  "stages": {
+    "as-submitted": {
+      "classifier_2": {
+        "auto_merge": {
+          "dry_run": true,
+          "eligible": false,
+          "reason": "severity Medium is above auto_merge.max_severity Low",
+          "rule": "T-auto-merge"
+        },
+        "considered": [
+          {
+            "detail": "every required check has a result for the reviewed commit",
+            "matched": false,
+            "route": "waiting",
+            "rule": "T-required-check-missing"
+          },
+          {
+            "detail": "no required check has failed tests on the reviewed commit",
+            "matched": false,
+            "route": "waiting",
+            "rule": "T-required-check-failed"
+          },
+          {
+            "detail": "no open or refused requirement clause names a check that would settle it (reason codes: no-check-reaches)",
+            "matched": false,
+            "route": "waiting",
+            "rule": "T-evidence-missing"
+          },
+          {
+            "detail": "no row is contradicted at this stage",
+            "matched": false,
+            "route": "human-review",
+            "rule": "T-contradicted"
+          },
+          {
+            "detail": "severity Medium is above auto_merge.max_severity Low",
+            "matched": false,
+            "route": "auto-merge-eligible",
+            "rule": "T-auto-merge"
+          },
+          {
+            "detail": "head-full: 169 passed, 0 failed on a0aa5ab2; no named evidence is missing",
+            "matched": true,
+            "route": "human-review",
+            "rule": "T-human-review"
+          }
+        ],
+        "initial_severity": "Medium",
+        "raised": false,
+        "route": "human-review",
+        "route_label": "Human review required",
+        "route_reason": "required checks passed and no named evidence is missing; a named human decides: head-full: 169 passed, 0 failed on a0aa5ab2; no named evidence is missing",
+        "route_rule": "T-human-review",
+        "severity": "Medium",
+        "severity_reason": "changed code is reached from places outside the diff: 6 places counted, the policy asks for at least 1 (RCH-1, RCH-2, RCH-3, RCH-4, RCH-5 and 1 more)",
+        "severity_rule": "S-shared-code",
+        "waiting_on": []
+      }
+    }
+  }
+}

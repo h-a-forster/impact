@@ -1,0 +1,14 @@
+# Approved team review policy. Read from the base revision only.
+version: 1
+critical_paths: []
+docs_paths:
+  - docs/**
+policy_paths: []
+required_checks: []
+evidence:
+  require_requirement_test_per_affected_workflow: false
+auto_merge_dry_run:
+  allow:
+    - severity: Low
+      paths:
+        - "**"

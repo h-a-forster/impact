@@ -1,0 +1,37 @@
+{
+  "check": "unit-tests",
+  "kind": "local",
+  "kindLabel": "Local run by the demo runner (no CI in this demo)",
+  "revision": "2e22bc2b2fe422595d6030cac407032205406315",
+  "command": "node --test \"tests/**/*.test.ts\"",
+  "exitCode": 0,
+  "status": "passed",
+  "counts": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0
+  },
+  "tests": [
+    {
+      "id": "test:tests/checkout.test.ts#checkout: 200 cents at 10% totals 180 cents",
+      "file": "tests/checkout.test.ts",
+      "name": "checkout: 200 cents at 10% totals 180 cents",
+      "status": "passed"
+    },
+    {
+      "id": "test:tests/ledger.test.ts#ledger: a charge is posted with its amount",
+      "file": "tests/ledger.test.ts",
+      "name": "ledger: a charge is posted with its amount",
+      "status": "passed"
+    },
+    {
+      "id": "test:tests/orderImport.test.ts#import: a row with the wrong column count is rejected",
+      "file": "tests/orderImport.test.ts",
+      "name": "import: a row with the wrong column count is rejected",
+      "status": "passed"
+    }
+  ],
+  "rawOutput": "✔ checkout: 200 cents at 10% totals 180 cents \n✔ ledger: a charge is posted with its amount \n✔ import: a row with the wrong column count is rejected \nℹ tests 3\nℹ suites 0\nℹ pass 3\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms -\n",
+  "nodeVersion": "v26.13.1",
+  "ranAt": "2026-11-14T05:41:02.251Z"
+}

@@ -1,0 +1,23 @@
+{
+  "pr": "docs-example",
+  "requirement": null,
+  "author": "Coding agent (authoring pass)",
+  "authorKind": "agent",
+  "why": "The pricing notes had no worked example.",
+  "before": "docs/pricing.md explains the rule only.",
+  "after": "docs/pricing.md also shows a 200-cent example.",
+  "preserve": "No code or behaviour changes.",
+  "approach": "Add one sentence to docs/pricing.md.",
+  "alternatives": null,
+  "rollback": "Revert the commit.",
+  "revisions": {
+    "1": {
+      "checksRun": [{ "label": "npm test, run locally before push", "check": "unit-tests" }],
+      "openGaps": [],
+      "claims": [
+        { "id": "c1", "text": "Only docs change. No code is touched.", "kind": "files-only", "paths": ["docs/**"] },
+        { "id": "c2", "text": "All tests pass.", "kind": "suite-green" }
+      ]
+    }
+  }
+}

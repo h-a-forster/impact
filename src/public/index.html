@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Code Review Impact Map</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <strong>Code Review Impact Map</strong>
+        <span class="muted">shop-sample · local demo</span>
+      </div>
+      <label class="pr-picker">
+        <span class="muted">Pull request</span>
+        <select id="prSelect"></select>
+      </label>
+      <nav class="revnav" aria-label="Revision">
+        <button id="prevBtn" type="button">◀ Previous</button>
+        <div id="revPills" class="pills"></div>
+        <button id="nextBtn" type="button">Next ▶</button>
+      </nav>
+    </header>
+
+    <div id="notice" class="notice" hidden></div>
+
+    <main class="layout">
+      <section class="col-main">
+        <div id="routeCard" class="card"></div>
+        <div id="intentCard" class="card"></div>
+        <div class="card">
+          <div class="card-head">
+            <h2>Impact map</h2>
+            <div class="tabs" id="levelTabs" role="tablist">
+              <button type="button" data-level="concept">Concepts</button>
+              <button type="button" data-level="file">Files</button>
+              <button type="button" data-level="function">Functions</button>
+            </div>
+          </div>
+          <div id="impactSummary" class="impact-summary"></div>
+          <div id="graphWrap" class="graph-wrap"></div>
+          <div class="legend">
+            <span><i class="sw sw-edited"></i> edited in this PR</span>
+            <span><i class="sw sw-downstream"></i> not edited, calls edited code</span>
+            <span><i class="sw sw-unverified"></i> unverified</span>
+            <span><i class="sw sw-contradicted"></i> contradicted by a check</span>
+            <span><i class="sw sw-test"></i> test</span>
+            <span><i class="ln ln-calls"></i> calls</span>
+            <span><i class="ln ln-tests"></i> tests</span>
+            <span><i class="ln ln-affect"></i> may affect</span>
+          </div>
+          <details id="coverage" class="coverage"></details>
+        </div>
+        <div id="claimsCard" class="card"></div>
+        <div id="rowsCard" class="card" hidden></div>
+        <div id="reviewCard" class="card"></div>
+        <div id="trackCard" class="card" hidden></div>
+        <div id="decisionCard" class="card"></div>
+      </section>
+      <aside class="col-side">
+        <div id="sidePanel" class="card side"></div>
+      </aside>
+    </main>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

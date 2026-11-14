@@ -1,0 +1,49 @@
+{
+  "check": "unit-tests",
+  "kind": "local",
+  "kindLabel": "Local run by the demo runner (no CI in this demo)",
+  "revision": "ae08cfbd40d82d45ac1dd7668a7e126acc194830",
+  "command": "node --test \"tests/**/*.test.ts\"",
+  "exitCode": 0,
+  "status": "passed",
+  "counts": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0
+  },
+  "tests": [
+    {
+      "id": "test:tests/checkout.test.ts#checkout: 200 cents at 10% totals 180 cents",
+      "file": "tests/checkout.test.ts",
+      "name": "checkout: 200 cents at 10% totals 180 cents",
+      "status": "passed"
+    },
+    {
+      "id": "test:tests/checkout.test.ts#REQ-17 checkout: 105 cents at 10% totals 94 cents",
+      "file": "tests/checkout.test.ts",
+      "name": "REQ-17 checkout: 105 cents at 10% totals 94 cents",
+      "status": "passed"
+    },
+    {
+      "id": "test:tests/checkout.test.ts#REQ-17 checkout: zero discount keeps the total at 105 cents",
+      "file": "tests/checkout.test.ts",
+      "name": "REQ-17 checkout: zero discount keeps the total at 105 cents",
+      "status": "passed"
+    },
+    {
+      "id": "test:tests/ledger.test.ts#ledger: a charge is posted with its amount",
+      "file": "tests/ledger.test.ts",
+      "name": "ledger: a charge is posted with its amount",
+      "status": "passed"
+    },
+    {
+      "id": "test:tests/orderImport.test.ts#import: a row with the wrong column count is rejected",
+      "file": "tests/orderImport.test.ts",
+      "name": "import: a row with the wrong column count is rejected",
+      "status": "passed"
+    }
+  ],
+  "rawOutput": "✔ checkout: 200 cents at 10% totals 180 cents \n✔ REQ-17 checkout: 105 cents at 10% totals 94 cents \n✔ REQ-17 checkout: zero discount keeps the total at 105 cents \n✔ ledger: a charge is posted with its amount \n✔ import: a row with the wrong column count is rejected \nℹ tests 5\nℹ suites 0\nℹ pass 5\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms -\n",
+  "nodeVersion": "v26.13.1",
+  "ranAt": "2026-11-14T05:41:02.885Z"
+}

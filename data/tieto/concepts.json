@@ -1,0 +1,14 @@
+{
+  "schema": "impactledger.concepts/1",
+  "source": "Declared by hand from the sample's directory layout by the overnight lead (an AI agent). Not a model run, and not reviewed by a person. The team guide's concept mapper agent would replace this file.",
+  "concepts": [
+    {"id": "build-config", "name": "Build and project configuration", "description": "Project files, shared MSBuild properties and targets, lock files and the SDK pin.", "patterns": ["**/*.csproj", "**/*.props", "**/*.targets", "**/packages.lock.json", "**/global.json"]},
+    {"id": "docs", "name": "Documentation", "description": "The README and the documentation pages.", "patterns": ["README.md", "doc/**", "**/*.md"]},
+    {"id": "type-collection", "name": "Type collection and analysis", "description": "Collects the types to serialise and checks their attributes (TypeCollector). The analyzer and the generator both go through it.", "patterns": ["src/MessagePack.SourceGenerator/CodeAnalysis/**"]},
+    {"id": "analyzer-diagnostics", "name": "Analyzer diagnostics", "description": "The analyzers that report MsgPack0xx diagnostics in a consumer's build.", "patterns": ["src/MessagePack.SourceGenerator/Analyzers/**"]},
+    {"id": "formatter-generation", "name": "Formatter and resolver generation", "description": "The source generator and its templates that emit formatters and resolvers.", "patterns": ["src/MessagePack.SourceGenerator/Transforms/**", "src/MessagePack.SourceGenerator/*.cs"]},
+    {"id": "generator-support", "name": "Generator utilities", "description": "Helpers and polyfills the source generator uses.", "patterns": ["src/MessagePack.SourceGenerator/Utils/**", "src/MessagePack.SourceGenerator/Shims/**"]},
+    {"id": "annotations", "name": "Public annotations", "description": "The attributes consumers put on their types.", "patterns": ["src/MessagePack.Annotations/**"]},
+    {"id": "tests", "name": "Tests", "description": "Test projects and their sources.", "patterns": ["tests/**"]}
+  ]
+}

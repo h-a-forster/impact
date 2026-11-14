@@ -1,0 +1,122 @@
+{
+  "note": "Expected review outcomes. Written before the AI reviewer was run.",
+  "walkthrough": {
+    "base": {
+      "callersOfApplyDiscount": [
+        "fn:src/checkout/checkout.ts#checkoutTotal",
+        "fn:src/import/orderImport.ts#importOrder"
+      ],
+      "route": null
+    },
+    "commit1": {
+      "edited": [
+        "fn:src/pricing/discount.ts#applyDiscount"
+      ],
+      "downstream": [
+        "fn:src/checkout/checkout.ts#checkoutTotal",
+        "fn:src/import/orderImport.ts#importOrder"
+      ],
+      "evidence": {
+        "fn:src/checkout/checkout.ts#checkoutTotal": "supported",
+        "fn:src/import/orderImport.ts#importOrder": "unverified"
+      },
+      "requiredChecks": {
+        "unit-tests": "passed"
+      },
+      "initialSeverity": "Medium",
+      "finalSeverity": "Medium",
+      "route": "Waiting for checks or evidence",
+      "importClaimLabel": "Unverified"
+    },
+    "commit2": {
+      "evidence": {
+        "fn:src/checkout/checkout.ts#checkoutTotal": "supported",
+        "fn:src/import/orderImport.ts#importOrder": "supported"
+      },
+      "requiredChecks": {
+        "unit-tests": "passed"
+      },
+      "initialSeverity": "Medium",
+      "finalSeverity": "Medium",
+      "route": "Human review required",
+      "importClaimLabel": "Verified"
+    }
+  },
+  "evidenceIntegrity": {
+    "wrongRevisionResult": {
+      "importEvidence": "unverified",
+      "check": "stale",
+      "route": "Waiting for checks or evidence"
+    },
+    "checkoutOnlyTest": {
+      "importClaimLabel": "Unverified"
+    },
+    "invalidCitation": {
+      "claimLabel": "Unverified"
+    },
+    "failedRequiredCheck": {
+      "check": "failed",
+      "route": "Waiting for checks or evidence"
+    }
+  },
+  "policyIntegrity": {
+    "docs-example": {
+      "finalSeverity": "Low",
+      "route": "Auto-merge eligible (dry run)"
+    },
+    "ledger-note": {
+      "finalSeverity": "High",
+      "route": "Human review required"
+    },
+    "policy-self-patch": {
+      "finalSeverity": "High",
+      "route": "Human review required",
+      "policyFrom": "base"
+    }
+  },
+  "decisionIntegrity": {
+    "signOffOnCommit1": "rejected",
+    "signOffOnCommit2": "accepted",
+    "commit2SignOffAppliesToCommit1": false,
+    "historyKept": true
+  },
+  "plantedFaults": {
+    "note": "Written from the first planted run. F3 is a known miss kept on record: a change in these lists must be looked at, not silently accepted.",
+    "commit1": {
+      "escapedWhereMapSaidUnverified": [
+        "F5",
+        "F6"
+      ],
+      "escapedWhereMapSaidSupported": [
+        "F3"
+      ]
+    },
+    "commit2": {
+      "escapedWhereMapSaidUnverified": [],
+      "escapedWhereMapSaidSupported": [
+        "F3"
+      ]
+    }
+  },
+  "tietoRecorded": {
+    "2129": {
+      "severity": "High"
+    },
+    "2283": {
+      "asSubmitted": {
+        "severity": "Medium",
+        "route": "Waiting for checks or evidence",
+        "waitingOn": "REQ-2283-6"
+      },
+      "afterTargetedChecks": {
+        "severity": "High",
+        "route": "Human review required",
+        "contradicted": [
+          "RCH-26",
+          "REQ-2283-6"
+        ]
+      }
+    },
+    "note": "Expectations for the real Tieto sample PRs. Taken from the Impact Ledger project's own eval cases (evals/cases.json there), written before its classifiers existed."
+  }
+}

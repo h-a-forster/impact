@@ -1,0 +1,97 @@
+{
+  "repoName": "shop-sample",
+  "author": {
+    "name": "Coding Agent (demo)",
+    "email": "agent@example.invalid"
+  },
+  "base": {
+    "branch": "main",
+    "message": "Base: shop sample with shared pricing",
+    "date": "2026-11-02T09:00:00Z"
+  },
+  "prs": [
+    {
+      "id": "req-17",
+      "title": "REQ-17: round discounts to the nearest cent, half-cents up",
+      "requirement": "REQ-17",
+      "branch": "pr/req-17",
+      "kind": "walkthrough",
+      "commits": [
+        {
+          "overlay": "req17-1",
+          "message": "REQ-17: round discount half-cents up; add Checkout test",
+          "date": "2026-11-03T09:00:00Z"
+        },
+        {
+          "overlay": "req17-2",
+          "message": "REQ-17: add Order Import test for the 94-cent case",
+          "date": "2026-11-03T11:00:00Z"
+        }
+      ],
+      "number": 1
+    },
+    {
+      "id": "docs-example",
+      "title": "Docs: add a worked pricing example",
+      "requirement": null,
+      "branch": "pr/docs-example",
+      "kind": "eval",
+      "commits": [
+        {
+          "overlay": "docs",
+          "message": "Docs: add a worked pricing example",
+          "date": "2026-11-04T09:00:00Z"
+        }
+      ],
+      "number": 2
+    },
+    {
+      "id": "ledger-note",
+      "title": "Ledger: tidy the charge note text",
+      "requirement": null,
+      "branch": "pr/ledger-note",
+      "kind": "eval",
+      "commits": [
+        {
+          "overlay": "sensitive",
+          "message": "Ledger: tidy the charge note text",
+          "date": "2026-11-04T10:00:00Z"
+        }
+      ],
+      "number": 3
+    },
+    {
+      "id": "policy-self-patch",
+      "title": "Ledger note tweak that also loosens review-policy.yml",
+      "requirement": null,
+      "branch": "pr/policy-self-patch",
+      "kind": "eval",
+      "commits": [
+        {
+          "overlay": "policy",
+          "message": "Ledger note tweak; relax review policy",
+          "date": "2026-11-04T11:00:00Z"
+        }
+      ],
+      "number": 4
+    }
+  ],
+  "github": {
+    "owner": "junction-demo",
+    "name": "shop-sample",
+    "description": "Synthetic shop sample for the Code Review Impact Map demo (REQ-17). Not a real product.",
+    "topics": [
+      "demo",
+      "impact-map",
+      "synthetic-fixture"
+    ],
+    "authorLogin": "coding-agent-demo",
+    "issues": {
+      "REQ-17": {
+        "number": 17,
+        "title": "REQ-17 Round discounts to the nearest cent",
+        "author": "product-owner-demo"
+      }
+    }
+  }
+}

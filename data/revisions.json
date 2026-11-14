@@ -1,0 +1,104 @@
+{
+  "repoName": "shop-sample",
+  "github": {
+    "owner": "junction-demo",
+    "name": "shop-sample",
+    "description": "Synthetic shop sample for the Code Review Impact Map demo (REQ-17). Not a real product.",
+    "topics": [
+      "demo",
+      "impact-map",
+      "synthetic-fixture"
+    ],
+    "authorLogin": "coding-agent-demo",
+    "issues": {
+      "REQ-17": {
+        "number": 17,
+        "title": "REQ-17 Round discounts to the nearest cent",
+        "author": "product-owner-demo"
+      }
+    },
+    "fullName": "junction-demo/shop-sample"
+  },
+  "author": {
+    "name": "Coding Agent (demo)",
+    "email": "agent@example.invalid"
+  },
+  "base": {
+    "sha": "2e22bc2b2fe422595d6030cac407032205406315",
+    "branch": "main",
+    "message": "Base: shop sample with shared pricing",
+    "date": "2026-11-02T09:00:00Z"
+  },
+  "prs": [
+    {
+      "id": "req-17",
+      "number": 1,
+      "title": "REQ-17: round discounts to the nearest cent, half-cents up",
+      "requirement": "REQ-17",
+      "kind": "walkthrough",
+      "branch": "pr/req-17",
+      "commits": [
+        {
+          "sha": "ae08cfbd40d82d45ac1dd7668a7e126acc194830",
+          "message": "REQ-17: round discount half-cents up; add Checkout test",
+          "date": "2026-11-03T09:00:00Z",
+          "index": 1
+        },
+        {
+          "sha": "3d67ab623a3ef3bd20051a4a4817cf3475aee914",
+          "message": "REQ-17: add Order Import test for the 94-cent case",
+          "date": "2026-11-03T11:00:00Z",
+          "index": 2
+        }
+      ]
+    },
+    {
+      "id": "docs-example",
+      "number": 2,
+      "title": "Docs: add a worked pricing example",
+      "requirement": null,
+      "kind": "eval",
+      "branch": "pr/docs-example",
+      "commits": [
+        {
+          "sha": "9f5f23307b28f0057e6b9bb3c8d9646f4b6e31d0",
+          "message": "Docs: add a worked pricing example",
+          "date": "2026-11-04T09:00:00Z",
+          "index": 1
+        }
+      ]
+    },
+    {
+      "id": "ledger-note",
+      "number": 3,
+      "title": "Ledger: tidy the charge note text",
+      "requirement": null,
+      "kind": "eval",
+      "branch": "pr/ledger-note",
+      "commits": [
+        {
+          "sha": "a3f1aeb6406e28403d024e3b160da7deb5c8b57e",
+          "message": "Ledger: tidy the charge note text",
+          "date": "2026-11-04T10:00:00Z",
+          "index": 1
+        }
+      ]
+    },
+    {
+      "id": "policy-self-patch",
+      "number": 4,
+      "title": "Ledger note tweak that also loosens review-policy.yml",
+      "requirement": null,
+      "kind": "eval",
+      "branch": "pr/policy-self-patch",
+      "commits": [
+        {
+          "sha": "522c41b9a79d4b90f25c295b969e0d17277f918e",
+          "message": "Ledger note tweak; relax review policy",
+          "date": "2026-11-04T11:00:00Z",
+          "index": 1
+        }
+      ]
+    }
+  ]
+}

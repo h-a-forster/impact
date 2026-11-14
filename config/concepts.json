@@ -1,0 +1,11 @@
+{
+  "note": "Trusted demo config for the rule-based concept mapper. Folder -> behaviour label. Folders not listed are shown as labelled folder groups.",
+  "groups": {
+    "src/pricing": "Pricing",
+    "src/checkout": "Checkout",
+    "src/import": "Order Import",
+    "src/payments": "Payments Ledger",
+    "tests": "Tests",
+    "docs": "Docs"
+  }
+}

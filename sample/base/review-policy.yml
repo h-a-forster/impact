@@ -1,0 +1,21 @@
+# Approved team review policy. Read from the base revision only.
+version: 1
+critical_paths:
+  - src/payments/**
+docs_paths:
+  - docs/**
+policy_paths:
+  - review-policy.yml
+  - REVIEW.md
+required_checks:
+  - unit-tests
+evidence:
+  # Each affected workflow needs a passing test that cites the requirement
+  # ID and reaches the workflow code on the reviewed commit.
+  require_requirement_test_per_affected_workflow: true
+auto_merge_dry_run:
+  # Narrow allowlist. Low severity only. Never merges for real.
+  allow:
+    - severity: Low
+      paths:
+        - docs/**

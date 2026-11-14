@@ -1,0 +1,160 @@
+{
+  "change_id": "ju26-issue-2234",
+  "classifier_1": {
+    "considered": [
+      {
+        "detail": "none of the 4 changed files matches a sensitive path",
+        "matched": false,
+        "rule": "S-sensitive-path",
+        "severity": "High"
+      },
+      {
+        "detail": "2 places counted, the policy asks for at least 1 (RCH-1, RCH-2)",
+        "matched": true,
+        "rule": "S-shared-code",
+        "severity": "Medium"
+      },
+      {
+        "detail": "1 changed file(s) are neither documentation nor test code: src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+        "matched": true,
+        "rule": "S-product-code",
+        "severity": "Medium"
+      },
+      {
+        "detail": "some changed files are product code",
+        "matched": false,
+        "rule": "S-docs-or-tests-only",
+        "severity": "Low"
+      }
+    ],
+    "reason": "changed code is reached from places outside the diff: 2 places counted, the policy asks for at least 1 (RCH-1, RCH-2)",
+    "rule": "S-shared-code",
+    "severity": "Medium"
+  },
+  "generated_by": "python -m impactledger.factory --all (rule-based; no model is called; do not edit by hand)",
+  "head": "9007cee1163c4a274fd60c3cc20c21ae63622786",
+  "pack_sha256": "b72a7733e0c065dce782bd6f36dd8a86abf12f7522f0d32074a00dced93273d9",
+  "policy": {
+    "path": "review-policy.yml",
+    "sha256": "fd368f1829d2aa08df1eb1a848dbf17aad6d9283229e097c0631c0aa3a641641"
+  },
+  "schema": "impactledger.factory/1",
+  "stages": {
+    "after-targeted-checks": {
+      "classifier_2": {
+        "auto_merge": {
+          "dry_run": true,
+          "eligible": false,
+          "reason": "severity High is above auto_merge.max_severity Low",
+          "rule": "T-auto-merge"
+        },
+        "considered": [
+          {
+            "detail": "every required check has a result for the reviewed commit",
+            "matched": false,
+            "route": "waiting",
+            "rule": "T-required-check-missing"
+          },
+          {
+            "detail": "no required check has failed tests on the reviewed commit",
+            "matched": false,
+            "route": "waiting",
+            "rule": "T-required-check-failed"
+          },
+          {
+            "detail": "no open or refused requirement clause names a check that would settle it (reason codes: no-check-reaches)",
+            "matched": false,
+            "route": "waiting",
+            "rule": "T-evidence-missing"
+          },
+          {
+            "detail": "REF-5 (1 row; each row names its check)",
+            "matched": true,
+            "route": "human-review",
+            "rule": "T-contradicted"
+          },
+          {
+            "detail": "severity High is above auto_merge.max_severity Low",
+            "matched": false,
+            "route": "auto-merge-eligible",
+            "rule": "T-auto-merge"
+          },
+          {
+            "detail": "head-full: 175 passed, 0 failed on 9007cee1; no named evidence is missing",
+            "matched": true,
+            "route": "human-review",
+            "rule": "T-human-review"
+          }
+        ],
+        "initial_severity": "Medium",
+        "raised": true,
+        "route": "human-review",
+        "route_label": "Human review required",
+        "route_reason": "an executed check contradicts a row; accepting or rejecting that is a named human's decision: REF-5 (1 row; each row names its check)",
+        "route_rule": "T-contradicted",
+        "severity": "High",
+        "severity_reason": "an executed check contradicts a row at this stage: REF-5 (1 row; each row names its check)",
+        "severity_rule": "R-contradicted",
+        "waiting_on": []
+      }
+    },
+    "as-submitted": {
+      "classifier_2": {
+        "auto_merge": {
+          "dry_run": true,
+          "eligible": false,
+          "reason": "severity Medium is above auto_merge.max_severity Low",
+          "rule": "T-auto-merge"
+        },
+        "considered": [
+          {
+            "detail": "every required check has a result for the reviewed commit",
+            "matched": false,
+            "route": "waiting",
+            "rule": "T-required-check-missing"
+          },
+          {
+            "detail": "no required check has failed tests on the reviewed commit",
+            "matched": false,
+            "route": "waiting",
+            "rule": "T-required-check-failed"
+          },
+          {
+            "detail": "no open or refused requirement clause names a check that would settle it (reason codes: no-check-reaches)",
+            "matched": false,
+            "route": "waiting",
+            "rule": "T-evidence-missing"
+          },
+          {
+            "detail": "no row is contradicted at this stage",
+            "matched": false,
+            "route": "human-review",
+            "rule": "T-contradicted"
+          },
+          {
+            "detail": "severity Medium is above auto_merge.max_severity Low",
+            "matched": false,
+            "route": "auto-merge-eligible",
+            "rule": "T-auto-merge"
+          },
+          {
+            "detail": "head-full: 175 passed, 0 failed on 9007cee1; no named evidence is missing",
+            "matched": true,
+            "route": "human-review",
+            "rule": "T-human-review"
+          }
+        ],
+        "initial_severity": "Medium",
+        "raised": false,
+        "route": "human-review",
+        "route_label": "Human review required",
+        "route_reason": "required checks passed and no named evidence is missing; a named human decides: head-full: 175 passed, 0 failed on 9007cee1; no named evidence is missing",
+        "route_rule": "T-human-review",
+        "severity": "Medium",
+        "severity_reason": "changed code is reached from places outside the diff: 2 places counted, the policy asks for at least 1 (RCH-1, RCH-2)",
+        "severity_rule": "S-shared-code",
+        "waiting_on": []
+      }
+    }
+  }
+}

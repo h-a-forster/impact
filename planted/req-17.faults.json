@@ -1,0 +1,70 @@
+{
+  "note": "Planted faults for the REQ-17 pull request. Each is one known bug put into a copy of a PR commit. Written before the run. Method from the Impact Ledger project.",
+  "pr": "req-17",
+  "faults": [
+    {
+      "id": "F1",
+      "node": "fn:src/pricing/discount.ts#applyDiscount",
+      "file": "src/pricing/discount.ts",
+      "find": "(subtotalCents * percent + 50) / 100",
+      "replace": "(subtotalCents * percent) / 100",
+      "what": "The shared function rounds down again (the REQ-17 fix is undone)."
+    },
+    {
+      "id": "F2",
+      "node": "fn:src/pricing/discount.ts#applyDiscount",
+      "file": "src/pricing/discount.ts",
+      "find": "(subtotalCents * percent + 50) / 100",
+      "replace": "(subtotalCents * percent + 49) / 100",
+      "what": "Off by one: exact half-cents round down."
+    },
+    {
+      "id": "F3",
+      "node": "fn:src/pricing/discount.ts#applyDiscount",
+      "file": "src/pricing/discount.ts",
+      "find": "percent > 100",
+      "replace": "percent > 1000",
+      "what": "Discounts above 100% are no longer rejected."
+    },
+    {
+      "id": "F4",
+      "node": "fn:src/checkout/checkout.ts#checkoutTotal",
+      "file": "src/checkout/checkout.ts",
+      "find": "applyDiscount(cartSubtotal(cart), cart.discountPercent)",
+      "replace": "applyDiscount(cartSubtotal(cart), 0)",
+      "what": "Checkout ignores the discount."
+    },
+    {
+      "id": "F5",
+      "node": "fn:src/import/orderImport.ts#importOrder",
+      "file": "src/import/orderImport.ts",
+      "find": "totalCents: applyDiscount(order.subtotalCents, order.discountPercent),",
+      "replace": "totalCents: order.subtotalCents - Math.floor((order.subtotalCents * order.discountPercent) / 100),",
+      "what": "Order Import keeps the old rounding (it stops using the shared function)."
+    },
+    {
+      "id": "F6",
+      "node": "fn:src/import/orderImport.ts#importOrder",
+      "file": "src/import/orderImport.ts",
+      "find": "totalCents: applyDiscount(order.subtotalCents, order.discountPercent),",
+      "replace": "totalCents: applyDiscount(order.subtotalCents, 0),",
+      "what": "Order Import ignores the discount."
+    },
+    {
+      "id": "F7",
+      "node": "fn:src/checkout/checkout.ts#cartSubtotal",
+      "file": "src/checkout/checkout.ts",
+      "find": "subtotal += item.priceCents * item.quantity;",
+      "replace": "subtotal += item.priceCents;",
+      "what": "Cart subtotal ignores quantity. This function is not affected by the PR."
+    },
+    {
+      "id": "F8",
+      "node": "fn:src/payments/ledger.ts#postCharge",
+      "file": "src/payments/ledger.ts",
+      "find": "amountCents < 0",
+      "replace": "amountCents < -1000",
+      "what": "The ledger accepts small negative charges. This function is not affected by the PR."
+    }
+  ]
+}

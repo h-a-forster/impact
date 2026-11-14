@@ -1,0 +1,26 @@
+{
+  "name": "code-review-impact-map",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Code Review Impact Map - reference implementation for Junction (Tieto, Earned Trust in AI Code)",
+  "scripts": {
+    "demo": "npm install && node scripts/setup.mjs && node src/server.mjs",
+    "setup": "node scripts/setup.mjs",
+    "setup:fresh": "node scripts/setup.mjs --fresh",
+    "review:live": "node scripts/setup.mjs --live-review",
+    "start": "node src/server.mjs",
+    "evals": "node evals/run.mjs",
+    "reset": "node -e \"require('fs').rmSync('.demo/decisions.json',{force:true});console.log('Decisions cleared.')\"",
+    "export:replica": "node scripts/export-replica.mjs",
+    "planted": "node scripts/planted.mjs",
+    "gate": "node scripts/gate.mjs",
+    "import:ledger": "node scripts/import-ledger.mjs"
+  },
+  "engines": {
+    "node": ">=22.6"
+  },
+  "dependencies": {
+    "yaml": "^2.5.0"
+  }
+}

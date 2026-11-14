@@ -1,0 +1,40 @@
+{
+  "pr": "req-17",
+  "requirement": "REQ-17",
+  "author": "Coding agent (authoring pass)",
+  "authorKind": "agent",
+  "why": "REQ-17 says discounts round to the nearest cent, with half-cents rounded up. The shared pricing function rounded the discount down.",
+  "before": "A 105-cent order at 10% gets a 10-cent discount. Total 95 cents.",
+  "after": "A 105-cent order at 10% gets an 11-cent discount. Total 94 cents.",
+  "preserve": "At zero discount the total stays 105 cents.",
+  "approach": "In applyDiscount(), add 50 before the integer division by 100 so half-cents round up. Whole-cent integer maths only.",
+  "alternatives": null,
+  "rollback": "Revert the PR commits. No data migration.",
+  "revisions": {
+    "1": {
+      "checksRun": [{ "label": "npm test, run locally before push", "check": "unit-tests" }],
+      "openGaps": [],
+      "claims": [
+        { "id": "c1", "text": "applyDiscount() now rounds the discount to the nearest cent, half-cents up.", "kind": "symbol-changed", "symbol": "fn:src/pricing/discount.ts#applyDiscount", "cite": { "file": "src/pricing/discount.ts", "line": 10 } },
+        { "id": "c2", "text": "Checkout totals 94 cents for a 105-cent order at 10%.", "kind": "test-passed", "test": "test:tests/checkout.test.ts#REQ-17 checkout: 105 cents at 10% totals 94 cents", "supports": "fn:src/checkout/checkout.ts#checkoutTotal" },
+        { "id": "c3", "text": "Order Import gets the same rounding, because it calls the shared function.", "kind": "behaviour", "node": "fn:src/import/orderImport.ts#importOrder", "cite": { "file": "src/import/orderImport.ts", "line": 28 } },
+        { "id": "c4", "text": "At zero discount the Checkout total stays 105 cents.", "kind": "test-passed", "test": "test:tests/checkout.test.ts#REQ-17 checkout: zero discount keeps the total at 105 cents", "supports": "fn:src/checkout/checkout.ts#checkoutTotal" },
+        { "id": "c5", "text": "All tests pass.", "kind": "suite-green" },
+        { "id": "c6", "text": "applyDiscount() has no callers other than Checkout and Order Import.", "kind": "callers-complete", "symbol": "fn:src/pricing/discount.ts#applyDiscount" }
+      ]
+    },
+    "2": {
+      "checksRun": [{ "label": "npm test, run locally before push", "check": "unit-tests" }],
+      "openGaps": ["Negative or over-100 percents are rejected as before; no new test added for them."],
+      "claims": [
+        { "id": "c1", "text": "applyDiscount() now rounds the discount to the nearest cent, half-cents up.", "kind": "symbol-changed", "symbol": "fn:src/pricing/discount.ts#applyDiscount", "cite": { "file": "src/pricing/discount.ts", "line": 10 } },
+        { "id": "c2", "text": "Checkout totals 94 cents for a 105-cent order at 10%.", "kind": "test-passed", "test": "test:tests/checkout.test.ts#REQ-17 checkout: 105 cents at 10% totals 94 cents", "supports": "fn:src/checkout/checkout.ts#checkoutTotal" },
+        { "id": "c3", "text": "Order Import totals 94 cents for a 105-cent order at 10%.", "kind": "test-passed", "test": "test:tests/orderImport.test.ts#REQ-17 import: 105 cents at 10% totals 94 cents", "supports": "fn:src/import/orderImport.ts#importOrder" },
+        { "id": "c4", "text": "At zero discount the Checkout total stays 105 cents.", "kind": "test-passed", "test": "test:tests/checkout.test.ts#REQ-17 checkout: zero discount keeps the total at 105 cents", "supports": "fn:src/checkout/checkout.ts#checkoutTotal" },
+        { "id": "c7", "text": "At zero discount the Order Import total stays 105 cents.", "kind": "test-passed", "test": "test:tests/orderImport.test.ts#REQ-17 import: zero discount keeps the total at 105 cents", "supports": "fn:src/import/orderImport.ts#importOrder" },
+        { "id": "c5", "text": "All tests pass.", "kind": "suite-green" },
+        { "id": "c6", "text": "applyDiscount() has no callers other than Checkout and Order Import.", "kind": "callers-complete", "symbol": "fn:src/pricing/discount.ts#applyDiscount" }
+      ]
+    }
+  }
+}

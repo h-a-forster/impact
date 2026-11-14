@@ -1,0 +1,84 @@
+# Review policy: what the two review classifiers read (impactledger/factory.py).
+#
+# Severity is the risk of the change (Low, Medium, High). The route is what happens next
+# (waiting, human-review, auto-merge-eligible). Reading depth, how much the named human
+# reads, is a separate thing decided by impactledger/rules.json.
+#
+# The team may reorder, remove or re-parameterise rules here. Every rule id maps to one
+# predicate in impactledger/factory.py (PREDICATES): a new kind of rule needs code, and an id
+# without a predicate is refused when the policy loads.
+#
+# Format: a strict subset of YAML (2-space indentation, block mappings and lists, plain or
+# quoted strings, whole numbers, true/false, # comments, empty []). Anything else, such as
+# tabs, anchors, multi-line strings or flow lists, is an error with its line number.
+# Quote a value that starts with `*`, e.g. "**/*.md".
+# After an edit, run: python -m impactledger.factory --all
+
+version: 1
+
+# One source of truth for sensitive paths: the patterns are not copied here.
+sensitive_paths:
+  source: impactledger/rules.json
+  key: always_full_read
+
+# Run ids as they appear in pack.stages[].runs and pack.provenance.evidence[].run_id.
+required_checks:
+  - run: head-full
+    what: the repository's test suite on the reviewed commit
+
+# Dry run only at Junction: eligibility is reported, nothing merges.
+auto_merge:
+  dry_run: true
+  allow_paths:
+    - README.md
+    - doc/**
+    - docs/**
+    - "**/*.md"
+  max_severity: Low
+
+# Classifier 1 (before any test result). The highest matching severity wins; listed high to low.
+# Documentation means a path matched by auto_merge.allow_paths.
+severity_rules:
+  - id: S-sensitive-path
+    severity: High
+    when: a changed file matches a sensitive path
+  - id: S-shared-code
+    severity: Medium
+    min_places: 1
+    when: changed code is reached from places outside the diff
+  - id: S-product-code
+    severity: Medium
+    when: a changed file is neither documentation nor test code
+  - id: S-docs-or-tests-only
+    severity: Low
+    when: every changed file is documentation or test code
+
+# Classifier 2 may keep or raise the initial severity, never lower it.
+raise_rules:
+  - id: R-contradicted
+    severity: High
+    when: an executed check contradicts a row at this stage
+
+# Classifier 2 route. The first matching rule wins.
+route_rules:
+  - id: T-required-check-missing
+    route: waiting
+    when: a required check has no result for the reviewed commit at this stage
+  - id: T-required-check-failed
+    route: waiting
+    when: a required check has failed tests on the reviewed commit; the author must address it
+  - id: T-evidence-missing
+    route: waiting
+    # Refusal reason codes that mean "a check would settle this" (not an owner decision).
+    reason_codes:
+      - no-check-reaches
+    when: a requirement clause is open or refused, the reviewer named a check that would settle it, and no targeted check has run yet
+  - id: T-contradicted
+    route: human-review
+    when: an executed check contradicts a row; accepting or rejecting that is a named human's decision
+  - id: T-auto-merge
+    route: auto-merge-eligible
+    when: severity is at most auto_merge.max_severity, every changed file matches auto_merge.allow_paths, and every required check passed on this commit (dry run)
+  - id: T-human-review
+    route: human-review
+    when: required checks passed and no named evidence is missing; a named human decides
