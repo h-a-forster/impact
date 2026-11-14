@@ -135,7 +135,11 @@ and land on a 0 to 100% similarity scale next to the real change. It replays rea
 - **Similarity rule.** Each change is a set: the product code files it touches, plus the functions in
   them it edits that already existed (no docs, no unit tests). Similarity = shared / all (Jaccard).
   "Similar" = 50% or more. "Agents agree with each other" = the average over every pair of agents.
-- Deep link: `?map=blast&swarm=1` plays it; `&model=<id|mix>&n=<count>` picks first; `&agent=<n>` opens one agent.
+- **Two scores per agent:** like the real change, and like the other agents (average). The
+  "Who is like whom" matrix compares every pair (real change + each agent), by files and functions
+  or by **changed lines** (the exact code lines added or removed in product code; Jaccard again).
+- **Folds:** everything under the trust label opens and closes (zone picture open by default).
+- Deep link: `?map=blast&swarm=1` plays it; `&model=<id|mix>&n=<count>` picks first; `&agent=<n>` opens one agent; `&measure=lines` sets the matrix; `&open=zones,files,numbers,how,swarm,matrix` opens folds.
 
 ## What is real, what is recorded, what is rule-based
 

@@ -7,6 +7,12 @@
 //   Similarity = things both changes touch / things either change touches   (Jaccard, 0 to 100%)
 //   A run is "similar" to the real change when its similarity is 50% or more.
 //   "Agents agree with each other" = the average similarity over every pair of agents (worked out on the page).
+//
+// A SECOND SCORE, BY CHANGED LINES (shown in the matrix):
+//   Each change is a set of the code lines it adds or removes in product code files, each line
+//   with its file and a + or - mark, spaces squeezed, blank lines left out.
+//   Line similarity = lines both changes add or remove / lines either one adds or removes.
+//   It sees inside a function: two different fixes in the same function score low here.
 import fs from "node:fs";
 import path from "node:path";
 import { DATA } from "./paths.mjs";
@@ -24,6 +30,22 @@ export function thingsOf(files) {
   }
   return out;
 }
+/** The set of changed lines in product code: "file|+text" or "file|-text". */
+export function linesOf(files) {
+  const out = new Map();
+  for (const f of files ?? []) {
+    if (f.kind !== "code") continue;
+    let on = false;
+    for (const raw of (f.patch ?? "").split("\n")) {
+      if (raw.startsWith("@@")) on = true;
+      else if (on && (raw[0] === "+" || raw[0] === "-")) {
+        const text = raw.slice(1).trim().replace(/\s+/g, " ");
+        if (text) out.set(`${f.file}|${raw[0]}${text}`, true);
+      }
+    }
+  }
+  return out;
+}
 export function similarity(a, b) {
   const all = new Set([...a.keys(), ...b.keys()]);
   if (!all.size) return 1;
@@ -35,7 +57,9 @@ export function similarity(a, b) {
 export function buildSwarm(prId) {
   if (!fs.existsSync(file(prId, "swarm.json")) || !fs.existsSync(file(prId, "blast.json"))) return { pr: prId, recorded: false, message: "No swarm runs recorded for this PR yet." };
   const rec = JSON.parse(fs.readFileSync(file(prId, "swarm.json"), "utf8"));
-  const real = thingsOf(JSON.parse(fs.readFileSync(file(prId, "blast.json"), "utf8")).real.files);
+  const realFiles = JSON.parse(fs.readFileSync(file(prId, "blast.json"), "utf8")).real.files;
+  const real = thingsOf(realFiles);
+  const realLines = linesOf(realFiles);
   const pct = (x) => Math.round(x * 100);
   const models = Object.entries(rec.models).map(([id, m]) => {
     const sets = m.runs.map((r) => thingsOf(r.files));
@@ -48,6 +72,8 @@ export function buildSwarm(prId) {
         modelLabel: m.label,
         n: r.n,
         things: [...mine.keys()],
+        lines: [...linesOf(r.files).keys()],
+        lineScore: pct(similarity(linesOf(r.files), realLines)),
         ok: r.exitCode === 0,
         noChange: r.files.length === 0,
         score: pct(score),
@@ -85,6 +111,9 @@ export function buildSwarm(prId) {
     notBuilt: rec.notBuilt,
     similarAt: pct(SIMILAR_AT),
     real: [...real.values()].map((t) => t.label),
+    // The real change as sets, so the page can build the matrix (real change + agents, every pair).
+    realThings: [...real.keys()],
+    realLines: [...realLines.keys()],
     // The demo default: the first set (the mix when there is one), all of its runs.
     defaultSet: sets[0].id,
     // Shown in the model list even when nothing is recorded for them.

@@ -589,8 +589,13 @@ function renderBlast() {
   const things = (arr) => (arr.length ? arr.map((t) => `<code>${esc(t.label)}</code>${t.kind === "doc" ? " (doc)" : t.kind === "test" ? " (unit test)" : ""}`).join(", ") : "nothing");
   const head = `<thead><tr><th></th>${cols.map((c) => `<th class="${c.id === "real" ? "real" : ""}">${esc(c.label)}${c.id !== "real" && !c.ok ? note(`<span class="bad-text">the run failed</span>`) : c.noChange ? note("made no change") : ""}</th>`).join("")}</tr></thead>`;
   const secs = (r) => (r.startedAt && r.endedAt ? `${Math.max(1, Math.round((new Date(r.endedAt) - new Date(r.startedAt)) / 1000))} s` : "");
+  // Every part below the trust label is a fold you can open and close. What is open is kept while you click around.
+  const open = (state.blastOpen ??= { zones: true });
+  const fold = (id, title, hint, body) => `<details class="fold" data-fold="${id}" ${open[id] ? "open" : ""}><summary><span class="fold-title">${title}</span><span class="fold-hint">${hint}</span></summary><div class="fold-body">${body}</div></details>`;
+  const realCol = cols.find((c) => c.id === "real");
   el.innerHTML = `<p class="blast-what">We gave the same task to 3 agents: one careful, one normal, one that changes too much. The coloured zones show the files they touched. The thick outline is the real change.</p>
     <div class="blast-label ${esc(b.label.tone)}"><span class="stamp-label">Trust label</span><strong>${esc(b.label.text)}</strong><span>${esc(b.label.how)}</span></div>
+    ${fold("zones", "Zone picture", "Which files each agent touched, and where the real change sits", `
     <div class="blast-zones">${zoneHtml(0)}
       <div class="bz bz-outside"><div class="bz-title">Outside every zone <span>No agent touched this. Only the real change did.</span></div>${boxesOr(inZone("outside"))}</div>
     </div>
@@ -600,10 +605,11 @@ function renderBlast() {
       <span><i class="pip pip-wide on"></i> agent that changes too much</span>
       <span><i class="sw sw-real"></i> thick outline: the real change</span>
       <span class="muted">Click a file to see what each one changed in it.</span>
-    </div>
+    </div>`)}
+    ${fold("files", "Lines changed per file", `Real change: ${num(realCol.files)} files, +${num(realCol.added)} −${num(realCol.removed)}`, `
     <table class="blast-table files">${head}<tbody>${fileRows}${totalRow}</tbody></table>
-    <div class="blast-key muted"><span class="plus">+</span> lines added, <span class="minus">−</span> lines removed, · not touched. The real change is Tieto's AI-written branch, shown as a PR. ${esc(b.notBuilt)}</div>
-    <details class="blast-runs"><summary>More numbers: functions, reach and overlap</summary>
+    <div class="blast-key muted"><span class="plus">+</span> lines added, <span class="minus">−</span> lines removed, · not touched. The real change is Tieto's AI-written branch, shown as a PR. ${esc(b.notBuilt)}</div>`)}
+    ${fold("numbers", "More numbers", "Functions, reach and overlap", `
       <table class="blast-table">${head}<tbody>
       ${row("Functions edited", (c) => num(c.functions) + (c.newFunctions ? note(`${c.newFunctions} of them new`) : ""), "in product code, not unit tests")}
       ${row("Unit test functions added or edited", (c) => num(c.testFunctions))}
@@ -613,9 +619,8 @@ function renderBlast() {
       ${row("Functions shared with the real change", (c) => (c.id === "real" ? num(o.realFunctions) + note("it edits, new ones not counted") : `${num(c.sharedFunctions.length)} of ${num(o.realFunctions)}${c.sharedFunctions.length ? note(c.sharedFunctions.map(fnName).join(", ")) : ""}`), "functions that already existed")}
       ${wideRow("The real change touched, no agent did", things(o.realOnly))}
       ${wideRow("Every agent touched, the real change did not", things(o.agentsNotReal))}
-      </tbody></table>
-    </details>
-    <details class="blast-runs"><summary>How the 3 runs were done, and the rule for the label</summary>
+      </tbody></table>`)}
+    ${fold("how", "How it was done", "The 3 runs, their prompts, and the rule for the label", `
       <p>Run on ${esc(b.recordedAt.slice(0, 10))} with the model <code>${esc(b.model)}</code>, once per agent. Each agent worked alone in its own copy of the code from before the fix (commit <code>${esc(short(b.base))}</code>). The real fix was not in those copies. This tab replays the saved result. No agent runs now.</p>
       <p><b>Rule for the trust label.</b> We look at the product code files the real change touches (not docs, not unit tests). If no agent touched one of them: "Touches code no agent touched". Else, if only the agent that changes too much touched one of them: "Touches more than needed". Else: "Inside the expected zone".</p>
       <p><b>What every agent got.</b> ${b.given.kept.map(esc).join("; ")}.</p>
@@ -623,8 +628,8 @@ function renderBlast() {
       ${b.runs.filter((r) => r.id !== "real").map((r) => `<div class="blast-run"><b>${esc(r.label)}</b> <span class="muted">${secs(r) ? `· took ${secs(r)}` : ""}</span><div>Told: ${esc(r.instruction ?? "")}</div>
         <details><summary>What it said when it was done</summary><pre class="raw doc">${esc(r.reply ?? "No reply was saved.")}</pre></details>
         <details><summary>The full prompt, word for word</summary><pre class="raw doc">${esc(r.prompt ?? "")}</pre></details></div>`).join("")}
-      <p class="muted">${esc(b.how.functions)} Callers come from ${esc(b.graphTool ?? "the recorded data")} (a saved run) and the recorded compiler data for this PR.</p>
-    </details>`;
+      <p class="muted">${esc(b.how.functions)} Callers come from ${esc(b.graphTool ?? "the recorded data")} (a saved run) and the recorded compiler data for this PR.</p>`)}`;
+  for (const d of el.querySelectorAll("[data-fold]")) d.ontoggle = () => (open[d.dataset.fold] = d.open);
   for (const btn of el.querySelectorAll("[data-blast]")) btn.onclick = () => selectBlast(btn.dataset.blast);
 }
 /** Side panel for one box: what each of the 4 changes did there. */
@@ -683,15 +688,18 @@ async function renderSwarm({ autoplay = false, model = null, count = null } = {}
     if (swarmUI.data.recorded) swarmDefault();
   }
   const s = swarmUI.data;
+  // The whole swarm is one fold. It opens by itself when the swarm plays.
+  if (autoplay) swarmUI.open = true;
+  const wrap = (body) => `<details class="fold swarm" id="swarmFold" ${swarmUI.open ? "open" : ""}><summary><span class="fold-title">Monte Carlo swarm</span><span class="fold-hint">Give the same task to many agents. How often does one end up close to the real change?</span></summary><div class="fold-body">${body}</div></details>`;
+  const keepOpen = () => ($("swarmFold").ontoggle = () => (swarmUI.open = $("swarmFold").open));
   if (!s?.recorded) {
-    el.innerHTML = `<div class="swarm"><div class="swarm-head"><h3>Monte Carlo swarm</h3></div><div class="muted">${esc(s?.message ?? "")}</div></div>`;
+    el.innerHTML = wrap(`<div class="muted">${esc(s?.message ?? "")}</div>`);
+    keepOpen();
     return;
   }
   const label = (id) => (id === "mix" ? swarmSet("mix")?.label ?? "Mix" : s.choiceLabels[id] ?? id);
   const def = swarmSet(s.defaultSet);
-  el.innerHTML = `<div class="swarm">
-    <div class="swarm-head"><h3>Monte Carlo swarm</h3>
-      <span class="muted">Give the same task to many agents. How often does one end up close to the real change?</span></div>
+  el.innerHTML = wrap(`
     <div class="swarm-controls">
       <label>Model <select id="swarmModel">${s.choices.map((id) => `<option value="${esc(id)}" ${id === swarmUI.model ? "selected" : ""}>${esc(label(id))}</option>`).join("")}</select></label>
       <label>Agents <select id="swarmCount">${Array.from({ length: s.maxAgents }, (_, i) => i + 1).map((n) => `<option value="${n}" ${n === swarmUI.count ? "selected" : ""}>${n}</option>`).join("")}</select></label>
@@ -699,8 +707,8 @@ async function renderSwarm({ autoplay = false, model = null, count = null } = {}
     </div>
     <div class="muted swarm-rec">Replays real runs recorded ${esc(s.recordedAt.slice(0, 10))}. No agent runs now. Recorded for the demo: ${esc(def.label)}.</div>
     <div id="swarmNote" class="swarm-note" ${swarmUI.note ? "" : "hidden"}>${esc(swarmUI.note ?? "")}</div>
-    <div id="swarmStage" class="swarm-stage" hidden></div>
-  </div>`;
+    <div id="swarmStage" class="swarm-stage" hidden></div>`);
+  keepOpen();
   $("swarmModel").onchange = (ev) => {
     stopSwarm();
     swarmUI.model = ev.target.value;
@@ -732,6 +740,11 @@ function playSwarm() {
   note.hidden = !swarmUI.note;
   note.textContent = swarmUI.note ?? "";
   const runs = swarmSet(swarmUI.model).runs.slice(0, swarmUI.count).map(swarmRun);
+  // Second score per agent: how like the other agents it is (average over the others, by files and functions).
+  const peers = runs.map((r, i) => {
+    const others = runs.filter((_, j) => j !== i);
+    return others.length ? Math.round(others.reduce((a, o) => a + swarmJac(r.things, o.things), 0) / others.length) : null;
+  });
   const stage = $("swarmStage");
   stage.hidden = false;
   const fast = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -781,7 +794,7 @@ function playSwarm() {
       rows[i].classList.add("done", r.similar ? "near" : "far");
       rows[i].querySelector(".swarm-status").innerHTML = !r.ok ? `<span class="bad-text">the run failed</span>` : r.noChange
         ? "made no change"
-        : `${r.files} file${r.files === 1 ? "" : "s"} · <span class="plus">+${r.added}</span> <span class="minus">−${r.removed}</span> · <b>${r.score}% similar</b>`;
+        : `${r.files} file${r.files === 1 ? "" : "s"} · <span class="plus">+${r.added}</span> <span class="minus">−${r.removed}</span> · <b>${r.score}%</b> like the real change${peers[i] === null ? "" : ` · <b>${peers[i]}%</b> like the other agents`}`;
       dots[i].classList.add("in", r.similar ? "near" : "far");
     });
     end = Math.max(end, start + work);
@@ -789,14 +802,10 @@ function playSwarm() {
   // 4. The answer.
   later(end + 500, () => {
     const near = runs.filter((r) => r.similar).length;
-    const jac = (a, b) => {
-      const A = new Set(a), all = new Set([...a, ...b]);
-      return all.size ? b.filter((x) => A.has(x)).length / all.size : 1;
-    };
     let pairs = 0, sum = 0;
     for (let i = 0; i < runs.length; i++) for (let j = i + 1; j < runs.length; j++) {
       pairs++;
-      sum += jac(runs[i].things, runs[j].things);
+      sum += swarmJac(runs[i].things, runs[j].things) / 100;
     }
     const count = (list) => {
       const m = new Map();
@@ -821,13 +830,46 @@ function playSwarm() {
         ${topExtra ? `<li><b>Agents did this, the real change did not:</b> <code>${esc(topExtra[0])}</code> (${topExtra[1]} of ${runs.length})</li>` : `<li>No agent touched code the real change left alone.</li>`}
         <li class="muted">${esc(s.notBuilt)}</li>
       </ul>
-      <details class="blast-runs"><summary>How similarity is worked out</summary>
-        <p>We list what each change touches in product code (not docs, not unit tests): the files, and the functions in them that already existed. The real change touches: ${s.real.map((x) => `<code>${esc(x)}</code>`).join(", ")}.</p>
-        <p>Similarity = things both changes touch, divided by things either one touches. 100% means the very same files and functions. It does not compare the code line by line.</p>
+      <details class="fold" id="swarmMatrixFold" ${swarmUI.matrixOpen ? "open" : ""}><summary><span class="fold-title">Who is like whom</span><span class="fold-hint">Every agent against the real change and against each other</span></summary><div class="fold-body"><div id="swarmMatrix" class="swarm-matrix"></div></div></details>
+      <details class="fold"><summary><span class="fold-title">How similarity is worked out</span><span class="fold-hint">Two ways to measure, and the prompt</span></summary><div class="fold-body">
+        <p><b>By files and functions</b> (the main score). We list what each change touches in product code (not docs, not unit tests): the files, and the functions in them that already existed. The real change touches: ${s.real.map((x) => `<code>${esc(x)}</code>`).join(", ")}. Similarity = things both changes touch, divided by things either one touches. 100% means the very same files and functions.</p>
+        <p><b>By changed lines.</b> We list every code line each change adds or removes in product code (blank lines left out, spaces squeezed). Similarity = lines both changes add or remove, divided by lines either one does. This one sees inside a function: two different fixes in the same function score low. The real change adds or removes ${s.realLines.length} lines.</p>
         <p>${esc(s.how)}</p>
         <details><summary>The prompt every agent got, word for word</summary><pre class="raw doc">${esc(s.prompt.text)}</pre></details>
-      </details>`;
+      </div></details>`;
+    $("swarmMatrixFold").ontoggle = () => (swarmUI.matrixOpen = $("swarmMatrixFold").open);
+    renderSwarmMatrix(runs);
   });
+}
+/** Jaccard of two lists, in whole percent: shared / all. */
+function swarmJac(a, b) {
+  const A = new Set(a), all = new Set([...a, ...b]);
+  return all.size ? Math.round((100 * b.filter((x) => A.has(x)).length) / all.size) : 100;
+}
+/** Every pair compared: the real change and each agent, rows and columns. Two ways to measure. */
+function renderSwarmMatrix(runs) {
+  const el = $("swarmMatrix"), s = swarmUI.data;
+  if (!el) return;
+  const measure = swarmUI.measure ?? "things";
+  const rows = [{ key: "real", name: "Real change", sub: "Tieto's AI-written branch", set: measure === "things" ? s.realThings : s.realLines }, ...runs.map((r, i) => ({ key: r.key, name: `Agent ${i + 1}`, sub: r.modelLabel, set: measure === "things" ? r.things : r.lines }))];
+  const cell = (a, b) => {
+    if (a.key === b.key) return `<td class="self">—</td>`;
+    const v = swarmJac(a.set, b.set);
+    return `<td style="--v:${v}%" title="${esc(a.name)} and ${esc(b.name)}: ${v}% alike">${v}%</td>`;
+  };
+  const avgOthers = (a) => {
+    const others = rows.filter((b) => b.key !== a.key && b.key !== "real");
+    return others.length ? `${Math.round(others.reduce((x, b) => x + swarmJac(a.set, b.set), 0) / others.length)}%` : "—";
+  };
+  el.innerHTML = `<div class="swarm-matrix-head">
+      <div class="tabs" role="tablist"><button type="button" data-measure="things" class="${measure === "things" ? "active" : ""}">Files and functions</button><button type="button" data-measure="lines" class="${measure === "lines" ? "active" : ""}">Changed lines</button></div></div>
+    <div class="muted swarm-matrix-sub">${measure === "things" ? "How alike two changes are by the files and functions they touch." : "How alike two changes are by the exact code lines they add or remove."} Darker = more alike. Row 1 is each agent against the real change.</div>
+    <table class="swarm-table"><thead><tr><th></th>${rows.map((b) => `<th class="${b.key === "real" ? "real" : ""}">${esc(b.name)}<div class="cell-note">${esc(b.sub)}</div></th>`).join("")}<th class="avg">Average with the other agents</th></tr></thead>
+    <tbody>${rows.map((a) => `<tr class="${a.key === "real" ? "real" : ""}"><th>${esc(a.name)}<div class="cell-note">${esc(a.sub)}</div></th>${rows.map((b) => cell(a, b)).join("")}<td class="avg">${avgOthers(a)}</td></tr>`).join("")}</tbody></table>`;
+  for (const b of el.querySelectorAll("[data-measure]")) b.onclick = () => {
+    swarmUI.measure = b.dataset.measure;
+    renderSwarmMatrix(runs);
+  };
 }
 /** Side panel for one swarm agent: its score and its change. */
 function swarmSideHtml(sel) {
@@ -835,7 +877,7 @@ function swarmSideHtml(sel) {
   if (!r) return "";
   const list = (arr) => (arr.length ? arr.map((x) => `<code>${esc(x)}</code>`).join(", ") : "nothing");
   return `<h2>Agent ${sel.agent ?? r.n} · ${esc(r.modelLabel)}</h2><div class="where">Monte Carlo swarm · took ${r.seconds ?? "?"} s · recorded ${esc(swarmUI.data.recordedAt.slice(0, 10))}</div>
-    <div class="callout ${r.similar ? "ok" : "bad"}"><strong>${r.score}% similar</strong> to the real change.</div>
+    <div class="callout ${r.similar ? "ok" : "bad"}"><strong>${r.score}% like the real change</strong> by files and functions · <strong>${r.lineScore}%</strong> by changed lines.</div>
     <dl class="kv"><dt>Both touched</dt><dd>${list(r.shared)}</dd><dt>Only the real change</dt><dd>${list(r.missed)}</dd><dt>Only this agent</dt><dd>${list(r.extra)}</dd></dl>
     <h3>What it changed</h3>${r.changes.length ? r.changes.map((f) => changeBlock(f.file, parseHunks(f.patch), `${f.added} added, ${f.removed} removed`)).join("<div style='height:8px'></div>") : `<div class="muted">No change.</div>`}
     <details><summary>What it said when it was done</summary><pre class="raw doc">${esc(r.reply ?? "No reply was saved.")}</pre></details>`;
@@ -1224,6 +1266,15 @@ async function init() {
     render();
     if (q.get("box")) selectBlast(q.get("box"));
     // &swarm=1 plays the Monte Carlo swarm (&model=<id>&n=<count> to pick first). &agent=<n> also opens that agent in the side panel.
+    if (q.get("measure") === "lines") swarmUI.measure = "lines";
+    // &open=zones,files,numbers,how,swarm,matrix opens those folds (for screenshots).
+    if (q.get("open")) {
+      const want = q.get("open").split(",");
+      state.blastOpen = Object.fromEntries(["zones", "files", "numbers", "how"].map((k) => [k, want.includes(k)]));
+      swarmUI.open = want.includes("swarm");
+      swarmUI.matrixOpen = want.includes("matrix");
+      render();
+    }
     if (q.get("swarm") === "1") {
       await renderSwarm({ autoplay: true, model: q.get("model"), count: Number(q.get("n")) || null });
       if (q.get("agent")) {

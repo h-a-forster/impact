@@ -358,7 +358,6 @@ button.danger { background: var(--bad); color: var(--card); border-color: var(--
 .bbox { width: 250px; }
 
 /* Monte Carlo swarm, at the bottom of the Blast radius tab */
-.swarm { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
 .swarm-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
 .swarm-head h3 { margin: 0; font-size: 13px; color: var(--ink); }
 .swarm-controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
@@ -405,3 +404,29 @@ button.danger { background: var(--bad); color: var(--card); border-color: var(--
 .swarm-agent { grid-template-columns: 90px 160px 1fr; }
 .swarm-rec { margin-top: 6px; }
 .swarm-note { margin-top: 8px; padding: 6px 10px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); font-size: 13px; }
+/* Swarm matrix: every pair compared */
+.swarm-matrix { margin-top: 16px; }
+.swarm-matrix-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.swarm-matrix-head h3 { margin: 0; color: var(--ink); }
+.swarm-matrix-sub { font-size: 12px; margin: 4px 0 8px; }
+.swarm-table { border-collapse: collapse; font-size: 13px; width: 100%; }
+.swarm-table th, .swarm-table td { border: 1px solid var(--line); padding: 6px 8px; }
+.swarm-table thead th { font-size: 12px; text-align: center; vertical-align: bottom; }
+.swarm-table tbody th { text-align: left; white-space: nowrap; }
+.swarm-table td { text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; background: color-mix(in srgb, var(--ok) var(--v, 0%), var(--card)); }
+.swarm-table td.self { background: var(--soft); color: var(--muted); font-weight: 400; }
+.swarm-table td.avg, .swarm-table th.avg { background: var(--soft); font-weight: 700; }
+.swarm-table tr.real th, .swarm-table th.real { border-left: 3px solid var(--ink); }
+.swarm-table tr.real th:first-child { font-weight: 800; }
+/* Folds: every part of the Blast radius tab can be opened and closed. */
+details.fold { border: 1px solid var(--line); border-radius: 10px; margin-top: 10px; background: var(--card); }
+details.fold > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 10px 14px; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::before { content: "▸"; color: var(--muted); transition: transform .2s; display: inline-block; }
+details.fold[open] > summary::before { transform: rotate(90deg); }
+details.fold > summary:hover { background: var(--soft); border-radius: 10px; }
+.fold-title { font-weight: 700; font-size: 14px; }
+.fold-hint { font-size: 12.5px; color: var(--muted); }
+.fold-body { padding: 0 14px 14px; }
+.fold-body > .blast-zones > .bz:first-child, .fold-body > .blast-table { margin-top: 0; }
+details.fold details.fold { background: var(--bg); }
