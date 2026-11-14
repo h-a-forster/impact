@@ -100,21 +100,21 @@ function parseJsonLoose(text) {
 /**
  * Independent AI review: a fresh `claude` process with its own system prompt,
  * no tools and an empty working folder. Separate context from the authoring pass.
- * The real inputs and response are saved for replay.
+ * Returns the record (real inputs and response) without saving it.
  */
-export function runLiveReview(sha, input) {
+export function askReviewer(sha, input, extraArgs = []) {
   const cwd = path.join(DEMO, "review-cwd");
   fs.mkdirSync(cwd, { recursive: true });
   const r = spawnSync(
     "claude",
-    ["-p", "--model", REVIEW_MODEL, "--output-format", "json", "--system-prompt", input.system, "--tools", "", "--strict-mcp-config", "--no-session-persistence"],
+    ["-p", "--model", REVIEW_MODEL, "--output-format", "json", "--system-prompt", input.system, "--tools", "", "--strict-mcp-config", "--no-session-persistence", ...extraArgs],
     { cwd, input: input.prompt, encoding: "utf8", maxBuffer: 32 * 1024 * 1024, timeout: 300000, shell: false },
   );
   if (r.status !== 0) throw new Error(`claude CLI failed (${r.status}): ${(r.stderr || r.stdout || r.error?.message || "").slice(0, 500)}`);
   const envelope = JSON.parse(r.stdout);
   if (envelope.is_error) throw new Error(`claude CLI reported an error: ${String(envelope.result ?? "").slice(0, 500)}`);
   const text = envelope.result ?? "";
-  const record = {
+  return {
     revision: sha,
     mode: "llm",
     runner: "claude CLI, print mode, no tools, fresh process",
@@ -125,6 +125,11 @@ export function runLiveReview(sha, input) {
     rawResponse: text,
     parsed: parseJsonLoose(text),
   };
+}
+
+/** Runs the reviewer and saves the record for replay by the app. */
+export function runLiveReview(sha, input) {
+  const record = askReviewer(sha, input);
   fs.mkdirSync(REVIEWS, { recursive: true });
   fs.writeFileSync(path.join(REVIEWS, `${sha}.json`), JSON.stringify(record, null, 2) + "\n");
   return record;
