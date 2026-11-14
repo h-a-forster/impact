@@ -23,6 +23,7 @@
           <div class="rail-rules muted">Team rules: <button type="button" class="link" data-doc="REVIEW.md">REVIEW.md</button> · <button type="button" class="link" data-doc="review-policy.yml">review-policy.yml</button></div>
           <div class="rail-row">
             <button id="resetDemo" type="button" class="link muted" title="Forgets every saved sign-off and everything you acknowledged.">Reset demo</button>
+            <button type="button" id="evalBtn" class="link muted eval-btn" data-act="evalcase">Mark as eval test case</button>
           </div>
         </div>
       </aside>
@@ -37,14 +38,9 @@
         <div id="thread" class="thread" aria-live="polite"></div>
         <div class="composer">
           <div id="quick" class="quick" role="group" aria-label="Tools">
-            <button type="button" data-act="merge">Merge</button>
-            <button type="button" data-act="page" data-page="pr">PR description</button>
-            <button type="button" data-act="page" data-page="review">Review steps</button>
             <button type="button" data-act="tool" data-scope="pr">Impact Map</button>
-            <button type="button" data-act="tool" data-scope="blast">Blast radius</button>
-            <button type="button" data-act="tool" data-scope="swarm">Monte Carlo swarm</button>
             <button type="button" data-act="ask">Ask the agent</button>
-            <button type="button" id="evalBtn" class="eval-btn" data-act="evalcase">Mark as eval test case</button>
+            <button type="button" data-act="merge">Merge</button>
           </div>
           <form id="askForm" class="ask">
             <input id="askInput" name="question" type="text" aria-label="Your message" placeholder="Ask about this PR…" autocomplete="off" />
