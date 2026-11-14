@@ -2,11 +2,16 @@
 // that must never let the wrong change in. Each case below takes the one change that should
 // qualify (a docs-only edit, checks passed, reviewer silent) and alters exactly one thing.
 // Every altered case must leave the fast lane; the unaltered one must stay in it.
+// A second group breaks the AI reviewer itself (missing, stale, empty, cut off) and sends the
+// sample's docs-only pull request through the whole pipeline: a broken reviewer must never
+// count as a silent one.
 //   Run with:  npm run fastlane
 import { classifier1, classifier2, loadApprovedPolicy, ROUTES } from "../src/lib/classifier.mjs";
-import { loadRevisions } from "../src/lib/model.mjs";
+import { buildModel, loadRevisions } from "../src/lib/model.mjs";
+import { loadReview } from "../src/lib/reviewer.mjs";
 
-const policy = loadApprovedPolicy(loadRevisions().base.sha);
+const revisions = loadRevisions();
+const policy = loadApprovedPolicy(revisions.base.sha);
 
 const docsOnlyChange = () => ({
   files: ["docs/pricing.md"],
@@ -57,9 +62,34 @@ const ATTEMPTS = [
   ["the reviewer asks for evidence", (c) => c.review.findings.push(finding("Needs evidence"))],
 ];
 
+// The reviewer itself is missing or broken. Each case alters the saved review of the docs-only pull request.
+const BROKEN_REVIEWER = [
+  ["no review was saved (it never ran, or had no key)", () => null],
+  ["the review was made for other evidence", (r) => ({ ...r, inputHash: "0".repeat(64) })],
+  ["the review was saved for another commit", (r) => ({ ...r, revision: "0".repeat(40) })],
+  ["the review did not come from a model", (r) => ({ ...r, mode: "manual" })],
+  ["the reviewer returned nothing", (r) => ({ ...r, parsed: {} })],
+  ["the reviewer returned no summary", (r) => ({ ...r, parsed: { ...r.parsed, summary: " " } })],
+  ["the saved review is cut off", (r) => ({ ...r, parsed: undefined })],
+  ["the findings are not a list", (r) => ({ ...r, parsed: { ...r.parsed, findings: "none" } })],
+  ["a finding of a kind the rules do not know", (r) => ({ ...r, parsed: { ...r.parsed, findings: [{ category: "Praise", title: "Nice change" }] } })],
+];
+
+const docsPr = revisions.prs.find((p) => p.id === "docs-example");
+const docsSha = docsPr.commits.at(-1).sha;
+/** The route of the docs-only pull request with its saved review replaced; a crash is reported, not hidden. */
+function pipelineRoute(alter) {
+  try {
+    return buildModel(revisions, docsPr.id, docsSha, { reviewRecord: alter(structuredClone(loadReview(docsSha))) }).classifier2.route;
+  } catch (error) {
+    return `crashed: ${error.message}`;
+  }
+}
+
 // Allowed on purpose, and listed so that it is a choice and not an oversight.
 const KNOWN_LIMITS = [
   ["the reviewer has an open question", (c) => c.review.couldNotDecide.push({ question: "Which requirement does this tie to?" })],
+  ["the description asks in words not to auto-merge", (c) => (c.description = "Please do not auto-merge this.")],
 ];
 
 const baselineRoute = routeOf(docsOnlyChange());
@@ -69,16 +99,24 @@ const results = ATTEMPTS.map(([name, alter]) => {
   const route = routeOf(change);
   return { name, route, held: route !== ROUTES.AUTO };
 });
+for (const [name, alter] of BROKEN_REVIEWER) {
+  const route = pipelineRoute(alter);
+  results.push({ name, route, held: route !== ROUTES.AUTO && !route.startsWith("crashed") });
+}
 const leaks = results.filter((r) => !r.held);
+const pipelineBaseline = pipelineRoute((record) => record);
 
-console.log(`Fast-lane test: ${ATTEMPTS.length} ways to get the wrong change auto-merged\n`);
-for (const r of results) console.log(`  ${r.held ? "held  " : "LEAK  "} ${r.name.padEnd(48)} -> ${r.route}`);
+console.log(`Fast-lane test: ${results.length} ways to get the wrong change auto-merged\n`);
+for (const r of results) console.log(`  ${r.held ? "held  " : "LEAK  "} ${r.name.padEnd(52)} -> ${r.route}`);
 for (const [name, alter] of KNOWN_LIMITS) {
   const change = docsOnlyChange();
   alter(change);
-  console.log(`  ${routeOf(change) === ROUTES.AUTO ? "allowed" : "held  "} ${name.padEnd(47)} -> ${routeOf(change)}  (known limit)`);
+  console.log(`  ${routeOf(change) === ROUTES.AUTO ? "allowed" : "held  "} ${name.padEnd(51)} -> ${routeOf(change)}  (known limit)`);
 }
-console.log(`\n  ${baselineRoute === ROUTES.AUTO ? "ok    " : "BROKEN"} ${"the plain docs-only change".padEnd(48)} -> ${baselineRoute}`);
+const baselines = [["the plain docs-only change", baselineRoute], ["the recorded docs-only pull request, whole pipeline", pipelineBaseline]];
+console.log("");
+for (const [name, route] of baselines) console.log(`  ${route === ROUTES.AUTO ? "ok    " : "BROKEN"} ${name.padEnd(52)} -> ${route}`);
 console.log(`\n${results.length - leaks.length} of ${results.length} held. ${leaks.length} got through.`);
-if (baselineRoute !== ROUTES.AUTO) console.log("The fast lane no longer accepts the change it exists for.");
-process.exit(leaks.length || baselineRoute !== ROUTES.AUTO ? 1 : 0);
+const accepts = baselines.every(([, route]) => route === ROUTES.AUTO);
+if (!accepts) console.log("The fast lane no longer accepts the change it exists for.");
+process.exit(leaks.length || !accepts ? 1 : 0);

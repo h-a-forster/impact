@@ -185,9 +185,15 @@ function fallbackFindings(ctx) {
  * Turn a saved review (or nothing) into what the app shows.
  * A saved review only counts as available when it was produced from the same inputs.
  */
+// A saved review is used only when it is whole: a summary in words and a list of findings.
+// An empty or cut-off answer is a reviewer that did not do its job, not a reviewer with nothing to say.
+function isWholeReview(parsed) {
+  return Boolean(parsed) && typeof parsed.summary === "string" && parsed.summary.trim() !== "" && Array.isArray(parsed.findings) && (parsed.couldNotDecide === undefined || Array.isArray(parsed.couldNotDecide));
+}
+
 export function finalizeReview(record, ctx, input) {
-  if (record && record.mode === "llm") {
-    const inputsMatch = record.inputHash === input.inputHash;
+  if (record && record.mode === "llm" && isWholeReview(record.parsed)) {
+    const inputsMatch = record.inputHash === input.inputHash && (record.revision === undefined || record.revision === ctx.sha);
     return {
       available: inputsMatch,
       mode: "recorded-llm",
@@ -210,7 +216,7 @@ export function finalizeReview(record, ctx, input) {
     modeLabel: "Rule-based fallback. Live AI review is UNVERIFIED for this commit.",
     model: null,
     inputsMatch: false,
-    summary: "No AI review is saved for this commit. These findings come from rules over the mapped evidence.",
+    summary: `${record ? "The saved AI review is incomplete or was not made by a model, so it is not used." : "No AI review is saved for this commit."} These findings come from rules over the mapped evidence.`,
     findings: validateFindings(fallbackFindings(ctx), ctx),
     couldNotDecide: [],
   };
