@@ -143,10 +143,12 @@ function renderVerdict() {
 const openContext = () => select({ type: "doc", file: `context/${state.prId}.md`, title: "context.md" });
 // Only the AI PR is shown. The author's commit message is no longer on screen (user's choice, 2026-11-14).
 // A PR with no AI PR saved still falls back to the author's text, so the card is never empty.
+/** TL;DR: the whole analysis and its conclusion in 1-2 lines, for people who will not read the rest. */
+const tldrBox = (tone, html) => `<div class="tldr ${esc(tone ?? "plain")}"><span class="tldr-tag">TL;DR</span><p>${html}</p></div>`;
 function renderDescription() {
   const m = state.model, el = $("intentCard"), d = m.description;
   const body = d.ai
-    ? `<div class="tags">${d.ai.tags.map((t) => `<span class="tag ${esc(t.tone)}">${esc(t.label)}</span>`).join("")}</div>
+    ? `${d.ai.tldr ? tldrBox(d.ai.tldr.tone, rich(d.ai.tldr.text)) : ""}<div class="tags">${d.ai.tags.map((t) => `<span class="tag ${esc(t.tone)}">${esc(t.label)}</span>`).join("")}</div>
        <p class="lead">${rich(d.ai.summary)}</p>
        <dl class="desc-grid">${d.ai.sections.map((s) => `<dt>${esc(s.title)}</dt><dd>${rich(s.text)}</dd>`).join("")}</dl>
 `
@@ -657,6 +659,21 @@ function blastTestsHtml(b) {
     <span class="muted">Recorded ${esc(t.recordedAt.slice(0, 10))} with .NET SDK ${esc(t.sdk)}, by <code>scripts/blast-tests.mjs</code>. No model was called.</span></div>`;
 }
 
+/** Blast radius TL;DR: the trust label, the sizes side by side, and what a person must check. */
+function blastTldr(b) {
+  const real = b.columns.find((c) => c.id === "real");
+  const agents = b.columns.filter((c) => c.id !== "real" && !c.noChange);
+  if (!real || !agents.length) return "";
+  const lo = Math.min(...agents.map((c) => c.files)), hi = Math.max(...agents.map((c) => c.files));
+  const files = (n) => `${n} file${n === 1 ? "" : "s"}`;
+  const span = lo === hi ? files(lo) : `${lo} to ${files(hi)}`;
+  const first = `<b>${esc(b.label.text)}.</b> The 3 agents changed ${span}; the real change changed ${files(real.files)} (+${real.added} −${real.removed}).`;
+  const extra = b.tests?.onlyReal?.length;
+  const second = extra
+    ? ` But ${extra === 1 ? "one of its unit tests fails" : `${extra} of its unit tests fail`} on every agent's fix: it does something no agent thought was needed. A person should check it was asked for.`
+    : b.label.tone === "ok" ? " No sign it did too much or too little." : " Check the files outside every zone before you trust it.";
+  return tldrBox(extra ? "warn" : b.label.tone, first + second);
+}
 function renderBlast() {
   const el = $("blastView"), b = state.blast[state.prId];
   if (!b) {
@@ -726,6 +743,7 @@ function renderBlast() {
   const fold = (id, title, hint, body) => (id === "zones" || id === "files" ? body : `<details class="blast-runs"><summary>${title}: ${hint}</summary>${body}</details>`);
   const realCol = cols.find((c) => c.id === "real");
   el.innerHTML = `<div class="blast-top"><p class="blast-what">We gave the same task to 3 agents: one careful, one normal, one that changes too much. The coloured zones show the files they touched. The thick outline is the real change.</p><button type="button" id="blastAgain">↻ Run again</button></div>
+    ${blastTldr(b)}
     <div class="blast-label ${esc(b.label.tone)}"><span class="stamp-label">Trust label</span><strong>${esc(b.label.text)}</strong><span>${esc(b.label.how)}</span></div>
     ${blastTestsHtml(b)}
     ${fold("zones", "Zone picture", "Which files each agent touched, and where the real change sits", `
@@ -963,7 +981,12 @@ function playSwarm() {
     });
     const res = $("swarmResult");
     res.hidden = false;
-    res.innerHTML = `<div class="blast-label ${tone}"><span class="stamp-label">Swarm result${runs.some((r) => r.madeUp) ? " · made up for the demo" : ""}</span>
+    const share = near / runs.length;
+    const verdict = share >= 0.7 ? "So the change looks right-sized."
+      : topMiss ? `Most agents skipped <code>${esc(topMiss[0])}</code>: check the real change needs it.`
+      : share >= 0.4 ? "Mixed: look at where they differ." : "Most agents did it differently: look closely.";
+    const tldr = tldrBox(tone, `<b>${near} of ${runs.length} agent${runs.length === 1 ? "" : "s"} made a change like the real one</b> (${avg}% alike on average). ${verdict}`);
+    res.innerHTML = `${tldr}<div class="blast-label ${tone}"><span class="stamp-label">Swarm result${runs.some((r) => r.madeUp) ? " · made up for the demo" : ""}</span>
         <strong>${near} of ${runs.length} agent${runs.length === 1 ? "" : "s"} ended up similar to the real change</strong>
         <span>"Similar" means ${s.similarAt}% or more. Average similarity: ${avg}%.${pairs ? ` The agents agree with each other ${Math.round((sum / pairs) * 100)}% of the time.` : ""}${byModel.length > 1 ? ` By model: ${byModel.join(" · ")}.` : ""}</span></div>
       <ul class="swarm-facts">

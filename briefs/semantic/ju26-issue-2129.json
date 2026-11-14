@@ -98,6 +98,10 @@
   },
   "revisions": {
     "1": {
+      "tldr": {
+        "tone": "bad",
+        "text": "A new option to generate code for types from other projects, but the main use was never tested. Wait for that proof before merging."
+      },
       "tags": [
         {
           "label": "New feature",
@@ -165,6 +169,10 @@
       ]
     },
     "2": {
+      "tldr": {
+        "tone": "ok",
+        "text": "Same new option, and commit 2 adds unit tests for the main use. Ready for a person to review the smaller bugs left."
+      },
       "tags": [
         {
           "label": "New feature",

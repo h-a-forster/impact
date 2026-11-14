@@ -307,6 +307,13 @@ button.danger { background: var(--bad); color: var(--card); border-color: var(--
 #mapCard[data-scope="blast"] .graph-wrap, #mapCard[data-scope="blast"] .gfy-note, #mapCard[data-scope="blast"] > .legend,
 #mapCard[data-scope="swarm"] .graph-wrap, #mapCard[data-scope="swarm"] .gfy-note, #mapCard[data-scope="swarm"] > .legend { display: none; }
 .blast-what { font-size: 14.5px; margin: 0 0 10px; }
+/* TL;DR box: one glance, then the details below are optional. */
+.tldr { display: flex; gap: 12px; align-items: flex-start; border: 1px solid var(--line); border-left: 5px solid var(--accent); border-radius: 8px; padding: 10px 14px; margin: 0 0 12px; background: var(--card); }
+.tldr p { margin: 0; font-size: 15px; line-height: 1.45; color: var(--ink); }
+.tldr-tag { flex: none; font-size: 11px; font-weight: 800; letter-spacing: .08em; padding: 3px 7px; border-radius: 5px; background: var(--accent); color: var(--card); margin-top: 1px; }
+.tldr.ok { border-left-color: var(--ok); } .tldr.ok .tldr-tag { background: var(--ok); }
+.tldr.warn { border-left-color: var(--warn); } .tldr.warn .tldr-tag { background: var(--warn); }
+.tldr.bad { border-left-color: var(--bad); } .tldr.bad .tldr-tag { background: var(--bad); }
 .blast-label { display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--line); border-left: 5px solid var(--muted); border-radius: 8px; padding: 9px 12px; background: var(--soft); margin-bottom: 10px; }
 .blast-label strong { font-size: 17px; line-height: 1.25; }
 .blast-tests { border: 1px solid var(--line); border-left: 5px solid var(--ok); border-radius: 8px; padding: 10px 14px; margin-top: 10px; }

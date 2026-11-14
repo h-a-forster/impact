@@ -92,6 +92,10 @@
   },
   "revisions": {
     "1": {
+      "tldr": {
+        "tone": "bad",
+        "text": "It fixes the crash, but by hiding warnings in places that never crashed. Do not merge yet: one extra unit test shows it changes more than the bug."
+      },
       "tags": [
         {
           "label": "Bug fix",
@@ -155,6 +159,10 @@
       ]
     },
     "2": {
+      "tldr": {
+        "tone": "ok",
+        "text": "It fixes the crash and now hides only the warnings it must. All unit tests pass: a person just needs to sign off."
+      },
       "tags": [
         {
           "label": "Bug fix",

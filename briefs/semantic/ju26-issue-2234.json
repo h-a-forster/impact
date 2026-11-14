@@ -88,6 +88,10 @@
   },
   "revisions": {
     "1": {
+      "tldr": {
+        "tone": "warn",
+        "text": "The checker no longer crashes on bad keys, but the code generator now quietly leaves a member out. A person must decide if that is OK."
+      },
       "tags": [
         {
           "label": "Bug fix",

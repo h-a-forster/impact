@@ -80,6 +80,10 @@
   },
   "revisions": {
     "1": {
+      "tldr": {
+        "tone": "warn",
+        "text": "It marks generated code so coverage tools skip it, but the mark also lands on classes users write. That can break their builds: look closely."
+      },
       "tags": [
         {
           "label": "New feature",
