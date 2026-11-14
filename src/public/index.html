@@ -23,13 +23,14 @@
         <div id="prView" class="stack">
         <div id="routeCard" class="card"></div>
         <div id="intentCard" class="card"></div>
-        <div class="card">
+        <div class="card" id="mapCard">
           <div class="card-head">
             <div class="head-left">
               <h2>Impact map</h2>
               <div class="tabs" id="scopeTabs" role="tablist">
                 <button type="button" data-scope="pr">This PR</button>
                 <button type="button" data-scope="full">Full map</button>
+                <button type="button" data-scope="blast">Blast radius</button>
               </div>
             </div>
             <div class="tabs" id="levelTabs" role="tablist">
@@ -48,6 +49,7 @@
             </div>
             <div id="fullDots" class="timeline-dots" aria-hidden="true"></div>
           </div>
+          <div id="blastView" hidden></div>
           <div id="graphWrap" class="graph-wrap"><div id="graphFlow"></div><div id="graphVis" hidden></div></div>
           <div id="gfyNote" class="gfy-note"></div>
           <div class="legend" id="legendPr">

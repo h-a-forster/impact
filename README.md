@@ -86,6 +86,36 @@ See [docs/demo-script.md](docs/demo-script.md).
 5. Press **Previous**. The gap is still shown on commit 1, and your sign-off
    does not apply there.
 
+## Blast radius tab (PR #1 only)
+
+Open: `http://localhost:4317/?map=blast#pr=ju26-issue-2283` (tab "Blast radius" in the Impact map card).
+
+We gave the same task to 3 agents: one careful ("minimal"), one normal, one that changes too
+much ("wide"). What they touched is the zone a fix can reasonably reach. The real change
+(Tieto's AI-written branch, shown as a PR) is laid over that zone.
+
+- **Real runs, recorded.** 2026-11-14, model `claude-fable-5-2`, `claude -p` once per agent, each in
+  its own copy of the Tieto repo at the base commit `32258fd` (the branch with the real fix was
+  never fetched). No shell, no git, no web. The result is saved in
+  `data/tieto/ju26-issue-2283/blast.json`; the tab replays it offline.
+- **What the agents got:** `data/tieto/ju26-issue-2283/blast-prompts/requirements.md` = the
+  Requirement, Why, Before/after (first part) and Must preserve rows of the AI PR, plus the bug
+  report #2283 word for word. Left out: Summary, Approach, Alternatives, Checks run, Open gaps,
+  Rollback (they describe the real fix). The 3 prompts differ only in the "How to work" lines.
+- **Nobody built the code or ran the unit tests** (no .NET SDK here). We do not know if any
+  agent's fix works. The tab says so.
+- **Rebuild the record:** put the 3 agent folders under `.demo/blast/{minimal,normal,wide}`
+  (git-ignored), run the agents, then `node scripts/record-blast.mjs`.
+- **Maths:** `src/lib/blast.mjs`, served by `GET /api/blast?pr=<id>`. Functions are found by a
+  simple reader of the C# text, the same way for all 4 changes. Callers come from the saved
+  Graphify run and the recorded compiler data; code they do not cover shows "not known".
+- **Trust label rule.** Look at product code only (not docs, not unit tests): the files the real
+  change touches and the functions it edits that already existed.
+  1. No agent touched one of them: "Touches code no agent touched".
+  2. Else, only the wide agent touched one of them: "Touches more than needed".
+  3. Else: "Inside the expected zone".
+  New functions are not scored. The other 3 PRs have no runs and say so.
+
 ## What is real, what is recorded, what is rule-based
 
 | Part | Status |

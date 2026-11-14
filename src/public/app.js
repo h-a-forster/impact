@@ -4,7 +4,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const short = (sha) => (sha ?? "").slice(0, 7);
 const chip = (text, cls) => `<span class="chip ${esc(cls ?? text)}">${esc(text)}</span>`;
 
-const state = { revisions: null, prId: null, sha: null, level: "function", sel: null, model: null, notice: null, descView: "author", mapScope: "pr", full: null, fullStep: 0, fullRun: 0, fullTimer: null };
+const state = { revisions: null, prId: null, sha: null, level: "function", sel: null, model: null, notice: null, descView: "author", mapScope: "pr", full: null, fullStep: 0, fullRun: 0, fullTimer: null, blast: {} };
 const sourceCache = new Map();
 
 // ---------- data ----------
@@ -347,7 +347,7 @@ function renderGraph() {
     b.onclick = () => {
       state.level = b.dataset.level;
       if (state.sel?.type === "node" && !m.graph.nodes.some((n) => n.id === state.sel.id && n.level === state.level)) state.sel = null;
-      if (["edge", "fullnode"].includes(state.sel?.type)) state.sel = null;
+      if (["edge", "fullnode", "blast"].includes(state.sel?.type)) state.sel = null;
       writeHash();
       render();
     };
@@ -357,7 +357,12 @@ function renderGraph() {
     b.classList.toggle("active", b.dataset.scope === state.mapScope);
     b.onclick = () => setScope(b.dataset.scope);
   }
+  // The "Blast radius" tab has its own picture (renderBlast). The map and its legends are hidden by CSS.
+  const blast = state.mapScope === "blast";
+  $("mapCard").dataset.scope = state.mapScope;
+  $("blastView").hidden = !blast;
   $("fullBar").hidden = !full;
+  if (blast) return renderBlast();
   $("legendPr").hidden = full;
   $("legendFull").hidden = !full;
   if (full) return renderFull();
@@ -403,6 +408,7 @@ async function setScope(scope, { play = true } = {}) {
     if (!state.full) state.full = await api("/api/fullmap");
     if (play) playFull(0);
   }
+  if (scope === "blast") state.level = "file";
   writeHash();
   render();
 }
@@ -496,6 +502,167 @@ function fullNodeHtml(id) {
 }
 /** One file's change in a made-up commit. */
 const patchBlock = (file, from, to) => changeBlock(file.file, parseHunks(file.patch), `commit ${from} → commit ${to}`);
+
+// ---------- blast radius: 3 agents did the same task; the real change is laid over what they touched ----------
+// Data: GET /api/blast?pr=<id> (recorded runs + the numbers, worked out in src/lib/blast.mjs).
+const BLAST_ZONES = [
+  ["wide", "Wide zone", "Only the agent that changes too much touched this."],
+  ["normal", "Normal zone", "The normal agent touched this. The careful agent did not."],
+  ["tight", "Tight zone", "The careful agent touched this."],
+];
+const BLAST_SHORT = { real: "Real change", minimal: "Careful", normal: "Normal", wide: "Changes too much" };
+const BLAST_LEVEL = { concept: "code area", file: "file", function: "function" };
+async function loadBlast() {
+  const id = state.prId;
+  if (!state.blast[id]) state.blast[id] = await api("/api/blast?pr=" + encodeURIComponent(id));
+  return state.blast[id];
+}
+function selectBlast(id) {
+  const b = state.blast[state.prId];
+  const item = b?.items?.find((x) => x.id === id);
+  if (!item) return;
+  state.level = item.level;
+  select({ type: "blast", id });
+}
+const blastPips = (by) => ["minimal", "normal", "wide"].map((a) => `<i class="pip pip-${a}${by[a] ? " on" : ""}" title="${esc(BLAST_SHORT[a])}${by[a] ? ": touched it" : ": did not touch it"}"></i>`).join("");
+function blastBox(x) {
+  const tags = [
+    x.by.real ? `<span class="btag real">REAL CHANGE</span>` : "",
+    x.agents === 3 ? `<span class="btag all">ALL 3 AGENTS</span>` : "",
+    x.isNew ? `<span class="btag">NEW</span>` : "",
+    x.kind === "test" ? `<span class="btag">UNIT TEST</span>` : x.kind === "doc" ? `<span class="btag">DOC</span>` : "",
+  ].join("");
+  const sel = state.sel?.type === "blast" && state.sel.id === x.id;
+  return `<button type="button" class="bbox${x.by.real ? " real" : ""}${sel ? " selected" : ""}" data-blast="${esc(x.id)}" title="${esc(x.sub)}">
+    <span class="bbox-label">${esc(x.label)}</span><span class="bbox-sub"><bdi>${esc(x.sub)}</bdi></span>
+    <span class="bbox-foot"><span class="pips">${blastPips(x.by)}</span>${tags}</span></button>`;
+}
+function renderBlast() {
+  const el = $("blastView"), b = state.blast[state.prId];
+  if (!b) {
+    el.innerHTML = `<div class="muted">Loading…</div>`;
+    const id = state.prId;
+    loadBlast().then(() => {
+      if (state.prId === id && state.mapScope === "blast") renderGraph();
+    });
+    return;
+  }
+  if (!b.recorded) {
+    el.innerHTML = `<p class="blast-what">We give the same task to 3 agents: one careful, one normal, one that changes too much. What they touch is the "blast radius" of the task. Then we lay the real change over it.</p><div class="callout info">${esc(b.message)}</div>`;
+    return;
+  }
+  const level = state.level;
+  const items = b.items.filter((x) => x.level === level);
+  const rank = (x) => (x.by.real ? 0 : 10) - x.agents;
+  const sorted = (list) => [...list].sort((p, q) => rank(p) - rank(q) || p.label.localeCompare(q.label));
+  // New functions cannot be shared between runs, so they sit in their own strip, not in a zone.
+  const zoned = items.filter((x) => !(level === "function" && x.isNew));
+  const fresh = items.filter((x) => level === "function" && x.isNew);
+  const inZone = (z) => sorted(zoned.filter((x) => x.zone === z));
+  const boxesOr = (boxes) => (boxes.length ? `<div class="bz-boxes">${boxes.map(blastBox).join("")}</div>` : `<div class="bz-empty">Nothing here.</div>`);
+  const zoneHtml = (i) => {
+    if (i >= BLAST_ZONES.length) return "";
+    const [z, name, text] = BLAST_ZONES[i];
+    return `<div class="bz bz-${z}"><div class="bz-title">${name} <span>${text}</span></div>${boxesOr(inZone(z))}${zoneHtml(i + 1)}</div>`;
+  };
+  const word = BLAST_LEVEL[level], plural = (n) => `${n} ${word}${n === 1 ? "" : "s"}`;
+  const names = (list) => list.map((x) => `<code>${esc(x.label)}</code>`).join(", ");
+  const all3 = zoned.filter((x) => x.agents === 3), wideOnly = inZone("wide");
+  const realAt = ["tight", "normal", "wide", "outside"].map((z) => [z, zoned.filter((x) => x.by.real && x.zone === z).length]).filter(([, n]) => n);
+  const zoneWord = { tight: "in the tight zone", normal: "in the normal zone", wide: "in the wide zone", outside: "that no agent touched" };
+  const cols = b.columns;
+  const num = (n) => Number(n).toLocaleString("en");
+  const list = (arr) => (arr.length ? arr.map(esc).join(", ") : "none");
+  const fnName = (id) => `<code>${esc(id.split("#")[1].split("~")[0])}()</code>`;
+  const note = (html) => `<div class="cell-note">${html}</div>`;
+  const reachCell = (c) => {
+    const r = c.reach;
+    if (r.of && !r.known) return `<span class="muted">not known</span>`;
+    return num(r.callers.length) + (r.callers.length ? note(r.callers.map((x) => `<code>${esc(x.name)}()</code>`).join(", ")) : "") + (r.unknown.length ? note(`not known for ${r.unknown.length} of ${r.of} edited functions`) : "");
+  };
+  const row = (label, fn, sub) => `<tr><th>${label}${sub ? note(sub) : ""}</th>${cols.map((c) => `<td class="${c.id === "real" ? "real" : ""}">${fn(c)}</td>`).join("")}</tr>`;
+  const section = (t) => `<tr class="sec"><th colspan="5">${t}</th></tr>`;
+  const wideRow = (label, html) => `<tr><th>${label}</th><td colspan="4" class="text">${html}</td></tr>`;
+  const o = b.overlap;
+  const things = (arr) => (arr.length ? arr.map((t) => `<code>${esc(t.label)}</code>${t.kind === "doc" ? " (doc)" : t.kind === "test" ? " (unit test)" : ""}`).join(", ") : "nothing");
+  const secs = (r) => (r.startedAt && r.endedAt ? `${Math.max(1, Math.round((new Date(r.endedAt) - new Date(r.startedAt)) / 1000))} s` : "");
+  el.innerHTML = `<p class="blast-what">We gave the same task to 3 agents: one careful, one normal, one that changes too much. The coloured zones show what they touched. The thick outline is the real change.</p>
+    <div class="blast-label ${esc(b.label.tone)}"><span class="stamp-label">Trust label</span><strong>${esc(b.label.text)}</strong><span>${esc(b.label.how)}</span></div>
+    <div class="blast-facts">
+      <span><b>All 3 agents agree on:</b> ${all3.length ? names(sorted(all3)) : "nothing at this level"}</span>
+      <span><b>Only the agent that changes too much touched:</b> ${wideOnly.length ? names(wideOnly) : "nothing at this level"}</span>
+      <span><b>The real change touches:</b> ${realAt.length ? realAt.map(([z, n]) => `${plural(n)} ${zoneWord[z]}`).join(", ") : "nothing at this level"}</span>
+    </div>
+    <div class="blast-zones">${zoneHtml(0)}
+      <div class="bz bz-outside"><div class="bz-title">Outside every zone <span>No agent touched this. Only the real change did.</span></div>${boxesOr(inZone("outside"))}</div>
+      ${fresh.length ? `<div class="bz bz-new"><div class="bz-title">New functions <span>Each one was written by one run, so no other run can share it. They are not part of a zone.</span></div>${boxesOr(sorted(fresh))}</div>` : ""}
+    </div>
+    <div class="legend blast-legend">
+      <span><i class="pip pip-minimal on"></i> the careful agent touched it</span>
+      <span><i class="pip pip-normal on"></i> the normal agent touched it</span>
+      <span><i class="pip pip-wide on"></i> the agent that changes too much touched it</span>
+      <span><i class="pip"></i> that agent did not touch it</span>
+      <span><i class="sw sw-real"></i> thick outline: the real change touches it</span>
+    </div>
+    <div class="legend blast-legend"><span class="muted">"Touched" means at least one line was added or removed there. The real change is Tieto's AI-written branch, shown as a PR. Click a box to see what each one changed there.</span></div>
+    <div class="blast-warn">${esc(b.notBuilt)}</div>
+    <table class="blast-table"><thead><tr><th></th>${cols.map((c) => `<th class="${c.id === "real" ? "real" : ""}">${esc(c.label)}${c.id !== "real" && !c.ok ? note(`<span class="bad-text">the run failed</span>`) : c.noChange ? note("made no change") : ""}</th>`).join("")}</tr></thead><tbody>
+      ${section("Size of change")}
+      ${row("Files touched", (c) => num(c.files))}
+      ${row("Lines added", (c) => num(c.added))}
+      ${row("Lines removed", (c) => num(c.removed))}
+      ${row("Functions edited", (c) => num(c.functions) + (c.newFunctions ? note(`${c.newFunctions} of them new`) : ""), "in product code, not unit tests")}
+      ${row("Unit test functions added or edited", (c) => num(c.testFunctions))}
+      ${section("Reach: code that was not edited but is affected")}
+      ${row("Functions that call an edited function", reachCell, "not edited, but what they do can change")}
+      ${row("Code areas edited", (c) => `<span class="text">${list(c.conceptsEdited)}</span>`)}
+      ${row("Code areas reached, not edited", (c) => `<span class="text">${list(c.conceptsReached)}</span>`)}
+      ${section("Overlap with the real change")}
+      ${row("Files shared with the real change", (c) => (c.id === "real" ? num(o.realFiles) + note("files it touches") : `${num(c.sharedFiles.length)} of ${num(o.realFiles)}`))}
+      ${row("Functions shared with the real change", (c) => (c.id === "real" ? num(o.realFunctions) + note("it edits, new ones not counted") : `${num(c.sharedFunctions.length)} of ${num(o.realFunctions)}${c.sharedFunctions.length ? note(c.sharedFunctions.map(fnName).join(", ")) : ""}`), "functions that already existed")}
+      ${wideRow("The real change touched, no agent did", things(o.realOnly))}
+      ${wideRow("Every agent touched, the real change did not", things(o.agentsNotReal))}
+      ${section("Trust")}
+      ${wideRow("Trust label", `<span class="tag ${esc(b.label.tone)}">${esc(b.label.text)}</span> ${esc(b.label.how)}`)}
+    </tbody></table>
+    <details class="blast-runs"><summary>How the 3 runs were done, and the rule for the label</summary>
+      <p>Run on ${esc(b.recordedAt.slice(0, 10))} with the model <code>${esc(b.model)}</code>, once per agent. Each agent worked alone in its own copy of the code from before the fix (commit <code>${esc(short(b.base))}</code>). The real fix was not in those copies. This tab replays the saved result. No agent runs now.</p>
+      <p><b>Rule for the trust label.</b> We look at product code only (not docs, not unit tests): the files the real change touches, and the functions it edits that already existed. If no agent touched one of them: "Touches code no agent touched". Else, if only the agent that changes too much touched one of them: "Touches more than needed". Else: "Inside the expected zone".</p>
+      <p><b>What every agent got.</b> ${b.given.kept.map(esc).join("; ")}.</p>
+      <p><b>What we left out of the AI PR text</b>, so the agents could not copy the real fix: ${b.given.leftOut.map(esc).join("; ")}. ${esc(b.given.note)}</p>
+      ${b.runs.filter((r) => r.id !== "real").map((r) => `<div class="blast-run"><b>${esc(r.label)}</b> <span class="muted">${secs(r) ? `· took ${secs(r)}` : ""}</span><div>Told: ${esc(r.instruction ?? "")}</div>
+        <details><summary>What it said when it was done</summary><pre class="raw doc">${esc(r.reply ?? "No reply was saved.")}</pre></details>
+        <details><summary>The full prompt, word for word</summary><pre class="raw doc">${esc(r.prompt ?? "")}</pre></details></div>`).join("")}
+      <p class="muted">${esc(b.how.functions)} Callers come from ${esc(b.graphTool ?? "the recorded data")} (a saved run) and the recorded compiler data for this PR.</p>
+    </details>`;
+  for (const btn of el.querySelectorAll("[data-blast]")) btn.onclick = () => selectBlast(btn.dataset.blast);
+}
+/** Side panel for one box: what each of the 4 changes did there. */
+function blastSideHtml(id) {
+  const b = state.blast[state.prId];
+  const x = b?.items?.find((i) => i.id === id);
+  if (!x) return "";
+  const who = (item) => b.order.filter((r) => item.by[r]).map((r) => BLAST_SHORT[r]).join(", ");
+  const head = `<h2>${esc(x.label)}</h2><div class="where mono">${esc(x.level === "function" ? x.file : x.sub)}</div><div class="callout info">Touched by: ${esc(who(x))}.</div>`;
+  if (x.level === "concept") {
+    const files = b.items.filter((i) => i.level === "file" && x.files.includes(i.key));
+    return `${head}<h3>Files touched in this code area</h3><ul class="list">${files.map((f) => `<li><button type="button" class="link" data-blast="${esc(f.id)}">${esc(f.label)}</button> <span class="muted">${esc(who(f))}</span></li>`).join("")}</ul>`;
+  }
+  const file = x.level === "function" ? x.file : x.key;
+  let body = head;
+  for (const r of b.runs) {
+    const f = r.files.find((y) => y.file === file);
+    let hunks = f ? parseHunks(f.patch) : [];
+    if (x.level === "function") {
+      const fn = x.by[r.id] ? f?.functions.find((y) => y.key === x.fnKey && Boolean(y.isNew) === x.isNew) : null;
+      hunks = fn ? hunks.filter((h) => h.lines.some((l) => l.t && l.at >= fn.line && l.at <= fn.endLine)) : [];
+    }
+    body += `<h3>${esc(r.label)}</h3>${hunks.length
+      ? changeBlock(file, hunks, x.level === "function" ? "before → after" : `${f.added} added, ${f.removed} removed`)
+      : `<div class="muted">Did not touch this ${x.level === "function" ? "function" : "file"}.</div>`}`;
+  }
+  return body;
+}
 
 // ---------- AI review (advice only) ----------
 function renderReview() {
@@ -626,6 +793,7 @@ async function sideHtml() {
   const m = state.model, sel = state.sel, sha = m.selected.sha;
   if (!sel) return "";
   if (sel.type === "fullnode") return fullNodeHtml(sel.id);
+  if (sel.type === "blast") return blastSideHtml(sel.id);
   if (sel.type === "doc") {
     const text = await (await fetch(`demo/${sel.file}`)).text();
     const note = sel.file.startsWith("context/") ? "Demo version, made up. The coding agent saves this file with the pull request. The Q&A agent reads it to answer your questions." : "Demo version. In a real repo this file sits at the top of the repo, and the copy on the base branch is the one that counts.";
@@ -759,6 +927,7 @@ async function renderSide() {
   for (const b of el.querySelectorAll("[data-run]")) b.onclick = () => select({ type: "run" });
   for (const b of el.querySelectorAll("[data-src]")) b.onclick = () => select({ type: "source", file: b.dataset.src, line: Number(b.dataset.line) });
   for (const b of el.querySelectorAll("[data-fullnode]")) b.onclick = () => select({ type: "fullnode", id: b.dataset.fullnode });
+  for (const b of el.querySelectorAll("[data-blast]")) b.onclick = () => selectBlast(b.dataset.blast);
   for (const b of el.querySelectorAll("[data-openpr]")) b.onclick = () => {
     state.mapScope = "pr";
     load(b.dataset.openpr, b.dataset.sha, { keepSelection: false });
@@ -870,6 +1039,15 @@ async function init() {
   if (q.get("since") === "1" && state.model.since) select({ type: "since" });
   if (q.get("doc") === "context") openContext();
   else if (q.get("doc")) select({ type: "doc", file: q.get("doc") });
+  if (q.get("map") === "blast") {
+    // ?map=blast opens the "Blast radius" tab. &box=<box id> also opens that box in the side panel.
+    const level = state.level;
+    await setScope("blast");
+    if (h.level) state.level = level;
+    await loadBlast();
+    render();
+    if (q.get("box")) selectBlast(q.get("box"));
+  }
   if (q.get("map") === "full") {
     // ?step=3 or ?commit=<sha> opens the Full map on that step, paused. No value: it plays from the start.
     const level = state.level;
