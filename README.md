@@ -45,6 +45,7 @@ and no Graphify install.
 | `npm run import:ledger -- <path to a clone of junction26-earned-trust>` | Refresh the recorded Tieto packs in `data/tieto/`. |
 | `npm run reset` | Clear recorded human decisions. |
 | `npm run export:replica` | Write the shop-sample repo and PRs into the GitHub replica's data folder. |
+| `npm run fastlane` | Try 72 ways to get the wrong change onto the auto-merge route: altered changes, a missing or broken AI reviewer, and files that only look like documents (links, executables, binaries), built through git itself. Every one must be held. |
 
 ## Run it inside the GitHub replica
 

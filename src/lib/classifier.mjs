@@ -25,6 +25,19 @@ function globToRegExp(glob) {
 }
 export const matchesAny = (file, globs = []) => (globs ?? []).some((g) => globToRegExp(g).test(file));
 
+// Auto-merge allowlist: a folder alone is not enough, because code can live in a docs folder.
+// Unless the policy lists extensions for an entry, only Markdown qualifies (.txt is also what
+// build files such as requirements.txt and CMakeLists.txt use).
+const DOCUMENT_EXTENSIONS = [".md"];
+const hasExtension = (file, extensions) => extensions.some((e) => file.toLowerCase().endsWith(e));
+// No climbing out of the folder, no hidden files or folders, and a name with exactly one extension.
+const isPlainPath = (file) => {
+  const parts = file.split("/");
+  return !file.startsWith("/") && parts.every((part) => part !== ".." && !part.startsWith(".")) && /^[\w -]+\.\w+$/.test(parts.at(-1));
+};
+// The fast lane fails closed: a file counts as ordinary only when the diff says so.
+const isOrdinaryFile = (changed) => changed.oddity === null;
+
 /**
  * The approved policy always comes from the base commit.
  * A PR that edits review-policy.yml cannot grant itself lighter checks.
@@ -148,7 +161,7 @@ export function classifier2(policy, input) {
     }
   }
   for (const e of evidence) {
-    if (e.status === "unverified") blockers.push({ type: "evidence", ref: e.nodeId, status: "unverified", text: e.missing, suggestedCheck: e.suggestedCheck });
+    if (e.status !== "supported") blockers.push({ type: "evidence", ref: e.nodeId, status: "unverified", text: e.missing, suggestedCheck: e.suggestedCheck });
   }
 
   let route;
@@ -160,10 +173,17 @@ export function classifier2(policy, input) {
     reason = "Required checks or evidence are missing, failed, stale or pending. See the blockers.";
   } else {
     const allow = (policy.auto_merge_dry_run?.allow ?? []).find(
-      (a) => a.severity === severity && files.length > 0 && files.every((f) => matchesAny(f, a.paths)),
+      (a) =>
+        a.severity === severity &&
+        files.length > 0 &&
+        changedFiles.every(isOrdinaryFile) &&
+        files.every((f) => isPlainPath(f) && matchesAny(f, a.paths) && hasExtension(f, a.extensions ?? DOCUMENT_EXTENSIONS)),
     );
-    const reviewAvailable = review && review.available;
-    if (severity === "Low" && allow && reviewAvailable && !actionRequired.length) {
+    const reviewAvailable = review?.available === true;
+    // The fast lane fails closed: every required check passed under its own name, and the reviewer reported no finding of any kind.
+    const requiredPassed = checks.length > 0 && (policy.required_checks ?? []).every((name) => checks.some((c) => c.name === name && c.status === "passed"));
+    const reviewerSilent = reviewAvailable && Array.isArray(review.findings) && review.findings.length === 0;
+    if (severity === "Low" && allow && requiredPassed && reviewerSilent) {
       route = ROUTES.AUTO;
       rule = "C2-ALLOWLIST";
       reason = `Low severity, required checks passed, AI review available with no action required, and every changed file is on the dry-run allowlist (${allow.paths.join(", ")}). Dry run only. Nothing is merged.`;
@@ -175,7 +195,9 @@ export function classifier2(policy, input) {
           ? "High severity. A named engineer must do a full review."
           : !reviewAvailable && severity === "Low"
             ? "The AI review is unavailable, so this cannot qualify for auto-merge. A named engineer decides."
-            : "Required checks and evidence are in. A named engineer decides.";
+            : reviewAvailable && severity === "Low" && !reviewerSilent
+              ? "The AI reviewer reported a finding, so this cannot qualify for auto-merge. A named engineer decides."
+              : "Required checks and evidence are in. A named engineer decides.";
       if (actionRequired.length) reason += " The reviewer reported a problem that needs resolution.";
     }
   }

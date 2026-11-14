@@ -268,6 +268,9 @@ function loadDescription(pr, brief, commit) {
     ai: ai ? { generatedBy: saved.generatedBy, ...ai } : null,
   };
 }
+/** A rollback is recorded only when the brief says how, in words. A blank or "none" is not a rollback. */
+const hasRollback = (text) => typeof text === "string" && text.trim().length > 0 && !/^((none|nothing|nil|null|n\/?a|no|false|todo|tbd)[.!]*|no rollback\b.*|not possible\b.*|[-\u2013\u2014.?]+)$/i.test(text.trim());
+
 export function loadBrief(prId) {
   const file = path.join(BRIEFS, `${prId}.json`);
   return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : null;
@@ -609,7 +612,7 @@ export function buildModel(revisions, prId, sha, opts = {}) {
     downstreamCount: downstream.length,
     sharedEdits,
     workflowsReached: workflows.map((w) => w.label),
-    rollbackRecorded: Boolean(brief?.rollback),
+    rollbackRecorded: hasRollback(brief?.rollback),
   });
 
   const reviewInput = buildReviewInput(ctx);
