@@ -1,7 +1,8 @@
 // Blast radius: the same task was given to 3 agents (careful, normal, one that changes too much).
 // What they touched is the zone a fix can reasonably reach. The real change is laid over it.
 //
-// The runs are recorded in data/tieto/<pr>/blast.json by scripts/record-blast.mjs.
+// The runs are recorded in data/tieto/<pr>/blast.json by scripts/record-blast.mjs, and for the
+// shop sample in data/shop/<pr>/blast.json by scripts/record-shop-blast.mjs.
 // This file only does the maths on that record. It never calls a model and never adds a link.
 //
 // THE TRUST LABEL RULE (keep it this simple; the README says the same):
@@ -17,7 +18,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { conceptOf } from "./ledger.mjs";
 import { loadTietoSlice, memberEnd } from "./graphify-tieto.mjs";
-import { DATA } from "./paths.mjs";
+import { blockEnd, loadIndex } from "./graphify.mjs";
+import { DATA, ROOT } from "./paths.mjs";
 
 export const AGENTS = ["minimal", "normal", "wide"];
 export const RUN_LABEL = { real: "The real change", minimal: "Careful agent", normal: "Normal agent", wide: "Agent that changes too much" };
@@ -32,13 +34,28 @@ const NOT_A_START = /^(if|else|for|foreach|while|switch|return|using|lock|catch|
 const NOT_A_TYPE = new Set(["return", "await", "new", "throw", "yield", "else", "in", "is", "as", "out", "case", "typeof", "nameof", "and", "or", "not"]);
 const SIGNATURE = /^((?:(?:public|private|protected|internal|static|virtual|override|abstract|sealed|async|partial|unsafe|extern|new|readonly|ref|file)\s+)*)((?:[\w.?]+(?:<[^()]*>)?(?:\[,*\])*\??|\([^()]*\))\s+)?([A-Za-z_]\w*)\s*(?:<[^()>]*>)?\s*\(/;
 
+/** The function name if this C# line is a function header, else null. */
+function csHeader(line) {
+  if (NOT_A_START.test(line)) return null;
+  const m = SIGNATURE.exec(line);
+  if (!m) return null;
+  const [, mods, type, name] = m;
+  if (!type && !mods) return null; // a call, not a header
+  if (type && NOT_A_TYPE.has(type.trim())) return null;
+  return name;
+}
+// TypeScript (the shop sample): `function` declarations only, exported or not.
+const TS_FUNCTION = /^(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s*\*?\s*([A-Za-z_$][\w$]*)\s*[<(]/;
+
 /**
  * The functions (methods and constructors) in a C# file, with their line range.
  * A simple reader of the text, not a compiler: it looks for lines shaped like a function header.
  * Functions inside functions are counted as part of the outer one.
  * `key` is the name, plus "~2", "~3" for the 2nd, 3rd function with the same name in the file.
+ * With lang "ts" it reads TypeScript `function` declarations instead, ended by brace matching
+ * as the shop's code index does (blockEnd in graphify.mjs).
  */
-export function scanFunctions(text) {
+export function scanFunctions(text, lang = "cs") {
   const lines = text.split("\n");
   const out = [];
   const seen = new Map();
@@ -46,13 +63,10 @@ export function scanFunctions(text) {
   for (let i = 0; i < lines.length; i++) {
     if (i + 1 <= until) continue;
     const line = lines[i].trim().replace(/^(\[[^\]]*\]\s*)+/, "");
-    if (!line || line.startsWith("//") || NOT_A_START.test(line)) continue;
-    const m = SIGNATURE.exec(line);
-    if (!m) continue;
-    const [, mods, type, name] = m;
-    if (!type && !mods) continue; // a call, not a header
-    if (type && NOT_A_TYPE.has(type.trim())) continue;
-    const end = memberEnd(lines, i + 1, null);
+    if (!line || line.startsWith("//")) continue;
+    const name = lang === "ts" ? (TS_FUNCTION.exec(line)?.[1] ?? null) : csHeader(line);
+    if (!name) continue;
+    const end = lang === "ts" ? blockEnd(lines, i + 1) : memberEnd(lines, i + 1, null);
     const n = (seen.get(name) ?? 0) + 1;
     seen.set(name, n);
     out.push({ key: n > 1 ? `${name}~${n}` : name, name, line: i + 1, endLine: end });
@@ -83,18 +97,19 @@ export function patchLines(patch) {
 }
 
 export const fileKind = (file) =>
-  /\.md$|^doc\//i.test(file) ? "doc" : /(^|\/)tests?\/|\.Tests\//i.test(file) ? "test" : /\.cs$/i.test(file) ? "code" : "other";
+  /\.md$|^doc\//i.test(file) ? "doc" : /(^|\/)tests?\/|\.Tests\//i.test(file) ? "test" : /\.(cs|ts)$/i.test(file) ? "code" : "other";
 
 /** One changed file: numbers, patch, and the functions the changed lines sit in. */
 export function fileRecord(file, status, patch, headText, baseText) {
   const kind = fileKind(file);
   const lines = patchLines(patch);
   const rec = { file, status, kind, added: lines.filter((l) => l.t === "add").length, removed: lines.filter((l) => l.t === "del").length, patch, functions: [] };
-  if (!/\.cs$/i.test(file)) return rec;
+  const lang = /\.cs$/i.test(file) ? "cs" : /\.ts$/i.test(file) ? "ts" : null;
+  if (!lang) return rec;
   // An added line belongs to the function it sits in after the change.
   // A removed line belongs to the function it sat in before the change.
-  const before = new Map((baseText === null ? [] : scanFunctions(baseText)).map((f) => [f.key, f]));
-  const after = headText === null ? [] : scanFunctions(headText);
+  const before = new Map((baseText === null ? [] : scanFunctions(baseText, lang)).map((f) => [f.key, f]));
+  const after = headText === null ? [] : scanFunctions(headText, lang);
   const within = (f, n) => Boolean(f) && n >= f.line && n <= f.endLine;
   for (const f of after) {
     const was = before.get(f.key);
@@ -114,8 +129,18 @@ export function fileRecord(file, status, patch, headText, baseText) {
 }
 
 // ---------- the maths ----------
-const file = (prId) => path.join(DATA, "tieto", prId, "blast.json");
+/** Where a PR's recorded runs live: data/shop/<pr> for the shop sample, data/tieto/<pr> for the demo's PRs. */
+export const recordDir = (prId) => [path.join(DATA, "shop", prId), path.join(DATA, "tieto", prId)].find((d) => fs.existsSync(d)) ?? path.join(DATA, "tieto", prId);
+const isShop = (prId) => recordDir(prId) === path.join(DATA, "shop", prId);
+const file = (prId) => path.join(recordDir(prId), "blast.json");
 export const hasBlast = (prId) => fs.existsSync(file(prId));
+
+/** Code areas: the demo's declared concepts, or for the shop the team's folder labels (config/concepts.json). */
+function conceptsFor(prId) {
+  if (!isShop(prId)) return JSON.parse(fs.readFileSync(path.join(DATA, "tieto", "concepts.json"), "utf8")).concepts;
+  const groups = JSON.parse(fs.readFileSync(path.join(ROOT, "config", "concepts.json"), "utf8")).groups;
+  return Object.entries(groups).map(([folder, name]) => ({ id: folder, name, patterns: [`${folder}/**`] }));
+}
 
 /**
  * Unit tests run both ways, recorded by scripts/blast-tests.mjs on a machine with a .NET SDK, or null.
@@ -123,7 +148,7 @@ export const hasBlast = (prId) => fs.existsSync(file(prId));
  * something only the real change does, so a named person decides whether it was asked for.
  */
 function recordedTests(prId) {
-  const testsFile = path.join(DATA, "tieto", prId, "blast-tests.json");
+  const testsFile = path.join(recordDir(prId), "blast-tests.json");
   if (!fs.existsSync(testsFile)) return null;
   const rec = JSON.parse(fs.readFileSync(testsFile, "utf8"));
   const onFixes = rec.runs.filter((r) => r.ran && r.tests === "real" && r.on !== "base");
@@ -133,8 +158,8 @@ function recordedTests(prId) {
 const fnId = (f, key) => `${f}#${key}`;
 const tail = (f) => f.split("/").pop();
 
-/** Who calls what, from the two recorded graphs. Keys are "file#functionKey". */
-function callGraph(prId, headSha) {
+/** Who calls what, from the two recorded graphs (for the shop: its saved code index). Keys are "file#functionKey". */
+function callGraph(prId, headSha, baseSha) {
   const callers = new Map(); // callee id -> Map(caller id -> { file, name, sources:Set })
   const known = new Set(); // functions the graphs can speak about
   const add = (to, from, source) => {
@@ -143,6 +168,16 @@ function callGraph(prId, headSha) {
     const c = m.get(from) ?? m.set(from, { id: from, file: from.split("#")[0], name: from.split("#")[1].split("~")[0], sources: new Set() }).get(from);
     c.sources.add(source);
   };
+  if (isShop(prId)) {
+    // The shop's own code index at the base commit (the code every agent started from). Its IDs are "fn:file#name".
+    const index = loadIndex(baseSha);
+    if (!index) return { callers, known, tool: null };
+    const tool = `Graphify ${index.graphifyVersion}`;
+    const id = (symbolId) => symbolId.replace(/^fn:/, "");
+    for (const s of index.symbols) if (s.kind === "function") known.add(id(s.id));
+    for (const c of index.calls) add(id(c.to), id(c.from), `${tool}, the shop's saved code index`);
+    return { callers, known, tool };
+  }
   // 1. The saved Graphify run. It holds every function in the files the real change edits, and every caller one step out.
   const slice = loadTietoSlice(headSha);
   const tool = slice ? `Graphify ${slice.graphifyVersion}` : null;
@@ -210,10 +245,10 @@ function summarise(run) {
 
 /** Everything the "Blast radius" tab shows for one PR, or { recorded: false }. */
 export function buildBlast(prId) {
-  if (!hasBlast(prId)) return { pr: prId, recorded: false, message: "No blast radius runs recorded for this PR yet." };
+  if (!hasBlast(prId)) return { pr: prId, recorded: false, message: "Blast radius was not run for this pull request, so there is nothing to compare it with." };
   const rec = JSON.parse(fs.readFileSync(file(prId), "utf8"));
-  const concepts = JSON.parse(fs.readFileSync(path.join(DATA, "tieto", "concepts.json"), "utf8")).concepts;
-  const graph = callGraph(prId, rec.real.head);
+  const concepts = conceptsFor(prId);
+  const graph = callGraph(prId, rec.real.head, rec.base);
   const order = ["real", ...AGENTS];
   const runs = { real: rec.real, ...Object.fromEntries(rec.runs.map((r) => [r.id, r])) };
   const sum = Object.fromEntries(order.map((id) => [id, summarise(runs[id])]));
