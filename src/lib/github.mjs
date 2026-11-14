@@ -55,6 +55,7 @@ export function prSummary(revisions, pr, decisionsFile) {
         verified: model.claims.filter((x) => x.label === "Verified").length,
         inferred: model.claims.filter((x) => x.label === "Inferred").length,
         unverified: model.claims.filter((x) => x.label === "Unverified").length,
+        contested: model.claims.filter((x) => x.label === "Contested").length,
       },
       aiReview: { available: model.review.available, label: model.review.modeLabel, findings: model.review.findings.length },
       signedOff: signOff ? { name: signOff.name, at: signOff.at, residualRisk: signOff.residualRisk } : null,

@@ -7,7 +7,7 @@ import { mapTests, TEST_MAPPER_LABEL } from "./testmap.mjs";
 import { loadBaseRun, loadRun } from "./runner.mjs";
 import { buildLedgerModel, ledgerPrs } from "./ledger.mjs";
 import { classifier1, classifier2, loadApprovedPolicy } from "./classifier.mjs";
-import { CLAIM_VERIFIER_LABEL, verifyClaims } from "./claims.mjs";
+import { CLAIM_VERIFIER_LABEL, contestClaims, verifyClaims } from "./claims.mjs";
 import { buildReviewInput, finalizeReview, loadReview } from "./reviewer.mjs";
 import { BRIEFS, DATA, REVISIONS_FILE, ROOT } from "./paths.mjs";
 
@@ -602,7 +602,6 @@ export function buildModel(revisions, prId, sha, opts = {}) {
     brief, briefRev, requirementText: common.requirementText, diffText: unifiedDiff(baseSha, sha),
     affected: affectedIds.map((id) => ({ ...symbolById.get(id), label: fnLabel(id), role: edited.includes(id) ? "edited" : "downstream" })),
   };
-  const claims = verifyClaims(briefRev.claims, ctx);
 
   const sharedEdits = edited
     .map((id) => {
@@ -623,6 +622,8 @@ export function buildModel(revisions, prId, sha, opts = {}) {
   const reviewInput = buildReviewInput(ctx);
   const reviewRecord = opts.reviewRecord !== undefined ? opts.reviewRecord : loadReview(sha);
   const review = finalizeReview(reviewRecord, ctx, reviewInput);
+  const disputes = review.findings.map((f) => ({ ...f, id: f.id ?? f.title, spans: f.citations.filter((c) => c.valid) }));
+  const claims = contestClaims(verifyClaims(briefRev.claims, ctx), disputes);
   const c2 = classifier2(policy, { initial: c1, checks, evidence, review, changedFiles: changed });
 
   return {

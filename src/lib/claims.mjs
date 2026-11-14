@@ -133,5 +133,43 @@ function verifyOne(claim, ctx) {
 
 /** Claim verifier: a per-claim label, a short reason and a source link where available. */
 export function verifyClaims(claims, ctx) {
-  return (claims ?? []).map((claim) => ({ id: claim.id, text: claim.text, kind: claim.kind, ...verifyOne(claim, ctx) }));
+  return (claims ?? []).map((claim) => ({ id: claim.id, text: claim.text, kind: claim.kind, ...verifyOne(claim, ctx), where: claim.cite ?? null }));
+}
+
+// Review severities that mean "this must be dealt with": the Impact Ledger's Important, our reviewer's Action required.
+const SERIOUS = new Set(["Important", "Action required"]);
+
+const overlaps = (a, b) =>
+  a.file === b.file && (a.side ?? "head") === (b.side ?? "head") && a.line <= (b.endLine ?? b.line) && b.line <= (a.endLine ?? a.line);
+
+/** Why a serious finding disputes a claim, or null. Every link is read from the data, never from wording. */
+function disputeOf(claim, f) {
+  if (f.rowIds?.includes(claim.id)) return "is filed against it";
+  if (claim.where && (f.spans ?? []).some((s) => overlaps(s, claim.where))) return "cites the same lines";
+  if (claim.clauseKind === "fix" && f.kind === "scope") return "says the change does less than the requirement asks";
+  return null;
+}
+
+/**
+ * A passing check does not settle a statement our own review disputes. A claim or requirement clause
+ * labelled Verified is shown as Contested, with the finding linked, when a serious finding is filed against it,
+ * cites the same file and lines, or (for a clause stating the fix) is a scope finding.
+ * Claims: { id, label, reason, where?: {file, line, endLine?, side?}, clauseKind? }.
+ * Findings: { id, category, title, kind?, rowIds?: [], spans?: [{file, line, endLine?, side?}] }.
+ */
+export function contestClaims(claims, findings) {
+  const serious = (findings ?? []).filter((f) => SERIOUS.has(f.category));
+  return claims.map((c) => {
+    if (c.label !== "Verified") return c;
+    const against = serious.map((f) => ({ f, how: disputeOf(c, f) })).filter((x) => x.how);
+    if (!against.length) return c;
+    const named = against.map(({ f, how }) => `${f.id} (${f.category}: ${f.title}) ${how}`).join("; ");
+    return {
+      ...c,
+      label: "Contested",
+      reason: `Our review disputes this statement: ${named}. Without that finding it would read Verified: ${c.reason}`,
+      missing: c.missing ?? `An answer to ${against.map(({ f }) => f.id).join(", ")}.`,
+      contestedBy: against.map(({ f, how }) => ({ findingId: f.id, title: f.title, category: f.category, how })),
+    };
+  });
 }

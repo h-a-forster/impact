@@ -34,7 +34,7 @@ Its tests pass (7/7). One of them only checks that 150% "no longer fails checkou
 | Route (Classifier 2) | Human review required. Could not auto-merge: Medium, and the files are outside docs/. |
 | Required check | unit-tests passed, 7/7. |
 | Evidence per affected workflow | All supported, by the change's own REQ-21 tests. The do-not-throw test counts as support for Checkout. |
-| Claim check | 5 claims Verified, 1 Inferred ("no other callers"). |
+| Claim check | 4 claims Verified, 1 Inferred ("no other callers"), 1 Contested: "applyDiscount() treats a negative percent as no discount" stands on the lines the reviewer's Action required finding cites, so it is not shown as Verified. |
 | Fast lane checks | Not reached (Medium). All four files are ordinary text files. |
 | AI reviewer (live run) | **Action required: "Percent above 100 no longer rejected; yields negative totals"**, citing discount.ts:7-8 and the do-not-throw test. The example it gave: 200 cents at 150% gives -100. It also gave 2 Needs evidence findings and asked the requirement owner whether >100 should be rejected, clamped or accepted. |
 | Edit check | Silent. The one code edit is needed by 3 tests. Nothing was left behind. Removing the upper limit is part of an edit the tests need, so it is not seen as a passenger. |

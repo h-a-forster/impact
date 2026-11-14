@@ -10,6 +10,7 @@ import { loadRun } from "../src/lib/runner.mjs";
 import { decisionView, recordDecision } from "../src/lib/decisions.mjs";
 import { findPr, prSummary } from "../src/lib/github.mjs";
 import { buildSwarm } from "../src/lib/swarm.mjs";
+import { buildLedgerModel, ledgerPrs } from "../src/lib/ledger.mjs";
 import { DATA } from "../src/lib/paths.mjs";
 import { ROOT } from "../src/lib/paths.mjs";
 
@@ -241,6 +242,21 @@ group = "Swarm agreement";
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+}
+
+// ---- 10. Contested claims ---------------------------------------------------
+group = "Contested claims";
+{
+  // A passing check does not make a statement Verified when our own serious finding disputes it.
+  const ledger = (id) => { const pr = ledgerPrs().find((p) => p.id === id); return buildLedgerModel(pr, pr.commits[0].sha); };
+  const m = ledger("ju26-issue-2297");
+  const by = (id) => { const c = m.claims.find((x) => x.id === id); return [c.label, (c.contestedBy ?? []).map((b) => b.findingId)]; };
+  check("finding filed against the claim: Contested, finding linked", by("CLM-2"), ["Contested", ["F-2"]]);
+  check("finding cites the lines the claim stands on: Contested", by("CLM-1"), ["Contested", ["F-2"]]);
+  check("scope finding on the clause that states the fix: Contested", by("REQ-2297-1"), ["Contested", ["F-2"]]);
+  check("a Minor finding alone does not contest a claim", by("CLM-4"), ["Verified", []]);
+  const attack = buildModel(revisions, "req-21", revisions.prs.find((p) => p.id === "req-21").commits[0].sha);
+  check("shop sample: Action required finding on the edited lines contests the author's claim", attack.claims.find((c) => c.id === "c1").label, "Contested");
 }
 
 // ---- Report ---------------------------------------------------------------
