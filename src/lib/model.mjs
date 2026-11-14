@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { changedFiles as gitChangedFiles, changedLineRanges, readFileAt, unifiedDiff } from "./git.mjs";
+import { authorOf, changedFiles as gitChangedFiles, changedLineRanges, readFileAt, unifiedDiff } from "./git.mjs";
 import { loadIndex } from "./graphify.mjs";
 import { graphifyGraph, loadBaseLinks } from "./graphify-tieto.mjs";
 import { mapTests, TEST_MAPPER_LABEL } from "./testmap.mjs";
@@ -337,7 +337,7 @@ function edgeKeys(index, tests) {
  * Graph, diff, evidence, claims, route and sign-off state all come from this
  * one call, so they always match the selection.
  *
- * `opts` lets evals replay altered evidence: { run, brief, reviewRecord, decisions }.
+ * `opts` lets evals replay altered evidence: { run, brief, reviewRecord, decisions, policy }.
  */
 export function buildModel(revisions, prId, sha, opts = {}) {
   const pr = revisions.prs.find((p) => p.id === prId);
@@ -353,7 +353,7 @@ export function buildModel(revisions, prId, sha, opts = {}) {
   if (!index || !baseIndex) throw new Error(`no code index saved for ${sha}. Run: npm run setup`);
   const tests = mapTests(sha, index);
   const baseTests = isBase ? tests : mapTests(baseSha, baseIndex);
-  const policy = loadApprovedPolicy(baseSha);
+  const policy = opts.policy ?? loadApprovedPolicy(baseSha);
   const brief = opts.brief ?? loadBrief(prId);
   const briefRev = (!isBase && brief?.revisions?.[String(commit.index)]) || { claims: [], openGaps: [], checksRun: [] };
   const fnLabel = (id) => (id.startsWith("test:") ? `"${id.split("#")[1]}"` : `${id.split("#")[1]}()`);
@@ -618,7 +618,9 @@ export function buildModel(revisions, prId, sha, opts = {}) {
   const reviewInput = buildReviewInput(ctx);
   const reviewRecord = opts.reviewRecord !== undefined ? opts.reviewRecord : loadReview(sha);
   const review = finalizeReview(reviewRecord, ctx, reviewInput);
-  const c2 = classifier2(policy, { initial: c1, checks, evidence, review, changedFiles: changed });
+  // Every commit up to the selected one counts: one untrusted commit keeps the whole change out of the fast lane.
+  const authors = pr.commits.filter((c) => c.index <= commit.index).map((c) => authorOf(c.sha));
+  const c2 = classifier2(policy, { initial: c1, checks, evidence, review, changedFiles: changed, authors });
 
   return {
     ...common,

@@ -19,7 +19,10 @@ import { loadReview } from "../src/lib/reviewer.mjs";
 const revisions = loadRevisions();
 const policy = loadApprovedPolicy(revisions.base.sha);
 
+const AUTHOR = revisions.author.email;
 const docsOnlyChange = () => ({
+  policy,
+  authors: [AUTHOR],
   files: ["docs/pricing.md"],
   oddity: null, // what the diff says about the files: null means ordinary text files
   sharedEdits: [],
@@ -31,9 +34,13 @@ const docsOnlyChange = () => ({
 
 function routeOf(change) {
   const changedFiles = change.changedFiles ?? change.files.map((file) => ({ file, oddity: change.oddity }));
-  const initial = classifier1(policy, { changedFiles, editedCount: 0, downstreamCount: 0, sharedEdits: change.sharedEdits, workflowsReached: [], rollbackRecorded: change.rollbackRecorded });
-  return classifier2(policy, { initial, checks: change.checks, evidence: change.evidence, review: change.review, changedFiles }).route;
+  const initial = classifier1(change.policy, { changedFiles, editedCount: 0, downstreamCount: 0, sharedEdits: change.sharedEdits, workflowsReached: [], rollbackRecorded: change.rollbackRecorded });
+  return classifier2(change.policy, { initial, checks: change.checks, evidence: change.evidence, review: change.review, changedFiles, authors: change.authors }).route;
 }
+// The team's own limits on the fast lane, set in the base commit's policy.
+const withFastLane = (extra) => ({ ...policy, auto_merge_dry_run: { ...policy.auto_merge_dry_run, ...extra } });
+const trustOnly = (authors) => withFastLane({ trusted_authors: authors });
+const pausedDocs = withFastLane({ paused: [{ paths: ["docs/**"], escape_on: "2026-11-14", owner: "the docs owner" }] });
 
 const finding = (category, citationsValid = true) => ({ category, citationsValid });
 const ATTEMPTS = [
@@ -83,6 +90,10 @@ const ATTEMPTS = [
   ["the reviewer reports a problem", (c) => c.review.findings.push(finding("Action required"))],
   ["the reviewer reports a problem it could not cite", (c) => c.review.findings.push(finding("Action required", false))],
   ["the reviewer asks for evidence", (c) => c.review.findings.push(finding("Needs evidence"))],
+  // The team's own limits: who may use the lane, and where it is paused.
+  ["an author not on the trusted list", (c) => ((c.policy = trustOnly([AUTHOR])), (c.authors = ["newcomer@example.invalid"]))],
+  ["one commit by an author not on the trusted list", (c) => ((c.policy = trustOnly([AUTHOR])), c.authors.push("newcomer@example.invalid"))],
+  ["a docs change in a paused area", (c) => (c.policy = pausedDocs)],
 ];
 
 // The reviewer itself is missing or broken. Each case alters the saved review of the docs-only pull request.
@@ -209,6 +220,7 @@ const KNOWN_LIMITS = [
 ];
 
 const baselineRoute = routeOf(docsOnlyChange());
+const trustedRoute = routeOf({ ...docsOnlyChange(), policy: trustOnly([AUTHOR]) });
 const results = ATTEMPTS.map(([name, alter]) => {
   const change = docsOnlyChange();
   alter(change);
@@ -233,7 +245,7 @@ for (const [name, alter] of KNOWN_LIMITS) {
   alter(change);
   console.log(`  ${routeOf(change) === ROUTES.AUTO ? "allowed" : "held  "} ${name.padEnd(51)} -> ${routeOf(change)}  (known limit)`);
 }
-const baselines = [["the plain docs-only change", baselineRoute], ["the recorded docs-only pull request, whole pipeline", pipelineBaseline], ["a plain edit to a document, through git", gitBaseline], ["a plain edit beside a .gitattributes that names *.md", gitSettingsBaseline]];
+const baselines = [["the plain docs-only change", baselineRoute], ["the same change by an author on the trusted list", trustedRoute], ["the recorded docs-only pull request, whole pipeline", pipelineBaseline], ["a plain edit to a document, through git", gitBaseline], ["a plain edit beside a .gitattributes that names *.md", gitSettingsBaseline]];
 console.log("");
 for (const [name, route] of baselines) console.log(`  ${route === ROUTES.AUTO ? "ok    " : "BROKEN"} ${name.padEnd(52)} -> ${route}`);
 console.log(`\n${results.length - leaks.length} of ${results.length} held. ${leaks.length} got through.`);

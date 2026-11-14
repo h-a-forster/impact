@@ -38,6 +38,9 @@ export function listFiles(sha) {
   return git(["ls-tree", "-r", "--name-only", sha]).split("\n").filter(Boolean);
 }
 
+/** The author email recorded on a commit. */
+export const authorOf = (sha) => git(["show", "-s", "--format=%ae", sha]).trim();
+
 /** File content at a revision, or null when the file is not in that revision. */
 export function readFileAt(sha, file) {
   try {
