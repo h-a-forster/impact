@@ -1838,7 +1838,7 @@ function initChat() {
   };
   // "Reset demo": also forgets every saved sign-off, on every PR.
   $("resetDemo").onclick = async () => {
-    await api("/api/reset", { method: "POST" });
+    await api("/api/reset", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
     acks = {};
     saveAcks();
     ui.threads = {};

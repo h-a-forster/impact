@@ -21,7 +21,7 @@ if (!fs.existsSync(REVISIONS_FILE) || !fs.existsSync(SAMPLE_REPO)) {
 }
 
 const json = (res, status, body) => {
-  res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "access-control-allow-origin": "*" });
+  res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
   res.end(JSON.stringify(body));
 };
 const readBody = (req) =>
@@ -34,6 +34,15 @@ const readBody = (req) =>
     req.on("end", () => resolve(data));
     req.on("error", reject);
   });
+
+// Writes come only from this app's own pages (or a local script, which sends no Origin):
+// a JSON content type cannot be sent cross-site without a preflight, and a foreign Origin is refused.
+function refuseWrite(req) {
+  if (!/^application\/json\b/i.test(req.headers["content-type"] ?? "")) return "POST bodies must be application/json";
+  const origin = req.headers.origin;
+  if (!origin || (URL.canParse(origin) && new URL(origin).host === req.headers.host)) return null;
+  return `Cross-site request from ${origin} refused`;
+}
 
 // Eval test cases: PRs a person marked as "merged, then broke the system".
 // They become test cases for the AI review agent. Saved per PR.
@@ -61,6 +70,10 @@ const handler = async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const demoRevisions = revisionsSource(url); // shadows the import, so every route below follows the session switch
   try {
+    if (req.method === "POST") {
+      const refused = refuseWrite(req);
+      if (refused) return json(res, 403, { error: refused });
+    }
     if (url.pathname === "/api/revisions") {
       return json(res, 200, demoRevisions());
     }
