@@ -126,6 +126,12 @@ const THROUGH_GIT = [
   ["binary content in a file named like a document", (add) => add("100644", Buffer.from([0, 1, 2, 0, 255, 0]), "docs/data.md")],
   ["a document larger than 1 MB", (add) => add("100644", "word ".repeat(250_000), "docs/big.md")],
   ["a document with a script in it", (add) => add("100644", "# Notes\n\n<script>fetch('/collect')</script>\n", "docs/page.md")],
+  // The third entry sets up the base: code that reads the document at run time, so editing the document changes prices.
+  [
+    "a document that the code reads its prices from",
+    (add) => add("100644", "# Notes\n\n| Maximum discount | 120% |\n", "docs/notes.md"),
+    (add) => add("100644", "import { readFileSync } from \"node:fs\";\nexport const notes = readFileSync(new URL(\"../docs/notes.md\", import.meta.url), \"utf8\");\n", "src/limits.ts"),
+  ],
 ];
 const PLAIN_EDIT = (add, text) => add("100644", `${text}One more sentence.\n`, "docs/notes.md");
 
@@ -146,9 +152,10 @@ function throughGit(cases) {
       return git(["commit-tree", git(["write-tree"], { env }), ...(parent ? ["-p", parent] : []), "-m", "change"]);
     };
     const base = commit((add) => add("100644", text, "docs/notes.md"));
-    return cases.map(([name, edit]) => {
-      const head = commit(edit, base);
-      return [name, routeOf({ ...docsOnlyChange(), changedFiles: gitChangedFiles(base, head, { cwd: repo }) })];
+    return cases.map(([name, edit, setUpBase]) => {
+      const before = setUpBase ? commit(setUpBase, base) : base;
+      const head = commit(edit, before);
+      return [name, routeOf({ ...docsOnlyChange(), changedFiles: gitChangedFiles(before, head, { cwd: repo }) })];
     });
   } finally {
     fs.rmSync(repo, { recursive: true, force: true });
