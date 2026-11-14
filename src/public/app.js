@@ -714,7 +714,7 @@ function renderBlast() {
     el.dataset.stage = "idle";
     el.innerHTML = `<p class="blast-what">We give the same task to 3 agents: one careful, one normal, one that changes too much. What they touch is the "blast radius" of the task. Then we lay the real change over it.</p>
       <div class="swarm-controls"><button type="button" class="primary" id="blastGo">▶ Run blast radius</button>
-      <span class="muted swarm-rec">Replays 3 real runs of <code>${esc(b.model)}</code>, recorded ${esc(b.recordedAt.slice(0, 10))}. No agent runs now.</span></div>`;
+      <span class="muted swarm-rec">Replays 3 real runs${b.model ? ` of <code>${esc(b.model)}</code>` : ""}, recorded ${esc(b.recordedAt.slice(0, 10))}. No agent runs now.</span></div>`;
     $("blastGo").onclick = () => playBlast();
     return;
   }
@@ -785,7 +785,7 @@ function renderBlast() {
     </div>`)}
     ${fold("files", "Lines changed per file", `Real change: ${num(realCol.files)} files, +${num(realCol.added)} −${num(realCol.removed)}`, `
     <table class="blast-table files">${head}<tbody>${fileRows}${totalRow}</tbody></table>
-    <div class="blast-key muted"><span class="plus">+</span> lines added, <span class="minus">−</span> lines removed, · not touched. The real change is Tieto's AI-written branch, shown as a PR. ${esc(b.tests ? "The agents could not build the code; the unit tests were run afterwards on another machine (see above)." : b.notBuilt)}</div>`)}
+    <div class="blast-key muted"><span class="plus">+</span> lines added, <span class="minus">−</span> lines removed, · not touched. The real change is ${SESSION ? "the pull request under review" : "Tieto's AI-written branch, shown as a PR"}. ${esc(b.tests ? "The agents could not build the code; the unit tests were run afterwards on another machine (see above)." : b.notBuilt)}</div>`)}
     ${fold("numbers", "More numbers", "Functions, reach and overlap", `
       <table class="blast-table">${head}<tbody>
       ${row("Functions edited", (c) => num(c.functions) + (c.newFunctions ? note(`${c.newFunctions} of them new`) : ""), "in product code, not unit tests")}
@@ -798,14 +798,14 @@ function renderBlast() {
       ${wideRow("Every agent touched, the real change did not", things(o.agentsNotReal))}
       </tbody></table>`)}
     ${fold("how", "How it was done", "The 3 runs, their prompts, and the rule for the label", `
-      <p>Run on ${esc(b.recordedAt.slice(0, 10))} with the model <code>${esc(b.model)}</code>, once per agent. Each agent worked alone in its own copy of the code from before the fix (commit <code>${esc(short(b.base))}</code>). The real fix was not in those copies. This tab replays the saved result. No agent runs now.</p>
+      <p>Run on ${esc(b.recordedAt.slice(0, 10))}${b.model ? ` with the model <code>${esc(b.model)}</code>` : ""}, once per agent. Each agent worked alone in its own copy of the code from before the fix (commit <code>${esc(short(b.base))}</code>). The real fix was not in those copies. This tab replays the saved result. No agent runs now.</p>
       <p><b>Rule for the trust label.</b> We look at the product code files the real change touches (not docs, not unit tests). If no agent touched one of them: "Touches code no agent touched". Else, if only the agent that changes too much touched one of them: "Touches more than needed". Else: "Inside the expected zone".</p>
       <p><b>What every agent got.</b> ${b.given.kept.map(esc).join("; ")}.</p>
-      <p><b>What we left out of the AI PR text</b>, so the agents could not copy the real fix: ${b.given.leftOut.map(esc).join("; ")}. ${esc(b.given.note)}</p>
+      ${b.given.leftOut?.length ? `<p><b>What we left out of the AI PR text</b>, so the agents could not copy the real fix: ${b.given.leftOut.map(esc).join("; ")}. ${esc(b.given.note ?? "")}</p>` : ""}
       ${b.runs.filter((r) => r.id !== "real").map((r) => `<div class="blast-run"><b>${esc(r.label)}</b> <span class="muted">${secs(r) ? `· took ${secs(r)}` : ""}</span><div>Told: ${esc(r.instruction ?? "")}</div>
         <details><summary>What it said when it was done</summary><pre class="raw doc">${esc(r.reply ?? "No reply was saved.")}</pre></details>
-        <details><summary>The full prompt, word for word</summary><pre class="raw doc">${esc(r.prompt ?? "")}</pre></details></div>`).join("")}
-      <p class="muted">${esc(b.how.functions)} Callers come from ${esc(b.graphTool ?? "the recorded data")} (a saved run) and the recorded compiler data for this PR.</p>
+        ${r.prompt ? `<details><summary>The full prompt, word for word</summary><pre class="raw doc">${esc(r.prompt)}</pre></details>` : ""}</div>`).join("")}
+      <p class="muted">${esc(b.how.functions)} Callers come from ${esc(b.graphTool ?? "the recorded data")} (a saved run)${SESSION ? "" : " and the recorded compiler data for this PR"}.</p>
       <p class="muted">Trust score: each code file the real change edits gets 100 if the careful agent edited it too, 85 for the normal agent, 60 for only the agent that changes too much, 20 for no agent. We take the average, then 20 off for each of its unit tests that fails on every agent's fix. A fixed rule, no AI.</p>`)}
     </details>`;
   $("blastDetails").ontoggle = (ev) => (blastRun.details = ev.target.open);
@@ -1047,7 +1047,7 @@ function renderSwarmMatrix(runs) {
   const el = $("swarmMatrix"), s = swarmUI.data;
   if (!el) return;
   const measure = swarmUI.measure ?? "things";
-  const rows = [{ key: "real", name: "Real change", sub: "Tieto's AI-written branch", set: measure === "things" ? s.realThings : s.realLines }, ...runs.map((r, i) => ({ key: r.key, name: `Agent ${i + 1}`, sub: r.modelLabel + (r.madeUp ? " · made up" : ""), set: measure === "things" ? r.things : r.lines }))];
+  const rows = [{ key: "real", name: "Real change", sub: SESSION ? "the pull request under review" : "Tieto's AI-written branch", set: measure === "things" ? s.realThings : s.realLines }, ...runs.map((r, i) => ({ key: r.key, name: `Agent ${i + 1}`, sub: r.modelLabel + (r.madeUp ? " · made up" : ""), set: measure === "things" ? r.things : r.lines }))];
   const cell = (a, b) => {
     if (a.key === b.key) return `<td class="self">—</td>`;
     const v = swarmJac(a.set, b.set);
