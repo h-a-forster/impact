@@ -1,0 +1,364 @@
+{
+ "schema": "impact-map/swarm/v1",
+ "pr": "ju26-issue-2283",
+ "recordedAt": "2026-11-14T14:46:31.796Z",
+ "base": "32258fdbee4bcd653c79f51b4376b5103c6f4d27",
+ "prompt": {
+  "file": "data/tieto/ju26-issue-2283/blast-prompts/normal.txt",
+  "text": "You are working in a copy of the MessagePack-CSharp repository (C#), at the commit just before the fix. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- This machine has no .NET SDK. You cannot build the code or run unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nSolve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.\n\n## Requirements (from the pull request description)\n\nRequirement: Bug report #2283 in MessagePack-CSharp.\n\nWhy: The tool crashed on one kind of type that comes from another project. The build still looked fine. But a file the app needs was never made, so some apps broke when they ran.\n\nBefore and after: Before: the tool crashed and the file was missing. After: no crash.\n\nMust preserve: Other types from another project already worked. They must still work, and still show their warnings.\n\n## The bug report the Requirement row points to (issue #2283, word for word)\n\n# Generator and analyzer crash with IndexOutOfRangeException on a closed generic struct from a referenced assembly\n\n#### Bug description\n\nBoth `MessagePackGenerator` (CS8785) and `MsgPack00xMessagePackAnalyzer` (AD0001) throw `IndexOutOfRangeException` when a `[MessagePackObject]` type has a member whose type is a **closed generic value type defined in a referenced assembly**.\n\nBecause the generator then \"will not contribute to the output\", the compiling assembly silently ends up with **no generated resolver at all**. It is only a warning, so a normal build looks fine, but trimmed and NativeAOT apps fail at runtime. In our case three assemblies of a large app had been shipping without a resolver across two releases before we noticed.\n\n#### Repro steps\n\nTwo projects. `lib`:\n\n```csharp\nusing MessagePack;\nnamespace Lib;\n\n[MessagePackObject]\npublic partial record struct Item<T>([property: Key(0)] string Key);\n```\n\n`app`, with a `ProjectReference` to `lib`:\n\n```csharp\nusing MessagePack; using Lib;\nnamespace App;\n\n[MessagePackObject]\npublic sealed partial record Cmd([property: Key(0)] string Scope)\n{\n    [Key(1)] public Item<int> Member { get; init; }\n}\n```\n\nThen `dotnet build` on `app`. Both projects are in the attached `mp-repro.zip`.\n\n#### Expected behavior\n\nA clean build, with a generated resolver in `app`.\n#### Actual behavior\n\n```\nCSC : warning CS8785: Generator 'MessagePackGenerator' failed to generate source. It will not\ncontribute to the output and compilation errors may occur as a result. Exception was of type\n'IndexOutOfRangeException' with message 'Index was outside the bounds of the array.'.\nCSC : warning AD0001: Analyzer 'MessagePack.SourceGenerator.Analyzers.MsgPack00xMessagePackAnalyzer'\nthrew an exception of type 'System.IndexOutOfRangeException' with message 'Index was outside the\nbounds of the array.'.\n```\n\n`app.dll` contains no `GeneratedMessagePackResolver`.\n\n- Version used: MessagePack 3.1.8\n- Runtime: .NET 10 (SDK 10.0.204), Windows 11\n\n#### Additional context\n\n**What triggers it.** `Item` is declared in `lib`, `Cmd` in `app`:\n\n| `Item` declared as | result |\n|---|---|\n| `record struct Item<T>` | **crash** |\n| `struct Item<T>` | **crash** |\n| `struct Item` | ok |\n| `record struct Item` | ok |\n| `class Item<T>` | ok |\n| `record class Item<T>` | ok |\n\nSo it needs all three of: **generic**, **value type**, **from a referenced assembly**. Moving the identical `Item<T>` declaration into `app` itself makes the crash disappear, which is what makes this specific to metadata symbols.\n**Stack trace.**\n\n```\nSystem.IndexOutOfRangeException: Index was outside the bounds of the array.\n   at TypeCollector.GetObjectInfo(INamedTypeSymbol formattedType, ISymbol callerSymbol)\n   at TypeCollector.CollectGeneric(INamedTypeSymbol type, ISymbol callerSymbol) in TypeCollector.cs:line 661\n   at TypeCollector.CollectCore(ITypeSymbol typeSymbol, ISymbol callerSymbol) in TypeCollector.cs:line 371\n   at TypeCollector.GetObjectInfo(INamedTypeSymbol formattedType, ISymbol callerSymbol) in TypeCollector.cs:line 1062\n   at TypeCollector.CollectCore(ITypeSymbol typeSymbol, ISymbol callerSymbol) in TypeCollector.cs:line 386\n   at TypeCollector.Collect() in TypeCollector.cs:line 300\n   at MsgPack00xMessagePackAnalyzer.AnalyzeSymbol(SymbolAnalysisContext, ReferenceSymbols, AnalyzerOptions) in MsgPack00xMessagePackAnalyzer.cs:line 431\n```\n\n`CollectGeneric` line 661 is the closed-generic branch that calls `GetObjectInfo` directly:\n\n```csharp\nelse\n{\n    // NOTE: ... closed generic types such as `Foo<string>` are not registered as a formatter.\n    this.GetObjectInfo(type, callerSymbol);\n```\n\nso `GetObjectInfo` runs against a type that has no syntax. Several diagnostic paths inside it index `DeclaringSyntaxReferences[0]` directly (lines 735, 1009, 1101) instead of using `FirstOrDefault()` the way the neighbouring `GetIdentifierLocation` / `GetLocation` / `GetParameterListLocation` helpers already do, and that collection is empty for a metadata symbol. I did not narrow down which of the three fires.\n\n**Getting the stack trace.** Console output truncates the exception to its message; `-p:ErrorLog=out.sarif` preserves the full description, including the stack trace and an `ISymbol:` context line naming the offending type:\n\n```\ndotnet build -p:ErrorLog=out.sarif\n```\n\n**Workaround.** Putting `[MessagePackFormatter(typeof(ItemFormatter<>))]` on the generic value type short-circuits `CollectCore` (line 356) before `GetObjectInfo` is reached, at the cost of hand-writing the formatter.\n\n**Possibly related:** #2092 reports CS8785 from the v3 generator, but with a different inner exception and no repro.\n",
+  "note": "Every agent got this prompt, word for word: the same one the normal agent got."
+ },
+ "how": "Each agent ran once with `claude -p --model <model>`, alone, in its own copy of the code from before the fix. No shell, no git, no web. Agents of the same model ran at the same time.",
+ "notBuilt": "This machine has no .NET SDK. Nobody built the code or ran the unit tests. We do not know if any agent's fix works.",
+ "mix": [
+  [
+   "claude-opus-5-5",
+   1
+  ],
+  [
+   "claude-sonnet-5-5",
+   1
+  ],
+  [
+   "claude-sonnet-5-5",
+   2
+  ],
+  [
+   "claude-haiku-5-5",
+   1
+  ],
+  [
+   "claude-haiku-5-5",
+   2
+  ]
+ ],
+ "demo": {
+  "note": "Made up for the demo. Each agent's code is a real recorded change, but the model names on them are made up. The real runs all made the same change, so they show no variation.",
+  "runs": [
+   {
+    "model": "claude-opus-5-5",
+    "from": "real",
+    "only": [
+     "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+    ],
+    "seconds": 130
+   },
+   {
+    "model": "claude-sonnet-5-5",
+    "from": "swarm:claude-sonnet-5-5:1",
+    "seconds": 18
+   },
+   {
+    "model": "claude-sonnet-5-5",
+    "from": "blast:normal",
+    "seconds": 92
+   },
+   {
+    "model": "claude-haiku-5-5",
+    "from": "blast:wide",
+    "only": [
+     "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs"
+    ],
+    "seconds": 50
+   },
+   {
+    "model": "claude-haiku-5-5",
+    "from": "blast:wide",
+    "seconds": 48
+   }
+  ]
+ },
+ "models": {
+  "claude-haiku-5-5": {
+   "label": "Haiku 5.5",
+   "runs": [
+    {
+     "n": 1,
+     "startedAt": "2026-11-14T14:32:34.793Z",
+     "endedAt": "2026-11-14T14:33:26.055Z",
+     "exitCode": 0,
+     "modelInLog": "claude-haiku-5-5",
+     "turns": 10,
+     "reply": "I fixed the crash. I changed one file.\n\n**What I changed**\n\nFile: `src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs`\n\n- **Line 985** (the \"both string and int key are null\" warning): I replaced `DeclaringSyntaxReferences[0]` with `FirstOrDefault()`. I also used `as PropertyDeclarationSyntax` instead of a hard cast. If there is no source code, it now skips the location instead of crashing.\n- **Line 1077** (the \"member needs a key\" warning): I replaced `DeclaringSyntaxReferences[0]` with `FirstOrDefault()?`. This matches the code next to it.\n\nWhy: types from another project have no source code. So the list of source references is empty. Reading `[0]` from an empty list is what threw `IndexOutOfRangeException`.\n\n**Did it work?**\n\nI could not build or run it, because there is no .NET SDK here. I checked by reading the code. The only `[0]` left in that folder is in a commented-out line.\n\nFor types in this project, nothing changes. The warnings still point at the same place.\n\n**What you need to do next**\n\n1. Run `dotnet build` on the repro in `app`.\n2. Check that `app.dll` now has `GeneratedMessagePackResolver`.\n3. I did not add a regression test. If you want one, it should be a generator test with a closed generic struct from a referenced project.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+       "status": "M",
+       "kind": "code",
+       "added": 2,
+       "removed": 2,
+       "patch": "@@ -982,7 +982,7 @@ public class TypeCollector\n                     var stringKey = key is { Value: string stringKeyValue } ? stringKeyValue : default;\n                     if (intKey == null && stringKey == null)\n                     {\n-                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, ((PropertyDeclarationSyntax)item.DeclaringSyntaxReferences[0].GetSyntax()).Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n+                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, (item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() as PropertyDeclarationSyntax)?.Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n                     }\n \n                     // A property with an init accessor and an initializer has a default that will be discarded by the deserializer.\n@@ -1074,7 +1074,7 @@ public class TypeCollector\n                             {\n                                 Diagnostic diagnostic = derivedKeyAttribute is not null && suppressSourceGeneration is not true\n                                     ? Diagnostic.Create(MsgPack00xMessagePackAnalyzer.AOTDerivedKeyAttribute, derivedKeyAttribute.GetSyntax(this.cancellationToken).GetLocation())\n-                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences[0].GetSyntax().GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n+                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n                                 if (nonPublicMembersAreSerialized || (item.DeclaredAccessibility & Accessibility.Public) == Accessibility.Public)\n                                 {\n                                     this.reportDiagnostic?.Invoke(diagnostic);",
+       "functions": [
+        {
+         "key": "GetObjectInfo",
+         "name": "GetObjectInfo",
+         "line": 700,
+         "endLine": 1418,
+         "isNew": false,
+         "added": 2,
+         "removed": 2
+        }
+       ],
+       "linesOutsideFunctions": 0
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "startedAt": "2026-11-14T14:32:34.819Z",
+     "endedAt": "2026-11-14T14:33:23.122Z",
+     "exitCode": 0,
+     "modelInLog": "claude-haiku-5-5",
+     "turns": 9,
+     "reply": "I fixed the crash. I could not build or run it here, so I checked the change by reading the code.\n\n**What I changed**\n\n- `src\\MessagePack.SourceGenerator\\CodeAnalysis\\TypeCollector.cs`, around line 985: the \"both string and int keys are null\" warning no longer assumes the member has source code. If there is no source, it uses no location instead of crashing.\n- `src\\MessagePack.SourceGenerator\\CodeAnalysis\\TypeCollector.cs`, around line 1077: the \"member needs a Key\" warning got the same fix.\n\n**Why it crashed**\n\nTypes from another project have no source code. The code read `DeclaringSyntaxReferences[0]`, which is an empty list for those types. That threw `IndexOutOfRangeException`, so no resolver was generated.\n\n**Did it work?**\n\n- Not tested. This machine has no .NET SDK.\n- By reading: the other warnings in that file already handle empty lists safely. Types from the same project still get their warnings with the same locations.\n\n**What you need to do next**\n\n- Build the repro in `app` and check that `GeneratedMessagePackResolver` appears.\n- Run the existing tests on a machine with the .NET SDK.\n\n**Things I did not change**\n\n- Some code-fix files in `src\\MessagePack.Analyzers.CodeFixes` also use `[0]`. They work on your own code in the editor, not on referenced types, so I left them alone.\n- I skipped the `git worktree` step from your global instructions, because this task says not to use git.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+       "status": "M",
+       "kind": "code",
+       "added": 2,
+       "removed": 2,
+       "patch": "@@ -982,7 +982,7 @@ public class TypeCollector\n                     var stringKey = key is { Value: string stringKeyValue } ? stringKeyValue : default;\n                     if (intKey == null && stringKey == null)\n                     {\n-                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, ((PropertyDeclarationSyntax)item.DeclaringSyntaxReferences[0].GetSyntax()).Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n+                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, (item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() as PropertyDeclarationSyntax)?.Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n                     }\n \n                     // A property with an init accessor and an initializer has a default that will be discarded by the deserializer.\n@@ -1074,7 +1074,7 @@ public class TypeCollector\n                             {\n                                 Diagnostic diagnostic = derivedKeyAttribute is not null && suppressSourceGeneration is not true\n                                     ? Diagnostic.Create(MsgPack00xMessagePackAnalyzer.AOTDerivedKeyAttribute, derivedKeyAttribute.GetSyntax(this.cancellationToken).GetLocation())\n-                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences[0].GetSyntax().GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n+                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n                                 if (nonPublicMembersAreSerialized || (item.DeclaredAccessibility & Accessibility.Public) == Accessibility.Public)\n                                 {\n                                     this.reportDiagnostic?.Invoke(diagnostic);",
+       "functions": [
+        {
+         "key": "GetObjectInfo",
+         "name": "GetObjectInfo",
+         "line": 700,
+         "endLine": 1418,
+         "isNew": false,
+         "added": 2,
+         "removed": 2
+        }
+       ],
+       "linesOutsideFunctions": 0
+      }
+     ]
+    }
+   ]
+  },
+  "claude-opus-5-5": {
+   "label": "Opus 5.5",
+   "runs": [
+    {
+     "n": 1,
+     "startedAt": "2026-11-14T14:32:34.786Z",
+     "endedAt": "2026-11-14T14:34:46.612Z",
+     "exitCode": 0,
+     "modelInLog": "claude-opus-5-5",
+     "turns": 22,
+     "reply": "I fixed the crash and added a test. Nothing was built or run, because this machine has no .NET SDK.\n\n## 1. What I changed\n\n**`src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs`** (the fix)\n- The tool read item `[0]` from a list. That list holds where a member is written in the code. For a type from another project, the list is empty, so the tool crashed.\n- I changed two spots to use `FirstOrDefault()`. It gives \"nothing\" instead of crashing. Other helpers in the same file already work this way.\n  - The `MemberNeedsKey` warning in the field loop.\n  - The `BothStringAndIntKeyAreNull` warning in the property loop.\n\n**Why only this kind of type crashed:** for a struct (a value type) from another project, the compiler also loads its hidden private fields. One of those has no `[Key]`, so the tool tries to build a warning for it. That warning was the line that read `[0]` and crashed.\n\n**What stays the same:** every warning still fires as before. A warning about a type from another project just has no code position, because there is no code to point at.\n\n**`tests/MessagePack.SourceGenerator.Tests/MsgPack00xAnalyzerTests.cs`** (the test)\n- New test: `ClosedGenericValueTypeFromReferencedAssembly`.\n- It compiles the `lib` code from the bug report into a real DLL in memory. A normal test project link would hand over the source code, and the bug only shows up without it.\n- Then it checks the `Cmd` example from the bug, with both `record struct Item<T>` and `struct Item<T>`. It expects no crash and no warnings.\n\n## 2. Did it work?\nI don't know yet. I checked the logic by reading the code only.\n\n## 3. What to do next\nRun the tests on a machine with the .NET SDK:\n\n```\ndotnet test tests/MessagePack.SourceGenerator.Tests --filter \"FullyQualifiedName~MsgPack00xAnalyzerTests\"\n```\n\nThe new test should pass. Without the fix, it should fail with `IndexOutOfRangeException`.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+       "status": "M",
+       "kind": "code",
+       "added": 2,
+       "removed": 2,
+       "patch": "@@ -982,7 +982,7 @@ public class TypeCollector\n                     var stringKey = key is { Value: string stringKeyValue } ? stringKeyValue : default;\n                     if (intKey == null && stringKey == null)\n                     {\n-                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, ((PropertyDeclarationSyntax)item.DeclaringSyntaxReferences[0].GetSyntax()).Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n+                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, (item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() as PropertyDeclarationSyntax)?.Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n                     }\n \n                     // A property with an init accessor and an initializer has a default that will be discarded by the deserializer.\n@@ -1074,7 +1074,7 @@ public class TypeCollector\n                             {\n                                 Diagnostic diagnostic = derivedKeyAttribute is not null && suppressSourceGeneration is not true\n                                     ? Diagnostic.Create(MsgPack00xMessagePackAnalyzer.AOTDerivedKeyAttribute, derivedKeyAttribute.GetSyntax(this.cancellationToken).GetLocation())\n-                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences[0].GetSyntax().GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n+                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n                                 if (nonPublicMembersAreSerialized || (item.DeclaredAccessibility & Accessibility.Public) == Accessibility.Public)\n                                 {\n                                     this.reportDiagnostic?.Invoke(diagnostic);",
+       "functions": [
+        {
+         "key": "GetObjectInfo",
+         "name": "GetObjectInfo",
+         "line": 700,
+         "endLine": 1418,
+         "isNew": false,
+         "added": 2,
+         "removed": 2
+        }
+       ],
+       "linesOutsideFunctions": 0
+      },
+      {
+       "file": "tests/MessagePack.SourceGenerator.Tests/MsgPack00xAnalyzerTests.cs",
+       "status": "M",
+       "kind": "test",
+       "added": 46,
+       "removed": 0,
+       "patch": "@@ -73,6 +73,52 @@ public class SomeClass {\n         await VerifyCS.VerifyAnalyzerAsync(input);\n     }\n \n+    /// <summary>\n+    /// Verifies that a closed generic value type from a referenced (metadata) assembly does not crash the analyzer.\n+    /// </summary>\n+    /// <see href=\"https://github.com/MessagePack-CSharp/MessagePack-CSharp/issues/2283\" />\n+    [Theory]\n+    [InlineData(\"public partial record struct Item<T>([property: Key(0)] string Key);\")]\n+    [InlineData(\"public struct Item<T> { [Key(0)] public string Key { get; set; } }\")]\n+    public async Task ClosedGenericValueTypeFromReferencedAssembly(string itemDeclaration)\n+    {\n+        string libSource = Preamble + @\"\n+namespace Lib;\n+\n+[MessagePackObject]\n+\" + itemDeclaration;\n+\n+        string input = Preamble + @\"\n+using Lib;\n+\n+[MessagePackObject]\n+public sealed partial record Cmd([property: Key(0)] string Scope)\n+{\n+    [Key(1)] public Item<int> Member { get; init; }\n+}\n+\";\n+\n+        VerifyCS.Test test = new()\n+        {\n+            TestCode = input,\n+        };\n+\n+        // Compile the library to an actual metadata reference so that its symbols have no syntax.\n+        System.Collections.Immutable.ImmutableArray<Microsoft.CodeAnalysis.MetadataReference> frameworkReferences =\n+            await ReferencesHelper.DefaultTargetFrameworkReferences.ResolveAsync(Microsoft.CodeAnalysis.LanguageNames.CSharp, CancellationToken.None);\n+        CSharpCompilation libCompilation = CSharpCompilation.Create(\n+            \"Lib\",\n+            new[] { CSharpSyntaxTree.ParseText(libSource, new CSharpParseOptions(LanguageVersion.CSharp10)) },\n+            frameworkReferences.Concat(ReferencesHelper.GetReferences(ReferencesSet.MessagePack)),\n+            new CSharpCompilationOptions(Microsoft.CodeAnalysis.OutputKind.DynamicallyLinkedLibrary));\n+        using MemoryStream libImage = new();\n+        Microsoft.CodeAnalysis.Emit.EmitResult emitResult = libCompilation.Emit(libImage);\n+        Assert.True(emitResult.Success, string.Join(Environment.NewLine, emitResult.Diagnostics));\n+        test.TestState.AdditionalReferences.Add(Microsoft.CodeAnalysis.MetadataReference.CreateFromImage(libImage.ToArray()));\n+\n+        await test.RunAsync();\n+    }\n+\n     [Fact]\n     public async Task NullStringKey()\n     {",
+       "functions": [
+        {
+         "key": "ClosedGenericValueTypeFromReferencedAssembly",
+         "name": "ClosedGenericValueTypeFromReferencedAssembly",
+         "line": 83,
+         "endLine": 120,
+         "isNew": true,
+         "added": 38,
+         "removed": 0
+        }
+       ],
+       "linesOutsideFunctions": 8
+      }
+     ]
+    }
+   ]
+  },
+  "claude-sonnet-5-5": {
+   "label": "Sonnet 5.5",
+   "runs": [
+    {
+     "n": 1,
+     "startedAt": "2026-11-14T14:25:52.299Z",
+     "endedAt": "2026-11-14T14:26:09.196Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 6,
+     "reply": "I fixed the crash. I could not build or test it, because there is no .NET SDK here.\n\n**What I changed**\n\nFile: `src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs`\n\n- **Cause:** Some code read `DeclaringSyntaxReferences[0]`. For a type from another project, that list is empty, so it crashed.\n- **Fix 1:** The `BothStringAndIntKeyAreNull` warning now uses `FirstOrDefault()` and `as PropertyDeclarationSyntax`. This was a hard cast before.\n- **Fix 2:** The `MemberNeedsKey` warning for fields now uses `FirstOrDefault()?`.\n- **Same pattern elsewhere:** The nearby code already did this the safe way, so I copied it.\n- **Other types:** Types from another project still get their warnings. The warning just has no source location when there is no source code to point at.\n\n**What you need to do next**\n\n1. Build on a machine with .NET.\n2. Run the tests.\n3. Optionally, add a test with a generic struct from a referenced project. I did not add one.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+       "status": "M",
+       "kind": "code",
+       "added": 2,
+       "removed": 2,
+       "patch": "@@ -982,7 +982,7 @@ public class TypeCollector\n                     var stringKey = key is { Value: string stringKeyValue } ? stringKeyValue : default;\n                     if (intKey == null && stringKey == null)\n                     {\n-                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, ((PropertyDeclarationSyntax)item.DeclaringSyntaxReferences[0].GetSyntax()).Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n+                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, (item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() as PropertyDeclarationSyntax)?.Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n                     }\n \n                     // A property with an init accessor and an initializer has a default that will be discarded by the deserializer.\n@@ -1074,7 +1074,7 @@ public class TypeCollector\n                             {\n                                 Diagnostic diagnostic = derivedKeyAttribute is not null && suppressSourceGeneration is not true\n                                     ? Diagnostic.Create(MsgPack00xMessagePackAnalyzer.AOTDerivedKeyAttribute, derivedKeyAttribute.GetSyntax(this.cancellationToken).GetLocation())\n-                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences[0].GetSyntax().GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n+                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n                                 if (nonPublicMembersAreSerialized || (item.DeclaredAccessibility & Accessibility.Public) == Accessibility.Public)\n                                 {\n                                     this.reportDiagnostic?.Invoke(diagnostic);",
+       "functions": [
+        {
+         "key": "GetObjectInfo",
+         "name": "GetObjectInfo",
+         "line": 700,
+         "endLine": 1418,
+         "isNew": false,
+         "added": 2,
+         "removed": 2
+        }
+       ],
+       "linesOutsideFunctions": 0
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "startedAt": "2026-11-14T14:25:52.321Z",
+     "endedAt": "2026-11-14T14:26:10.761Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 8,
+     "reply": "**What I changed**\n\nI edited one file: `src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs`.\n\n- **The cause:** Two spots read `DeclaringSyntaxReferences[0]`. That list is empty for a type from another project, so the code crashed.\n- **The fix:** Both spots now use `FirstOrDefault()?`, like the nearby helper methods. If there is no source code to point at, the warning has no location. It no longer crashes.\n  - Line 985: the `BothStringAndIntKeyAreNull` warning.\n  - Line 1077: the `MemberNeedsKey` warning.\n\n**Did it work?**\n\nI don't know. This machine has no .NET SDK, so I could not build or run tests. I only read the code.\n\nOther types from another project still go through the same code and still report their warnings.\n\nI did not add a test.\n\n**What you need to do next**\n\n1. Build the repo on a machine with .NET.\n2. Add a test with a generic struct from a referenced project. I can write it if you want.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+       "status": "M",
+       "kind": "code",
+       "added": 2,
+       "removed": 2,
+       "patch": "@@ -982,7 +982,7 @@ public class TypeCollector\n                     var stringKey = key is { Value: string stringKeyValue } ? stringKeyValue : default;\n                     if (intKey == null && stringKey == null)\n                     {\n-                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, ((PropertyDeclarationSyntax)item.DeclaringSyntaxReferences[0].GetSyntax()).Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n+                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, (item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() as PropertyDeclarationSyntax)?.Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n                     }\n \n                     // A property with an init accessor and an initializer has a default that will be discarded by the deserializer.\n@@ -1074,7 +1074,7 @@ public class TypeCollector\n                             {\n                                 Diagnostic diagnostic = derivedKeyAttribute is not null && suppressSourceGeneration is not true\n                                     ? Diagnostic.Create(MsgPack00xMessagePackAnalyzer.AOTDerivedKeyAttribute, derivedKeyAttribute.GetSyntax(this.cancellationToken).GetLocation())\n-                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences[0].GetSyntax().GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n+                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n                                 if (nonPublicMembersAreSerialized || (item.DeclaredAccessibility & Accessibility.Public) == Accessibility.Public)\n                                 {\n                                     this.reportDiagnostic?.Invoke(diagnostic);",
+       "functions": [
+        {
+         "key": "GetObjectInfo",
+         "name": "GetObjectInfo",
+         "line": 700,
+         "endLine": 1418,
+         "isNew": false,
+         "added": 2,
+         "removed": 2
+        }
+       ],
+       "linesOutsideFunctions": 0
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "startedAt": "2026-11-14T14:25:52.325Z",
+     "endedAt": "2026-11-14T14:26:12.235Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 8,
+     "reply": "I fixed the crash. I could not build or test it, because there is no .NET SDK here.\n\n**What I changed**\n\nFile: `src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs`\n\n- **Cause:** a type from another project has no source code in your build. The old code read the first item of an empty list, and that threw `IndexOutOfRangeException`.\n- **Fix:** two spots now use `FirstOrDefault()` instead of `[0]`. It gives `null` when the list is empty, and that is fine for a warning location.\n  - The `BothStringAndIntKeyAreNull` warning. It also now uses `as PropertyDeclarationSyntax` instead of a hard cast, so it can't crash there either.\n  - The `MemberNeedsKey` warning in the second member loop.\n- **Other types still work:** types from your own project have source code. They get the same warning locations as before.\n\n**Next steps**\n\n1. Build the repo and run the existing tests.\n2. Optional: add a test with a generic struct from a second project. I didn't add one, because I can't run it here.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+       "status": "M",
+       "kind": "code",
+       "added": 2,
+       "removed": 2,
+       "patch": "@@ -982,7 +982,7 @@ public class TypeCollector\n                     var stringKey = key is { Value: string stringKeyValue } ? stringKeyValue : default;\n                     if (intKey == null && stringKey == null)\n                     {\n-                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, ((PropertyDeclarationSyntax)item.DeclaringSyntaxReferences[0].GetSyntax()).Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n+                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, (item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() as PropertyDeclarationSyntax)?.Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n                     }\n \n                     // A property with an init accessor and an initializer has a default that will be discarded by the deserializer.\n@@ -1074,7 +1074,7 @@ public class TypeCollector\n                             {\n                                 Diagnostic diagnostic = derivedKeyAttribute is not null && suppressSourceGeneration is not true\n                                     ? Diagnostic.Create(MsgPack00xMessagePackAnalyzer.AOTDerivedKeyAttribute, derivedKeyAttribute.GetSyntax(this.cancellationToken).GetLocation())\n-                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences[0].GetSyntax().GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n+                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n                                 if (nonPublicMembersAreSerialized || (item.DeclaredAccessibility & Accessibility.Public) == Accessibility.Public)\n                                 {\n                                     this.reportDiagnostic?.Invoke(diagnostic);",
+       "functions": [
+        {
+         "key": "GetObjectInfo",
+         "name": "GetObjectInfo",
+         "line": 700,
+         "endLine": 1418,
+         "isNew": false,
+         "added": 2,
+         "removed": 2
+        }
+       ],
+       "linesOutsideFunctions": 0
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "startedAt": "2026-11-14T14:25:52.329Z",
+     "endedAt": "2026-11-14T14:26:09.080Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 7,
+     "reply": "I fixed the crash by editing one file, but I couldn't build or test it because this machine has no .NET SDK.\n\n**File changed:** `src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs`\n\n**What was wrong:** Two warning paths read `DeclaringSyntaxReferences[0]`. A type from another project has no source code in this project, so that list is empty and the read crashed.\n\n**What I changed:**\n- **Line 985 (`BothStringAndIntKeyAreNull`):** The code now uses `FirstOrDefault()` and a safe `as` cast. It gives a null location when there is no source.\n- **Line 1077 (`MemberNeedsKey`):** The code now uses `FirstOrDefault()?.GetSyntax(...)`. It also gives a null location when there is no source.\n\nTypes in your own project still get the same warnings at the same places. Only types from other projects get a null location.\n\n**Not done:**\n- I added no test.\n- I did not check the third place named in the report, at line 735. That is `GetSpecialFormatter`, and it reads `ConstructorArguments[0]`, not syntax. It looks safe to me.\n\n**Next for you:** Build on a machine with .NET and try the repro from #2283 (`Item<int>` from `lib` used in `app`). It should build with no CS8785 or AD0001 warning.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+       "status": "M",
+       "kind": "code",
+       "added": 2,
+       "removed": 2,
+       "patch": "@@ -982,7 +982,7 @@ public class TypeCollector\n                     var stringKey = key is { Value: string stringKeyValue } ? stringKeyValue : default;\n                     if (intKey == null && stringKey == null)\n                     {\n-                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, ((PropertyDeclarationSyntax)item.DeclaringSyntaxReferences[0].GetSyntax()).Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n+                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, (item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax(this.cancellationToken) as PropertyDeclarationSyntax)?.Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n                     }\n \n                     // A property with an init accessor and an initializer has a default that will be discarded by the deserializer.\n@@ -1074,7 +1074,7 @@ public class TypeCollector\n                             {\n                                 Diagnostic diagnostic = derivedKeyAttribute is not null && suppressSourceGeneration is not true\n                                     ? Diagnostic.Create(MsgPack00xMessagePackAnalyzer.AOTDerivedKeyAttribute, derivedKeyAttribute.GetSyntax(this.cancellationToken).GetLocation())\n-                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences[0].GetSyntax().GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n+                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax(this.cancellationToken).GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n                                 if (nonPublicMembersAreSerialized || (item.DeclaredAccessibility & Accessibility.Public) == Accessibility.Public)\n                                 {\n                                     this.reportDiagnostic?.Invoke(diagnostic);",
+       "functions": [
+        {
+         "key": "GetObjectInfo",
+         "name": "GetObjectInfo",
+         "line": 700,
+         "endLine": 1418,
+         "isNew": false,
+         "added": 2,
+         "removed": 2
+        }
+       ],
+       "linesOutsideFunctions": 0
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "startedAt": "2026-11-14T14:25:52.335Z",
+     "endedAt": "2026-11-14T14:26:08.861Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 6,
+     "reply": "**What I changed**\n\nI edited one file: `src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs`.\n\n- **Line 985:** the old code used `DeclaringSyntaxReferences[0]`. It crashes when a type comes from another project, because that list is empty. It now uses `FirstOrDefault()?`, like the code next to it.\n- **Line 1077:** same fix.\n\nIf there is no source code to point at, the warning now has no location. It is still reported. Types from another project that already worked still show their warnings.\n\n**Did it work?**\n\nI could not build or test. There is no .NET SDK here. I checked by reading the code. I did not find which of the three places in the bug report actually crashes. Line 1007 and the others were already safe. So these two were the only unsafe ones left in that method.\n\n**What you need to do next**\n\n1. Build the repo.\n2. Run the tests.\n3. Build the two-project repro from issue #2283. Check that `app.dll` now has `GeneratedMessagePackResolver`.\n\nI did not add a test. Adding one would need the repro's two-project setup.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+       "status": "M",
+       "kind": "code",
+       "added": 2,
+       "removed": 2,
+       "patch": "@@ -982,7 +982,7 @@ public class TypeCollector\n                     var stringKey = key is { Value: string stringKeyValue } ? stringKeyValue : default;\n                     if (intKey == null && stringKey == null)\n                     {\n-                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, ((PropertyDeclarationSyntax)item.DeclaringSyntaxReferences[0].GetSyntax()).Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n+                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, (item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() as PropertyDeclarationSyntax)?.Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n                     }\n \n                     // A property with an init accessor and an initializer has a default that will be discarded by the deserializer.\n@@ -1074,7 +1074,7 @@ public class TypeCollector\n                             {\n                                 Diagnostic diagnostic = derivedKeyAttribute is not null && suppressSourceGeneration is not true\n                                     ? Diagnostic.Create(MsgPack00xMessagePackAnalyzer.AOTDerivedKeyAttribute, derivedKeyAttribute.GetSyntax(this.cancellationToken).GetLocation())\n-                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences[0].GetSyntax().GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n+                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n                                 if (nonPublicMembersAreSerialized || (item.DeclaredAccessibility & Accessibility.Public) == Accessibility.Public)\n                                 {\n                                     this.reportDiagnostic?.Invoke(diagnostic);",
+       "functions": [
+        {
+         "key": "GetObjectInfo",
+         "name": "GetObjectInfo",
+         "line": 700,
+         "endLine": 1418,
+         "isNew": false,
+         "added": 2,
+         "removed": 2
+        }
+       ],
+       "linesOutsideFunctions": 0
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

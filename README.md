@@ -86,6 +86,76 @@ See [docs/demo-script.md](docs/demo-script.md).
 5. Press **Previous**. The gap is still shown on commit 1, and your sign-off
    does not apply there.
 
+## Blast radius tab (PR #1 only)
+
+Open: `http://localhost:4317/?map=blast#pr=ju26-issue-2283` (tab "Blast radius" in the Impact map card).
+The tab opens on a **Run blast radius** button. Pressing it replays the 3 recorded runs (sped up), then
+shows the result. `&run=1` plays it from a link; `&done=1` (or `&box=<id>`) shows the result straight away.
+
+We gave the same task to 3 agents: one careful ("minimal"), one normal, one that changes too
+much ("wide"). What they touched is the zone a fix can reasonably reach. The real change
+(Tieto's AI-written branch, shown as a PR) is laid over that zone.
+
+- **Real runs, recorded.** 2026-11-14, model `claude-fable-5-2`, `claude -p` once per agent, each in
+  its own copy of the Tieto repo at the base commit `32258fd` (the branch with the real fix was
+  never fetched). No shell, no git, no web. The result is saved in
+  `data/tieto/ju26-issue-2283/blast.json`; the tab replays it offline.
+- **What the agents got:** `data/tieto/ju26-issue-2283/blast-prompts/requirements.md` = the
+  Requirement, Why, Before/after (first part) and Must preserve rows of the AI PR, plus the bug
+  report #2283 word for word. Left out: Summary, Approach, Alternatives, Checks run, Open gaps,
+  Rollback (they describe the real fix). The 3 prompts differ only in the "How to work" lines.
+- **Unit tests, run both ways** (recorded afterwards on a machine with a .NET SDK, by
+  `node scripts/blast-tests.mjs <clone of the sample repository>`; saved in
+  `data/tieto/ju26-issue-2283/blast-tests.json`). The agents themselves could not build the code.
+  - The wide agent's own unit tests: 2 of 5 pass on the old code, 5 of 5 on the real change.
+    A test written without seeing the real change notices the bug, and the real change passes it.
+  - The real change's unit tests (19): 16 pass on the old code, 18 on each of the three agents' fixes.
+    The one that fails on all three, `ClosedGenericStruct_FromMetadataReference_UnkeyedMember`,
+    expects no MsgPack004 diagnostic for a type from a referenced assembly. No agent's fix silences
+    that diagnostic; only the real change does. The tab shows it as a question for a named person.
+- **Rebuild the record:** put the 3 agent folders under `.demo/blast/{minimal,normal,wide}`
+  (git-ignored), run the agents, then `node scripts/record-blast.mjs`.
+- **Maths:** `src/lib/blast.mjs`, served by `GET /api/blast?pr=<id>`. Functions are found by a
+  simple reader of the C# text, the same way for all 4 changes. Callers come from the saved
+  Graphify run and the recorded compiler data; code they do not cover shows "not known".
+- **File level.** The picture and the main table show files: one box and one row per file, with
+  lines added and removed per change. Function numbers, reach and overlap sit in a fold.
+- **Trust label rule.** Look at the product code files the real change touches (not docs, not
+  unit tests).
+  1. No agent touched one of them: "Touches code no agent touched".
+  2. Else, only the wide agent touched one of them: "Touches more than needed".
+  3. Else: "Inside the expected zone".
+  Docs, unit test files and functions are not scored. They are named in the line under the
+  label. The other 3 PRs have no runs and say so.
+
+### Monte Carlo swarm (its own tab, next to Blast radius)
+
+Press **Run Monte Carlo swarm** to watch N agents get the same requirements, each write a fix,
+and land on a 0 to 100% similarity scale next to the real change. It replays real runs, recorded
+2026-11-14, each agent alone in a clean copy of the base commit, all with the normal agent's prompt
+(`blast-prompts/normal.txt`). No agent runs in the demo.
+
+- **Demo default: "Demo mix, made up"** (tagged "made up for the demo" on screen). The real runs all
+  made the same change, so this set shows variation: each agent is a REAL recorded change (Tieto's
+  branch, a Blast radius run, or a swarm run; see `demo` in `swarm.json`) with a made-up model name.
+  Real sets: "Mix, real runs" (1 Opus 5.5, 2 Sonnet 5.5, 2 Haiku 5.5) and 5 Sonnet 5.5 agents. The menus offer more (Fable 5.2, up to 10 agents); a pick that is not
+  recorded plays the demo mix and says so on screen.
+- Record: `data/tieto/ju26-issue-2283/swarm.json`. Rebuild with
+  `node scripts/record-swarm.mjs --setup`, then `--run`, then `--record` (`--model`, `--count`).
+- Maths: `src/lib/swarm.mjs`, served by `GET /api/swarm?pr=<id>`.
+- **Similarity rule.** Each change is a set: the product code files it touches, plus the functions in
+  them it edits that already existed (no docs, no unit tests). Similarity = shared / all (Jaccard).
+  "Similar" = 50% or more. "Agents agree with each other" = the average over every pair of agents.
+- **Two scores per agent:** like the real change, and like the other agents (average). The
+  "Who is like whom" matrix compares every pair (real change + each agent), by files and functions
+  or by **changed lines** (the exact code lines added or removed in product code; Jaccard again).
+- Deep link: `?map=swarm` opens the tab and plays it (the old `?map=blast&swarm=1` still works); `&model=<id|mix>&n=<count>` picks first; `&agent=<n>` opens one agent; `&measure=lines` sets the matrix.
+
+### Page layout
+
+- The description card shows only the AI PR (the author's commit message is no longer shown).
+- The AI PR, Impact map and Review steps cards each have a Hide / Show button and **start hidden**. A link with `?map=` shows the Impact map card; the "AI review" stamp opens Review steps. `?show=intentCard,mapCard,reviewCard` opens them, `?hide=` closes them.
+
 ## What is real, what is recorded, what is rule-based
 
 | Part | Status |

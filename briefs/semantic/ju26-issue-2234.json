@@ -18,27 +18,32 @@
       {
         "match": "duplicate or mixed keys",
         "title": "The generator now makes code that quietly drops a member",
-        "detail": "The changed code is shared with the code generator. Before, a repeated or mixed key stopped the generator. Now it makes code that leaves the later member out. The checker still shows an error, but only if the checker is on."
+        "detail": "The changed code is shared with the code generator. Before, a repeated or mixed key stopped the generator. Now it makes code that leaves the later member out. The checker still shows an error, but only if the checker is on.",
+        "fix": "Make the generator stop with an error, as it did before."
       },
       {
         "match": "field half",
         "title": "Half of the change is never run by a unit test",
-        "detail": "The change edits the code for properties and the code for fields. Every new unit test uses properties only. So the field part is untested."
+        "detail": "The change edits the code for properties and the code for fields. Every new unit test uses properties only. So the field part is untested.",
+        "fix": "Add the same unit tests for fields."
       },
       {
         "match": "new continue",
         "title": "A skipped member is no longer checked at all",
-        "detail": "When a member is skipped for a bad key, its type is not checked either. Before, the user got two warnings. Now they get one."
+        "detail": "When a member is skipped for a bad key, its type is not checked either. Before, the user got two warnings. Now they get one.",
+        "fix": "Still check the type of a member that is skipped."
       },
       {
         "match": "null key on the first keyed field",
         "title": "An empty key on a field still crashes",
-        "detail": "If the first field with a key has an empty key, the checker still crashes. This is the same kind of crash the PR set out to fix. It happens on the old code and the new code."
+        "detail": "If the first field with a key has an empty key, the checker still crashes. This is the same kind of crash the PR set out to fix. It happens on the old code and the new code.",
+        "fix": "Handle an empty key on a field the same way as on a property."
       },
       {
         "match": "MsgPack016",
         "title": "A unit test claims to cover a warning it cannot trigger",
-        "detail": "The test comment and the README name warning MsgPack016. The test input cannot raise that warning. So a pass tells us nothing about it."
+        "detail": "The test comment and the README name warning MsgPack016. The test input cannot raise that warning. So a pass tells us nothing about it.",
+        "fix": "Change the test input so it can raise the warning, or drop the claim."
       }
     ],
     "questions": [
@@ -88,6 +93,10 @@
   },
   "revisions": {
     "1": {
+      "tldr": {
+        "tone": "warn",
+        "text": "The checker no longer crashes on bad keys, but the code generator now quietly leaves a member out. A person must decide if that is OK."
+      },
       "tags": [
         {
           "label": "Bug fix",

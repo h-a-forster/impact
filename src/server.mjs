@@ -5,9 +5,11 @@ import { readFileAt, revisionExists } from "./lib/git.mjs";
 import { buildFullMap, buildModel, demoRevisions, loadRevisions } from "./lib/model.mjs";
 import { ledgerSource } from "./lib/ledger.mjs";
 import { loadTietoSlice } from "./lib/graphify-tieto.mjs";
+import { buildBlast } from "./lib/blast.mjs";
+import { buildSwarm } from "./lib/swarm.mjs";
 import { decisionView, recordDecision } from "./lib/decisions.mjs";
 import { findPr, prSummary } from "./lib/github.mjs";
-import { DEMO, REVISIONS_FILE, ROOT, SAMPLE_REPO } from "./lib/paths.mjs";
+import { DECISIONS_FILE, DEMO, REVISIONS_FILE, ROOT, SAMPLE_REPO } from "./lib/paths.mjs";
 
 const PORT = Number(process.env.PORT ?? 4317);
 const PUBLIC = path.join(ROOT, "src", "public");
@@ -76,6 +78,16 @@ const handler = async (req, res) => {
       const slice = pr ? loadTietoSlice(pr.commits[0].sha) : null;
       return slice ? json(res, 200, slice) : json(res, 404, { error: "No saved Graphify export for this pull request" });
     }
+    if (url.pathname === "/api/blast") {
+      // "Blast radius" tab: 3 recorded agent runs on the same task, compared with the real change.
+      const pr = demoRevisions().prs.find((p) => p.id === url.searchParams.get("pr"));
+      return pr ? json(res, 200, buildBlast(pr.id)) : json(res, 404, { error: `Unknown PR ${url.searchParams.get("pr")}` });
+    }
+    if (url.pathname === "/api/swarm") {
+      // Monte Carlo swarm on the "Blast radius" tab: N recorded runs of one model, scored against the real change.
+      const pr = demoRevisions().prs.find((p) => p.id === url.searchParams.get("pr"));
+      return pr ? json(res, 200, buildSwarm(pr.id)) : json(res, 404, { error: `Unknown PR ${url.searchParams.get("pr")}` });
+    }
     if (url.pathname === "/api/fullmap") return json(res, 200, buildFullMap(demoRevisions()));
     if (url.pathname === "/api/summary") {
       // Used by the GitHub replica: live state for the Impact review check, per commit.
@@ -104,6 +116,11 @@ const handler = async (req, res) => {
       const model = buildModel(revisions, input.pr, input.sha);
       const result = recordDecision(model, input);
       return json(res, result.ok ? 200 : 400, result);
+    }
+    if (url.pathname === "/api/reset" && req.method === "POST") {
+      // "Reset demo" in the chat UI: forget every saved sign-off, so a merge can be shown again.
+      fs.rmSync(DECISIONS_FILE, { force: true });
+      return json(res, 200, { ok: true });
     }
     // Static files.
     const rel = url.pathname === "/" ? "index.html" : url.pathname.slice(1);

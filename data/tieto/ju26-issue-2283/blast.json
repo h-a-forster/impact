@@ -1,0 +1,426 @@
+{
+ "schema": "impact-map/blast/v1",
+ "pr": "ju26-issue-2283",
+ "recordedAt": "2026-11-14T13:45:54.753Z",
+ "model": "claude-fable-5-2",
+ "base": "32258fdbee4bcd653c79f51b4376b5103c6f4d27",
+ "how": {
+  "command": "claude -p --model claude-fable-5-2 --permission-mode acceptEdits --disallowedTools Bash PowerShell WebFetch WebSearch Agent Skill --strict-mcp-config --output-format stream-json --verbose < blast-prompts/<run>.txt",
+  "folders": "3 folders, each with only the base commit fetched (git fetch --depth 1 <repo> <base sha>). The branch with the real fix was never fetched.",
+  "same": "Same model and same requirements for all three. Only the 'How to work' lines differ.",
+  "settings": "The agents ran with this machine's own Claude Code user settings (a global CLAUDE.md and a plain-words output style). They could read, search and edit files in their folder. They had no shell, no git and no web.",
+  "functions": "Functions are found by a simple reader of the C# text (scanFunctions in src/lib/blast.mjs), the same way for all 4 changes. A function counts as edited when a changed line sits inside it."
+ },
+ "notBuilt": "This machine has no .NET SDK. Nobody built the code or ran the unit tests. We do not know if any agent's fix works.",
+ "given": {
+  "file": "data/tieto/ju26-issue-2283/blast-prompts/requirements.md",
+  "text": "## Requirements (from the pull request description)\n\nRequirement: Bug report #2283 in MessagePack-CSharp.\n\nWhy: The tool crashed on one kind of type that comes from another project. The build still looked fine. But a file the app needs was never made, so some apps broke when they ran.\n\nBefore and after: Before: the tool crashed and the file was missing. After: no crash.\n\nMust preserve: Other types from another project already worked. They must still work, and still show their warnings.\n\n## The bug report the Requirement row points to (issue #2283, word for word)\n\n# Generator and analyzer crash with IndexOutOfRangeException on a closed generic struct from a referenced assembly\n\n#### Bug description\n\nBoth `MessagePackGenerator` (CS8785) and `MsgPack00xMessagePackAnalyzer` (AD0001) throw `IndexOutOfRangeException` when a `[MessagePackObject]` type has a member whose type is a **closed generic value type defined in a referenced assembly**.\n\nBecause the generator then \"will not contribute to the output\", the compiling assembly silently ends up with **no generated resolver at all**. It is only a warning, so a normal build looks fine, but trimmed and NativeAOT apps fail at runtime. In our case three assemblies of a large app had been shipping without a resolver across two releases before we noticed.\n\n#### Repro steps\n\nTwo projects. `lib`:\n\n```csharp\nusing MessagePack;\nnamespace Lib;\n\n[MessagePackObject]\npublic partial record struct Item<T>([property: Key(0)] string Key);\n```\n\n`app`, with a `ProjectReference` to `lib`:\n\n```csharp\nusing MessagePack; using Lib;\nnamespace App;\n\n[MessagePackObject]\npublic sealed partial record Cmd([property: Key(0)] string Scope)\n{\n    [Key(1)] public Item<int> Member { get; init; }\n}\n```\n\nThen `dotnet build` on `app`. Both projects are in the attached `mp-repro.zip`.\n\n#### Expected behavior\n\nA clean build, with a generated resolver in `app`.\n#### Actual behavior\n\n```\nCSC : warning CS8785: Generator 'MessagePackGenerator' failed to generate source. It will not\ncontribute to the output and compilation errors may occur as a result. Exception was of type\n'IndexOutOfRangeException' with message 'Index was outside the bounds of the array.'.\nCSC : warning AD0001: Analyzer 'MessagePack.SourceGenerator.Analyzers.MsgPack00xMessagePackAnalyzer'\nthrew an exception of type 'System.IndexOutOfRangeException' with message 'Index was outside the\nbounds of the array.'.\n```\n\n`app.dll` contains no `GeneratedMessagePackResolver`.\n\n- Version used: MessagePack 3.1.8\n- Runtime: .NET 10 (SDK 10.0.204), Windows 11\n\n#### Additional context\n\n**What triggers it.** `Item` is declared in `lib`, `Cmd` in `app`:\n\n| `Item` declared as | result |\n|---|---|\n| `record struct Item<T>` | **crash** |\n| `struct Item<T>` | **crash** |\n| `struct Item` | ok |\n| `record struct Item` | ok |\n| `class Item<T>` | ok |\n| `record class Item<T>` | ok |\n\nSo it needs all three of: **generic**, **value type**, **from a referenced assembly**. Moving the identical `Item<T>` declaration into `app` itself makes the crash disappear, which is what makes this specific to metadata symbols.\n**Stack trace.**\n\n```\nSystem.IndexOutOfRangeException: Index was outside the bounds of the array.\n   at TypeCollector.GetObjectInfo(INamedTypeSymbol formattedType, ISymbol callerSymbol)\n   at TypeCollector.CollectGeneric(INamedTypeSymbol type, ISymbol callerSymbol) in TypeCollector.cs:line 661\n   at TypeCollector.CollectCore(ITypeSymbol typeSymbol, ISymbol callerSymbol) in TypeCollector.cs:line 371\n   at TypeCollector.GetObjectInfo(INamedTypeSymbol formattedType, ISymbol callerSymbol) in TypeCollector.cs:line 1062\n   at TypeCollector.CollectCore(ITypeSymbol typeSymbol, ISymbol callerSymbol) in TypeCollector.cs:line 386\n   at TypeCollector.Collect() in TypeCollector.cs:line 300\n   at MsgPack00xMessagePackAnalyzer.AnalyzeSymbol(SymbolAnalysisContext, ReferenceSymbols, AnalyzerOptions) in MsgPack00xMessagePackAnalyzer.cs:line 431\n```\n\n`CollectGeneric` line 661 is the closed-generic branch that calls `GetObjectInfo` directly:\n\n```csharp\nelse\n{\n    // NOTE: ... closed generic types such as `Foo<string>` are not registered as a formatter.\n    this.GetObjectInfo(type, callerSymbol);\n```\n\nso `GetObjectInfo` runs against a type that has no syntax. Several diagnostic paths inside it index `DeclaringSyntaxReferences[0]` directly (lines 735, 1009, 1101) instead of using `FirstOrDefault()` the way the neighbouring `GetIdentifierLocation` / `GetLocation` / `GetParameterListLocation` helpers already do, and that collection is empty for a metadata symbol. I did not narrow down which of the three fires.\n\n**Getting the stack trace.** Console output truncates the exception to its message; `-p:ErrorLog=out.sarif` preserves the full description, including the stack trace and an `ISymbol:` context line naming the offending type:\n\n```\ndotnet build -p:ErrorLog=out.sarif\n```\n\n**Workaround.** Putting `[MessagePackFormatter(typeof(ItemFormatter<>))]` on the generic value type short-circuits `CollectCore` (line 356) before `GetObjectInfo` is reached, at the cost of hand-writing the formatter.\n\n**Possibly related:** #2092 reports CS8785 from the v3 generator, but with a different inner exception and no repro.\n",
+  "kept": [
+   "Requirement",
+   "Why",
+   "Before and after (first part: 'Before: the tool crashed and the file was missing. After: no crash.')",
+   "Must preserve",
+   "The bug report #2283 that the Requirement row points to, word for word (without the link to the attached zip)"
+  ],
+  "leftOut": [
+   "Summary and tags (they describe the real fix)",
+   "Second half of 'Before → after' (it says what the real fix hides)",
+   "Approach (it names a function the real fix adds)",
+   "Alternatives",
+   "Checks run",
+   "Open gaps",
+   "Rollback"
+  ],
+  "note": "The bug report itself names TypeCollector.cs and GetObjectInfo(), where the crash is. The author of the real change had the same bug report."
+ },
+ "real": {
+  "id": "real",
+  "head": "9df83c38409c8bfad0517aebffe48211eda4a5b4",
+  "source": "data/tieto/ju26-issue-2283/pack.json (branch ju26-issue-2283, recorded)",
+  "files": [
+   {
+    "file": "README.md",
+    "status": "M",
+    "kind": "doc",
+    "added": 5,
+    "removed": 0,
+    "patch": "@@ -1636,6 +1636,11 @@\n \n Learn more about using a mix of your own custom formatters and automatically generated ones in [the Analyzer section](#analyzer).\n \n+### Generic types from referenced assemblies\n+\n+Closed generic types defined in a referenced assembly (for example, `Item<int>` where `Item<T>` is defined in another project or NuGet package) can be used as members of your `[MessagePackObject]` types, including generic value types and record structs.\n+Diagnostics about the members of such a type are reported by the assembly that defines it rather than by the consuming project, so any problem must be fixed there.\n+\n ### MagicOnion\n \n [MagicOnion](https://github.com/Cysharp/MagicOnion) is a code-first gRPC framework based on grpc-dotnet and MessagePack. gRPC usually communicates with Protocol Buffers using IDL. But MagicOnion uses MessagePack for C# and does not need IDL. When communicating C# to C#, schemaless (or rather C# classes as schema) is better than using IDL.",
+    "functions": []
+   },
+   {
+    "file": "doc/analyzers/MsgPack004.md",
+    "status": "M",
+    "kind": "doc",
+    "added": 5,
+    "removed": 0,
+    "patch": "@@ -45,3 +45,8 @@\n     public int B { get; set; }\n }\n ```\n+\n+## Types from referenced assemblies\n+\n+This analyzer only reports on members declared in the project being compiled.\n+Members of a type defined in a referenced assembly are reported by the project that defines that type, so an unattributed public member of such a type must be fixed in its defining project.",
+    "functions": []
+   },
+   {
+    "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+    "status": "M",
+    "kind": "code",
+    "added": 26,
+    "removed": 3,
+    "patch": "@@ -236,7 +236,7 @@\n     private TypeCollector(Compilation compilation, AnalyzerOptions options, ReferenceSymbols referenceSymbols, ITypeSymbol targetType, Action<Diagnostic>? reportAnalyzerDiagnostic, CancellationToken cancellationToken)\n     {\n         this.typeReferences = referenceSymbols;\n-        this.reportDiagnostic = reportAnalyzerDiagnostic;\n+        this.reportDiagnostic = reportAnalyzerDiagnostic is null ? null : diagnostic => ReportIfLocatedInCompilation(reportAnalyzerDiagnostic, diagnostic);\n         this.options = options;\n         this.compilation = compilation;\n         this.cancellationToken = cancellationToken;\n@@ -982,7 +982,7 @@\n                     var stringKey = key is { Value: string stringKeyValue } ? stringKeyValue : default;\n                     if (intKey == null && stringKey == null)\n                     {\n-                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, ((PropertyDeclarationSyntax)item.DeclaringSyntaxReferences[0].GetSyntax()).Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n+                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, GetPropertyIdentifierLocation(item), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n                     }\n \n                     // A property with an init accessor and an initializer has a default that will be discarded by the deserializer.\n@@ -1074,7 +1074,7 @@\n                             {\n                                 Diagnostic diagnostic = derivedKeyAttribute is not null && suppressSourceGeneration is not true\n                                     ? Diagnostic.Create(MsgPack00xMessagePackAnalyzer.AOTDerivedKeyAttribute, derivedKeyAttribute.GetSyntax(this.cancellationToken).GetLocation())\n-                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences[0].GetSyntax().GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n+                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n                                 if (nonPublicMembersAreSerialized || (item.DeclaredAccessibility & Accessibility.Public) == Accessibility.Public)\n                                 {\n                                     this.reportDiagnostic?.Invoke(diagnostic);\n@@ -1426,6 +1426,29 @@\n \n     private static Location? GetIdentifierLocation(INamedTypeSymbol type) => ((BaseTypeDeclarationSyntax?)type.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax())?.Identifier.GetLocation();\n \n+    /// <summary>\n+    /// Gets the location of the identifier of a property, if it is declared in source.\n+    /// </summary>\n+    /// <param name=\"property\">The property symbol. It may be declared in metadata, in which case <see langword=\"null\" /> is returned.</param>\n+    /// <returns>The location of the identifier, or <see langword=\"null\" /> if the property has no declaration in source.</returns>\n+    private static Location? GetPropertyIdentifierLocation(IPropertySymbol property) => (property.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() as PropertyDeclarationSyntax)?.Identifier.GetLocation();\n+\n+    /// <summary>\n+    /// Reports a diagnostic only when its location belongs to the compilation being analyzed.\n+    /// </summary>\n+    /// <remarks>\n+    /// Types and members that come from metadata (or from another compilation) have no location in the compilation being analyzed.\n+    /// Their problems are reported by the compilation that defines them, so they are dropped here rather than being reported\n+    /// against a location that does not exist, which analyzers are not permitted to do.\n+    /// </remarks>\n+    private void ReportIfLocatedInCompilation(Action<Diagnostic> report, Diagnostic diagnostic)\n+    {\n+        if (diagnostic.Location.IsInSource && this.compilation.ContainsSyntaxTree(diagnostic.Location.SourceTree))\n+        {\n+            report(diagnostic);\n+        }\n+    }\n+\n     private static Location? GetLocation(IParameterSymbol parameter) => parameter.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation();\n \n     private static Location? GetParameterListLocation(IMethodSymbol? method) => ((BaseMethodDeclarationSyntax?)method?.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax())?.ParameterList.GetLocation();",
+    "functions": [
+     {
+      "key": "TypeCollector",
+      "name": "TypeCollector",
+      "line": 236,
+      "endLine": 261,
+      "isNew": false,
+      "added": 1,
+      "removed": 1
+     },
+     {
+      "key": "GetObjectInfo",
+      "name": "GetObjectInfo",
+      "line": 700,
+      "endLine": 1418,
+      "isNew": false,
+      "added": 2,
+      "removed": 2
+     },
+     {
+      "key": "GetPropertyIdentifierLocation",
+      "name": "GetPropertyIdentifierLocation",
+      "line": 1434,
+      "endLine": 1434,
+      "isNew": true,
+      "added": 1,
+      "removed": 0
+     },
+     {
+      "key": "ReportIfLocatedInCompilation",
+      "name": "ReportIfLocatedInCompilation",
+      "line": 1444,
+      "endLine": 1450,
+      "isNew": true,
+      "added": 7,
+      "removed": 0
+     }
+    ],
+    "linesOutsideFunctions": 15
+   },
+   {
+    "file": "tests/MessagePack.SourceGenerator.Tests/GenericsFormatterTests.cs",
+    "status": "M",
+    "kind": "test",
+    "added": 189,
+    "removed": 0,
+    "patch": "@@ -1,7 +1,9 @@\n // Copyright (c) All contributors. All rights reserved.\n // Licensed under the MIT license. See LICENSE file in the project root for full license information.\n \n+using Microsoft.CodeAnalysis;\n using Microsoft.CodeAnalysis.CSharp;\n+using Microsoft.CodeAnalysis.Testing;\n using VerifyCS = CSharpSourceGeneratorVerifier<MessagePack.SourceGenerator.MessagePackGenerator>;\n \n public class GenericsFormatterTests\n@@ -494,6 +496,193 @@\n         }.RunAsync();\n     }\n \n+    /// <summary>\n+    /// Asserts that a closed generic value type defined in a referenced <em>assembly</em> (metadata only, no syntax),\n+    /// used as a member type, does not crash the generator or analyzer.\n+    /// </summary>\n+    /// <remarks>\n+    /// See https://github.com/MessagePack-CSharp/MessagePack-CSharp/issues/2283.\n+    /// </remarks>\n+    [Fact]\n+    public async Task ClosedGenericStruct_FromMetadataReference()\n+    {\n+        string defineSource = \"\"\"\n+using MessagePack;\n+\n+namespace TempProject\n+{\n+    [MessagePackObject]\n+    public struct MyGenericStruct<T>\n+    {\n+        [Key(0)]\n+        public T Content { get; set; }\n+    }\n+}\n+\"\"\";\n+\n+        string usageSource = \"\"\"\n+using MessagePack;\n+\n+namespace TempProject\n+{\n+    [MessagePackObject]\n+    public class MyObject\n+    {\n+        [Key(0)]\n+        public MyGenericStruct<int> Value { get; set; }\n+    }\n+\n+    [GeneratedMessagePackResolver]\n+    partial class MyResolver { }\n+}\n+\"\"\";\n+\n+        await RunWithMetadataReferenceAsync(defineSource, usageSource, \"TempProject.MyResolver.g.cs\");\n+    }\n+\n+    /// <summary>\n+    /// Asserts that a closed generic <em>record struct</em> defined in a referenced assembly, used as a member type,\n+    /// does not crash the generator or analyzer.\n+    /// </summary>\n+    /// <remarks>\n+    /// See https://github.com/MessagePack-CSharp/MessagePack-CSharp/issues/2283.\n+    /// </remarks>\n+    [Fact]\n+    public async Task ClosedGenericRecordStruct_FromMetadataReference()\n+    {\n+        string defineSource = \"\"\"\n+using MessagePack;\n+\n+namespace Lib;\n+\n+[MessagePackObject]\n+public partial record struct Item<T>([property: Key(0)] string Key);\n+\"\"\";\n+\n+        string usageSource = \"\"\"\n+using MessagePack;\n+using Lib;\n+\n+namespace App;\n+\n+[MessagePackObject]\n+public sealed partial record Cmd([property: Key(0)] string Scope)\n+{\n+    [Key(1)]\n+    public Item<int> Member { get; init; }\n+}\n+\n+[GeneratedMessagePackResolver]\n+partial class AppResolver { }\n+\"\"\";\n+\n+        await RunWithMetadataReferenceAsync(defineSource, usageSource, \"App.AppResolver.g.cs\", LanguageVersion.Latest);\n+    }\n+\n+    /// <summary>\n+    /// Asserts that a closed generic value type from a referenced assembly whose members lack a key attribute\n+    /// does not crash the generator or analyzer, since its member diagnostics belong to the defining assembly.\n+    /// </summary>\n+    /// <remarks>\n+    /// See https://github.com/MessagePack-CSharp/MessagePack-CSharp/issues/2283.\n+    /// </remarks>\n+    [Fact]\n+    public async Task ClosedGenericStruct_FromMetadataReference_UnkeyedMember()\n+    {\n+        string defineSource = \"\"\"\n+using MessagePack;\n+\n+namespace TempProject\n+{\n+    [MessagePackObject]\n+    public struct MyGenericStruct<T>\n+    {\n+        [Key(0)]\n+        public string Key { get; set; }\n+\n+        public int Unkeyed { get; set; }\n+    }\n+}\n+\"\"\";\n+\n+        string usageSource = \"\"\"\n+using MessagePack;\n+\n+namespace TempProject\n+{\n+    [MessagePackObject]\n+    public class MyObject\n+    {\n+        [Key(0)]\n+        public MyGenericStruct<int> Value { get; set; }\n+    }\n+\n+    [GeneratedMessagePackResolver]\n+    partial class MyResolver { }\n+}\n+\"\"\";\n+\n+        await RunWithMetadataReferenceAsync(defineSource, usageSource, \"TempProject.MyResolver.g.cs\");\n+    }\n+\n+    /// <summary>\n+    /// Compiles <paramref name=\"defineSource\"/> to an assembly image, then verifies that the analyzers and the generator\n+    /// handle <paramref name=\"usageSource\"/> without diagnostics, referencing that image as metadata only,\n+    /// and that the resolver named <paramref name=\"expectedResolverHintName\"/> is generated.\n+    /// </summary>\n+    private static async Task RunWithMetadataReferenceAsync(string defineSource, string usageSource, string expectedResolverHintName, LanguageVersion languageVersion = LanguageVersion.CSharp7_3)\n+    {\n+        MetadataReference definingAssembly = await CompileToMetadataReferenceAsync(\"DefiningProject\", defineSource, languageVersion);\n+\n+        // Run the analyzers and the generator, failing on any diagnostic (the defect surfaced as AD0001 and CS8785).\n+        var test = new VerifyCS.Test(ReferencesSet.MessagePack)\n+        {\n+            LanguageVersion = languageVersion,\n+            TestBehaviors = TestBehaviors.SkipGeneratedSourcesCheck,\n+            TestState =\n+            {\n+                Sources = { usageSource },\n+            },\n+        };\n+        test.TestState.AdditionalReferences.Add(definingAssembly);\n+        await test.RunAsync();\n+\n+        // Verify that the resolver was actually generated for the usage assembly, since the defect caused it to be silently omitted.\n+        ImmutableArray<MetadataReference> frameworkReferences = await ReferenceAssemblies.Net.Net80.ResolveAsync(LanguageNames.CSharp, CancellationToken.None);\n+        Compilation usageCompilation = CreateCompilation(\"App\", usageSource, languageVersion, frameworkReferences.Concat(ReferencesHelper.GetReferences(ReferencesSet.MessagePack)).Append(definingAssembly));\n+        GeneratorDriverRunResult runResult = CSharpGeneratorDriver.Create(new MessagePack.SourceGenerator.MessagePackGenerator().AsSourceGenerator())\n+            .RunGenerators(usageCompilation)\n+            .GetRunResult();\n+        Assert.Empty(runResult.Diagnostics.Where(d => d.Severity >= DiagnosticSeverity.Warning));\n+        var hintNames = runResult.Results.SelectMany(r => r.GeneratedSources).Select(s => s.HintName).ToList();\n+        Assert.Contains(expectedResolverHintName, hintNames);\n+    }\n+\n+    private static async Task<MetadataReference> CompileToMetadataReferenceAsync(string assemblyName, string source, LanguageVersion languageVersion)\n+    {\n+        ImmutableArray<MetadataReference> frameworkReferences = await ReferenceAssemblies.Net.Net80.ResolveAsync(LanguageNames.CSharp, CancellationToken.None);\n+        Compilation compilation = CreateCompilation(assemblyName, source, languageVersion, frameworkReferences.Concat(ReferencesHelper.GetReferences(ReferencesSet.MessagePack)), OutputKind.DynamicallyLinkedLibrary);\n+\n+        using var stream = new MemoryStream();\n+        Microsoft.CodeAnalysis.Emit.EmitResult emitResult = compilation.Emit(stream);\n+        if (!emitResult.Success)\n+        {\n+            throw new InvalidOperationException(\"Failed to compile referenced assembly: \" + string.Join(Environment.NewLine, emitResult.Diagnostics));\n+        }\n+\n+        return MetadataReference.CreateFromImage(stream.ToArray());\n+    }\n+\n+    private static Compilation CreateCompilation(string assemblyName, string source, LanguageVersion languageVersion, IEnumerable<MetadataReference> references, OutputKind outputKind = OutputKind.DynamicallyLinkedLibrary)\n+    {\n+        var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(languageVersion);\n+        return CSharpCompilation.Create(\n+            assemblyName,\n+            new[] { CSharpSyntaxTree.ParseText(source, parseOptions) },\n+            references.ToArray(),\n+            new CSharpCompilationOptions(outputKind));\n+    }\n+\n     /// <summary>\n     /// Asserts that the generator can handle directly recursive generic constraints.\n     /// </summary>",
+    "functions": [
+     {
+      "key": "ClosedGenericStruct_FromMetadataReference",
+      "name": "ClosedGenericStruct_FromMetadataReference",
+      "line": 507,
+      "endLine": 541,
+      "isNew": true,
+      "added": 35,
+      "removed": 0
+     },
+     {
+      "key": "ClosedGenericRecordStruct_FromMetadataReference",
+      "name": "ClosedGenericRecordStruct_FromMetadataReference",
+      "line": 551,
+      "endLine": 580,
+      "isNew": true,
+      "added": 30,
+      "removed": 0
+     },
+     {
+      "key": "ClosedGenericStruct_FromMetadataReference_UnkeyedMember",
+      "name": "ClosedGenericStruct_FromMetadataReference_UnkeyedMember",
+      "line": 590,
+      "endLine": 626,
+      "isNew": true,
+      "added": 37,
+      "removed": 0
+     },
+     {
+      "key": "RunWithMetadataReferenceAsync",
+      "name": "RunWithMetadataReferenceAsync",
+      "line": 633,
+      "endLine": 659,
+      "isNew": true,
+      "added": 27,
+      "removed": 0
+     },
+     {
+      "key": "CompileToMetadataReferenceAsync",
+      "name": "CompileToMetadataReferenceAsync",
+      "line": 661,
+      "endLine": 674,
+      "isNew": true,
+      "added": 14,
+      "removed": 0
+     },
+     {
+      "key": "CreateCompilation",
+      "name": "CreateCompilation",
+      "line": 676,
+      "endLine": 684,
+      "isNew": true,
+      "added": 9,
+      "removed": 0
+     }
+    ],
+    "linesOutsideFunctions": 37
+   }
+  ]
+ },
+ "runs": [
+  {
+   "id": "minimal",
+   "prompt": "You are working in a copy of the MessagePack-CSharp repository (C#), at the commit just before the fix. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- This machine has no .NET SDK. You cannot build the code or run unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nMake the smallest change that meets the requirements. Touch as few files, as few functions and as few lines as you can. No refactoring, no tidy-ups, no renames and no doc changes. Add no unit tests unless the requirements cannot be met without them.\n\n## Requirements (from the pull request description)\n\nRequirement: Bug report #2283 in MessagePack-CSharp.\n\nWhy: The tool crashed on one kind of type that comes from another project. The build still looked fine. But a file the app needs was never made, so some apps broke when they ran.\n\nBefore and after: Before: the tool crashed and the file was missing. After: no crash.\n\nMust preserve: Other types from another project already worked. They must still work, and still show their warnings.\n\n## The bug report the Requirement row points to (issue #2283, word for word)\n\n# Generator and analyzer crash with IndexOutOfRangeException on a closed generic struct from a referenced assembly\n\n#### Bug description\n\nBoth `MessagePackGenerator` (CS8785) and `MsgPack00xMessagePackAnalyzer` (AD0001) throw `IndexOutOfRangeException` when a `[MessagePackObject]` type has a member whose type is a **closed generic value type defined in a referenced assembly**.\n\nBecause the generator then \"will not contribute to the output\", the compiling assembly silently ends up with **no generated resolver at all**. It is only a warning, so a normal build looks fine, but trimmed and NativeAOT apps fail at runtime. In our case three assemblies of a large app had been shipping without a resolver across two releases before we noticed.\n\n#### Repro steps\n\nTwo projects. `lib`:\n\n```csharp\nusing MessagePack;\nnamespace Lib;\n\n[MessagePackObject]\npublic partial record struct Item<T>([property: Key(0)] string Key);\n```\n\n`app`, with a `ProjectReference` to `lib`:\n\n```csharp\nusing MessagePack; using Lib;\nnamespace App;\n\n[MessagePackObject]\npublic sealed partial record Cmd([property: Key(0)] string Scope)\n{\n    [Key(1)] public Item<int> Member { get; init; }\n}\n```\n\nThen `dotnet build` on `app`. Both projects are in the attached `mp-repro.zip`.\n\n#### Expected behavior\n\nA clean build, with a generated resolver in `app`.\n#### Actual behavior\n\n```\nCSC : warning CS8785: Generator 'MessagePackGenerator' failed to generate source. It will not\ncontribute to the output and compilation errors may occur as a result. Exception was of type\n'IndexOutOfRangeException' with message 'Index was outside the bounds of the array.'.\nCSC : warning AD0001: Analyzer 'MessagePack.SourceGenerator.Analyzers.MsgPack00xMessagePackAnalyzer'\nthrew an exception of type 'System.IndexOutOfRangeException' with message 'Index was outside the\nbounds of the array.'.\n```\n\n`app.dll` contains no `GeneratedMessagePackResolver`.\n\n- Version used: MessagePack 3.1.8\n- Runtime: .NET 10 (SDK 10.0.204), Windows 11\n\n#### Additional context\n\n**What triggers it.** `Item` is declared in `lib`, `Cmd` in `app`:\n\n| `Item` declared as | result |\n|---|---|\n| `record struct Item<T>` | **crash** |\n| `struct Item<T>` | **crash** |\n| `struct Item` | ok |\n| `record struct Item` | ok |\n| `class Item<T>` | ok |\n| `record class Item<T>` | ok |\n\nSo it needs all three of: **generic**, **value type**, **from a referenced assembly**. Moving the identical `Item<T>` declaration into `app` itself makes the crash disappear, which is what makes this specific to metadata symbols.\n**Stack trace.**\n\n```\nSystem.IndexOutOfRangeException: Index was outside the bounds of the array.\n   at TypeCollector.GetObjectInfo(INamedTypeSymbol formattedType, ISymbol callerSymbol)\n   at TypeCollector.CollectGeneric(INamedTypeSymbol type, ISymbol callerSymbol) in TypeCollector.cs:line 661\n   at TypeCollector.CollectCore(ITypeSymbol typeSymbol, ISymbol callerSymbol) in TypeCollector.cs:line 371\n   at TypeCollector.GetObjectInfo(INamedTypeSymbol formattedType, ISymbol callerSymbol) in TypeCollector.cs:line 1062\n   at TypeCollector.CollectCore(ITypeSymbol typeSymbol, ISymbol callerSymbol) in TypeCollector.cs:line 386\n   at TypeCollector.Collect() in TypeCollector.cs:line 300\n   at MsgPack00xMessagePackAnalyzer.AnalyzeSymbol(SymbolAnalysisContext, ReferenceSymbols, AnalyzerOptions) in MsgPack00xMessagePackAnalyzer.cs:line 431\n```\n\n`CollectGeneric` line 661 is the closed-generic branch that calls `GetObjectInfo` directly:\n\n```csharp\nelse\n{\n    // NOTE: ... closed generic types such as `Foo<string>` are not registered as a formatter.\n    this.GetObjectInfo(type, callerSymbol);\n```\n\nso `GetObjectInfo` runs against a type that has no syntax. Several diagnostic paths inside it index `DeclaringSyntaxReferences[0]` directly (lines 735, 1009, 1101) instead of using `FirstOrDefault()` the way the neighbouring `GetIdentifierLocation` / `GetLocation` / `GetParameterListLocation` helpers already do, and that collection is empty for a metadata symbol. I did not narrow down which of the three fires.\n\n**Getting the stack trace.** Console output truncates the exception to its message; `-p:ErrorLog=out.sarif` preserves the full description, including the stack trace and an `ISymbol:` context line naming the offending type:\n\n```\ndotnet build -p:ErrorLog=out.sarif\n```\n\n**Workaround.** Putting `[MessagePackFormatter(typeof(ItemFormatter<>))]` on the generic value type short-circuits `CollectCore` (line 356) before `GetObjectInfo` is reached, at the cost of hand-writing the formatter.\n\n**Possibly related:** #2092 reports CS8785 from the v3 generator, but with a different inner exception and no repro.\n",
+   "instruction": "Make the smallest change that meets the requirements. Touch as few files, as few functions and as few lines as you can. No refactoring, no tidy-ups, no renames and no doc changes. Add no unit tests unless the requirements cannot be met without them.",
+   "startedAt": "2026-11-14T13:37:12Z",
+   "endedAt": "2026-11-14T13:38:18Z",
+   "exitCode": 0,
+   "modelInLog": "claude-fable-5-2",
+   "turns": 12,
+   "reply": "## What I changed\n\nOne file: `src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs`\n\nTwo lines inside `GetObjectInfo`:\n\n- **Line 1077** (the `MemberNeedsKey` warning for fields). This is the crash from the bug report. It used `item.DeclaringSyntaxReferences[0]`. Now it uses `item.DeclaringSyntaxReferences.FirstOrDefault()?`.\n- **Line 985** (the `BothStringAndIntKeyAreNull` warning for properties). Same unsafe `[0]`, same fix. The repro does not hit this one, but it would crash the same way.\n\n## Why it crashed\n\nA struct from another project still shows its hidden private fields. Those fields have no source code in the app's build, so the list was empty and `[0]` blew up. Classes hide their private fields, so they were fine.\n\n## Did it work\n\nNot tested. This machine has no .NET SDK, so I could not build or run anything. I checked it by reading the code only.\n\nWarnings are kept. They are still made the same way, just with no source location when there is none.\n\n## What you do next\n\nBuild and run the repro from issue #2283 on a machine with the .NET SDK:\n\n```\ndotnet build\n```\n\nIt should finish with no `CS8785` or `AD0001` warning, and `app.dll` should contain `GeneratedMessagePackResolver`.",
+   "toolCalls": {
+    "Grep": 3,
+    "Glob": 1,
+    "Read": 5,
+    "Edit": 2
+   },
+   "pathsOutsideFolder": [],
+   "files": [
+    {
+     "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+     "status": "M",
+     "kind": "code",
+     "added": 2,
+     "removed": 2,
+     "patch": "@@ -982,7 +982,7 @@ public class TypeCollector\n                     var stringKey = key is { Value: string stringKeyValue } ? stringKeyValue : default;\n                     if (intKey == null && stringKey == null)\n                     {\n-                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, ((PropertyDeclarationSyntax)item.DeclaringSyntaxReferences[0].GetSyntax()).Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n+                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, ((PropertyDeclarationSyntax?)item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax())?.Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n                     }\n \n                     // A property with an init accessor and an initializer has a default that will be discarded by the deserializer.\n@@ -1074,7 +1074,7 @@ public class TypeCollector\n                             {\n                                 Diagnostic diagnostic = derivedKeyAttribute is not null && suppressSourceGeneration is not true\n                                     ? Diagnostic.Create(MsgPack00xMessagePackAnalyzer.AOTDerivedKeyAttribute, derivedKeyAttribute.GetSyntax(this.cancellationToken).GetLocation())\n-                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences[0].GetSyntax().GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n+                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation(),formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n                                 if (nonPublicMembersAreSerialized || (item.DeclaredAccessibility & Accessibility.Public) == Accessibility.Public)\n                                 {\n                                     this.reportDiagnostic?.Invoke(diagnostic);",
+     "functions": [
+      {
+       "key": "GetObjectInfo",
+       "name": "GetObjectInfo",
+       "line": 700,
+       "endLine": 1418,
+       "isNew": false,
+       "added": 2,
+       "removed": 2
+      }
+     ],
+     "linesOutsideFunctions": 0
+    }
+   ]
+  },
+  {
+   "id": "normal",
+   "prompt": "You are working in a copy of the MessagePack-CSharp repository (C#), at the commit just before the fix. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- This machine has no .NET SDK. You cannot build the code or run unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nSolve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.\n\n## Requirements (from the pull request description)\n\nRequirement: Bug report #2283 in MessagePack-CSharp.\n\nWhy: The tool crashed on one kind of type that comes from another project. The build still looked fine. But a file the app needs was never made, so some apps broke when they ran.\n\nBefore and after: Before: the tool crashed and the file was missing. After: no crash.\n\nMust preserve: Other types from another project already worked. They must still work, and still show their warnings.\n\n## The bug report the Requirement row points to (issue #2283, word for word)\n\n# Generator and analyzer crash with IndexOutOfRangeException on a closed generic struct from a referenced assembly\n\n#### Bug description\n\nBoth `MessagePackGenerator` (CS8785) and `MsgPack00xMessagePackAnalyzer` (AD0001) throw `IndexOutOfRangeException` when a `[MessagePackObject]` type has a member whose type is a **closed generic value type defined in a referenced assembly**.\n\nBecause the generator then \"will not contribute to the output\", the compiling assembly silently ends up with **no generated resolver at all**. It is only a warning, so a normal build looks fine, but trimmed and NativeAOT apps fail at runtime. In our case three assemblies of a large app had been shipping without a resolver across two releases before we noticed.\n\n#### Repro steps\n\nTwo projects. `lib`:\n\n```csharp\nusing MessagePack;\nnamespace Lib;\n\n[MessagePackObject]\npublic partial record struct Item<T>([property: Key(0)] string Key);\n```\n\n`app`, with a `ProjectReference` to `lib`:\n\n```csharp\nusing MessagePack; using Lib;\nnamespace App;\n\n[MessagePackObject]\npublic sealed partial record Cmd([property: Key(0)] string Scope)\n{\n    [Key(1)] public Item<int> Member { get; init; }\n}\n```\n\nThen `dotnet build` on `app`. Both projects are in the attached `mp-repro.zip`.\n\n#### Expected behavior\n\nA clean build, with a generated resolver in `app`.\n#### Actual behavior\n\n```\nCSC : warning CS8785: Generator 'MessagePackGenerator' failed to generate source. It will not\ncontribute to the output and compilation errors may occur as a result. Exception was of type\n'IndexOutOfRangeException' with message 'Index was outside the bounds of the array.'.\nCSC : warning AD0001: Analyzer 'MessagePack.SourceGenerator.Analyzers.MsgPack00xMessagePackAnalyzer'\nthrew an exception of type 'System.IndexOutOfRangeException' with message 'Index was outside the\nbounds of the array.'.\n```\n\n`app.dll` contains no `GeneratedMessagePackResolver`.\n\n- Version used: MessagePack 3.1.8\n- Runtime: .NET 10 (SDK 10.0.204), Windows 11\n\n#### Additional context\n\n**What triggers it.** `Item` is declared in `lib`, `Cmd` in `app`:\n\n| `Item` declared as | result |\n|---|---|\n| `record struct Item<T>` | **crash** |\n| `struct Item<T>` | **crash** |\n| `struct Item` | ok |\n| `record struct Item` | ok |\n| `class Item<T>` | ok |\n| `record class Item<T>` | ok |\n\nSo it needs all three of: **generic**, **value type**, **from a referenced assembly**. Moving the identical `Item<T>` declaration into `app` itself makes the crash disappear, which is what makes this specific to metadata symbols.\n**Stack trace.**\n\n```\nSystem.IndexOutOfRangeException: Index was outside the bounds of the array.\n   at TypeCollector.GetObjectInfo(INamedTypeSymbol formattedType, ISymbol callerSymbol)\n   at TypeCollector.CollectGeneric(INamedTypeSymbol type, ISymbol callerSymbol) in TypeCollector.cs:line 661\n   at TypeCollector.CollectCore(ITypeSymbol typeSymbol, ISymbol callerSymbol) in TypeCollector.cs:line 371\n   at TypeCollector.GetObjectInfo(INamedTypeSymbol formattedType, ISymbol callerSymbol) in TypeCollector.cs:line 1062\n   at TypeCollector.CollectCore(ITypeSymbol typeSymbol, ISymbol callerSymbol) in TypeCollector.cs:line 386\n   at TypeCollector.Collect() in TypeCollector.cs:line 300\n   at MsgPack00xMessagePackAnalyzer.AnalyzeSymbol(SymbolAnalysisContext, ReferenceSymbols, AnalyzerOptions) in MsgPack00xMessagePackAnalyzer.cs:line 431\n```\n\n`CollectGeneric` line 661 is the closed-generic branch that calls `GetObjectInfo` directly:\n\n```csharp\nelse\n{\n    // NOTE: ... closed generic types such as `Foo<string>` are not registered as a formatter.\n    this.GetObjectInfo(type, callerSymbol);\n```\n\nso `GetObjectInfo` runs against a type that has no syntax. Several diagnostic paths inside it index `DeclaringSyntaxReferences[0]` directly (lines 735, 1009, 1101) instead of using `FirstOrDefault()` the way the neighbouring `GetIdentifierLocation` / `GetLocation` / `GetParameterListLocation` helpers already do, and that collection is empty for a metadata symbol. I did not narrow down which of the three fires.\n\n**Getting the stack trace.** Console output truncates the exception to its message; `-p:ErrorLog=out.sarif` preserves the full description, including the stack trace and an `ISymbol:` context line naming the offending type:\n\n```\ndotnet build -p:ErrorLog=out.sarif\n```\n\n**Workaround.** Putting `[MessagePackFormatter(typeof(ItemFormatter<>))]` on the generic value type short-circuits `CollectCore` (line 356) before `GetObjectInfo` is reached, at the cost of hand-writing the formatter.\n\n**Possibly related:** #2092 reports CS8785 from the v3 generator, but with a different inner exception and no repro.\n",
+   "instruction": "Solve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.",
+   "startedAt": "2026-11-14T13:37:12Z",
+   "endedAt": "2026-11-14T13:38:46Z",
+   "exitCode": 0,
+   "modelInLog": "claude-fable-5-2",
+   "turns": 13,
+   "reply": "## What I changed\n\nOne file: `src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs`\n\n- **Fixed the crash.** Two spots read `DeclaringSyntaxReferences[0]`, the first source-code location of a member. A type from another project has no source, so that list is empty. They now use `FirstOrDefault()`, and the warning is still shown, just without a location.\n- **Stopped the false trigger.** The crash was set off by the hidden field the compiler makes behind an auto-property (`<Key>k__BackingField`). The tool wanted to warn that it \"needs a key\". I added a small helper, `IsCompilerGeneratedField`, and such fields are now skipped.\n\n## Did it work\n\nNot tested. This machine has no .NET SDK, so nothing was built or run. The fix comes from reading the code.\n\nI did not add a test. The test harness links projects as source, so it cannot hit this bug. A real test needs a compiled reference plus snapshot files, which I can't make here.\n\n## What you need to do next\n\n1. Run the tests in `tests/MessagePack.SourceGenerator.Tests`.\n2. Build the `mp-repro.zip` repro from the issue. Check there is no CS8785 or AD0001 warning, and that `app.dll` has a `GeneratedMessagePackResolver`.",
+   "toolCalls": {
+    "Grep": 2,
+    "Glob": 1,
+    "Read": 4,
+    "Edit": 5
+   },
+   "pathsOutsideFolder": [],
+   "files": [
+    {
+     "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+     "status": "M",
+     "kind": "code",
+     "added": 16,
+     "removed": 4,
+     "patch": "@@ -750,7 +750,7 @@ public class TypeCollector\n \n         HashSet<Diagnostic> reportedDiagnostics = new();\n         IEnumerable<ISymbol> instanceMembers = formattedType.GetAllMembers()\n-            .Where(m => m is IFieldSymbol or IPropertySymbol && !(m.IsStatic || m.IsOverride || m.IsImplicitlyDeclared));\n+            .Where(m => m is IFieldSymbol or IPropertySymbol && !(m.IsStatic || m.IsOverride || m.IsImplicitlyDeclared || IsCompilerGeneratedField(m)));\n \n         // The actual member identifiers of each serializable member,\n         // such that we'll recognize collisions as we enumerate members in base types\n@@ -982,7 +982,7 @@ public class TypeCollector\n                     var stringKey = key is { Value: string stringKeyValue } ? stringKeyValue : default;\n                     if (intKey == null && stringKey == null)\n                     {\n-                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, ((PropertyDeclarationSyntax)item.DeclaringSyntaxReferences[0].GetSyntax()).Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n+                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, (item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax(this.cancellationToken) as PropertyDeclarationSyntax)?.Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n                     }\n \n                     // A property with an init accessor and an initializer has a default that will be discarded by the deserializer.\n@@ -1047,7 +1047,7 @@ public class TypeCollector\n \n             foreach (IFieldSymbol item in formattedType.GetAllMembers().OfType<IFieldSymbol>())\n             {\n-                if (item.IsImplicitlyDeclared || item.IsStatic)\n+                if (item.IsImplicitlyDeclared || item.IsStatic || IsCompilerGeneratedField(item))\n                 {\n                     continue;\n                 }\n@@ -1074,7 +1074,7 @@ public class TypeCollector\n                             {\n                                 Diagnostic diagnostic = derivedKeyAttribute is not null && suppressSourceGeneration is not true\n                                     ? Diagnostic.Create(MsgPack00xMessagePackAnalyzer.AOTDerivedKeyAttribute, derivedKeyAttribute.GetSyntax(this.cancellationToken).GetLocation())\n-                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences[0].GetSyntax().GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n+                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax(this.cancellationToken).GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n                                 if (nonPublicMembersAreSerialized || (item.DeclaredAccessibility & Accessibility.Public) == Accessibility.Public)\n                                 {\n                                     this.reportDiagnostic?.Invoke(diagnostic);\n@@ -1424,6 +1424,18 @@ public class TypeCollector\n                select x.FirstDeclaration;\n     }\n \n+    /// <summary>\n+    /// Tests whether a member is a compiler-generated field (e.g. the backing field of an auto-property) that was loaded from a referenced assembly.\n+    /// </summary>\n+    /// <param name=\"member\">The member to test.</param>\n+    /// <returns><see langword=\"true\" /> if the member is a field whose name could not have been written in source code.</returns>\n+    /// <remarks>\n+    /// Fields declared in source report <see cref=\"ISymbol.IsImplicitlyDeclared\"/> when the compiler generated them,\n+    /// but that is not preserved in metadata. There, such fields can only be recognized by their unspeakable names (e.g. <c>&lt;Name&gt;k__BackingField</c>).\n+    /// These fields show up on value types in particular, because private fields of structs are always imported from metadata.\n+    /// </remarks>\n+    private static bool IsCompilerGeneratedField(ISymbol member) => member is IFieldSymbol && !SyntaxFacts.IsValidIdentifier(member.Name);\n+\n     private static Location? GetIdentifierLocation(INamedTypeSymbol type) => ((BaseTypeDeclarationSyntax?)type.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax())?.Identifier.GetLocation();\n \n     private static Location? GetLocation(IParameterSymbol parameter) => parameter.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation();",
+     "functions": [
+      {
+       "key": "GetObjectInfo",
+       "name": "GetObjectInfo",
+       "line": 700,
+       "endLine": 1418,
+       "isNew": false,
+       "added": 4,
+       "removed": 4
+      },
+      {
+       "key": "IsCompilerGeneratedField",
+       "name": "IsCompilerGeneratedField",
+       "line": 1437,
+       "endLine": 1437,
+       "isNew": true,
+       "added": 1,
+       "removed": 0
+      }
+     ],
+     "linesOutsideFunctions": 11
+    }
+   ]
+  },
+  {
+   "id": "wide",
+   "prompt": "You are working in a copy of the MessagePack-CSharp repository (C#), at the commit just before the fix. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- This machine has no .NET SDK. You cannot build the code or run unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nYou are free to go well beyond the smallest fix. While you solve the problem, also refactor, tidy up and harden the code around it wherever you think it helps: similar weak spots elsewhere, shared helpers, naming, docs, unit tests. Prefer a broad, thorough change over a narrow one. The requirements must still be met.\n\n## Requirements (from the pull request description)\n\nRequirement: Bug report #2283 in MessagePack-CSharp.\n\nWhy: The tool crashed on one kind of type that comes from another project. The build still looked fine. But a file the app needs was never made, so some apps broke when they ran.\n\nBefore and after: Before: the tool crashed and the file was missing. After: no crash.\n\nMust preserve: Other types from another project already worked. They must still work, and still show their warnings.\n\n## The bug report the Requirement row points to (issue #2283, word for word)\n\n# Generator and analyzer crash with IndexOutOfRangeException on a closed generic struct from a referenced assembly\n\n#### Bug description\n\nBoth `MessagePackGenerator` (CS8785) and `MsgPack00xMessagePackAnalyzer` (AD0001) throw `IndexOutOfRangeException` when a `[MessagePackObject]` type has a member whose type is a **closed generic value type defined in a referenced assembly**.\n\nBecause the generator then \"will not contribute to the output\", the compiling assembly silently ends up with **no generated resolver at all**. It is only a warning, so a normal build looks fine, but trimmed and NativeAOT apps fail at runtime. In our case three assemblies of a large app had been shipping without a resolver across two releases before we noticed.\n\n#### Repro steps\n\nTwo projects. `lib`:\n\n```csharp\nusing MessagePack;\nnamespace Lib;\n\n[MessagePackObject]\npublic partial record struct Item<T>([property: Key(0)] string Key);\n```\n\n`app`, with a `ProjectReference` to `lib`:\n\n```csharp\nusing MessagePack; using Lib;\nnamespace App;\n\n[MessagePackObject]\npublic sealed partial record Cmd([property: Key(0)] string Scope)\n{\n    [Key(1)] public Item<int> Member { get; init; }\n}\n```\n\nThen `dotnet build` on `app`. Both projects are in the attached `mp-repro.zip`.\n\n#### Expected behavior\n\nA clean build, with a generated resolver in `app`.\n#### Actual behavior\n\n```\nCSC : warning CS8785: Generator 'MessagePackGenerator' failed to generate source. It will not\ncontribute to the output and compilation errors may occur as a result. Exception was of type\n'IndexOutOfRangeException' with message 'Index was outside the bounds of the array.'.\nCSC : warning AD0001: Analyzer 'MessagePack.SourceGenerator.Analyzers.MsgPack00xMessagePackAnalyzer'\nthrew an exception of type 'System.IndexOutOfRangeException' with message 'Index was outside the\nbounds of the array.'.\n```\n\n`app.dll` contains no `GeneratedMessagePackResolver`.\n\n- Version used: MessagePack 3.1.8\n- Runtime: .NET 10 (SDK 10.0.204), Windows 11\n\n#### Additional context\n\n**What triggers it.** `Item` is declared in `lib`, `Cmd` in `app`:\n\n| `Item` declared as | result |\n|---|---|\n| `record struct Item<T>` | **crash** |\n| `struct Item<T>` | **crash** |\n| `struct Item` | ok |\n| `record struct Item` | ok |\n| `class Item<T>` | ok |\n| `record class Item<T>` | ok |\n\nSo it needs all three of: **generic**, **value type**, **from a referenced assembly**. Moving the identical `Item<T>` declaration into `app` itself makes the crash disappear, which is what makes this specific to metadata symbols.\n**Stack trace.**\n\n```\nSystem.IndexOutOfRangeException: Index was outside the bounds of the array.\n   at TypeCollector.GetObjectInfo(INamedTypeSymbol formattedType, ISymbol callerSymbol)\n   at TypeCollector.CollectGeneric(INamedTypeSymbol type, ISymbol callerSymbol) in TypeCollector.cs:line 661\n   at TypeCollector.CollectCore(ITypeSymbol typeSymbol, ISymbol callerSymbol) in TypeCollector.cs:line 371\n   at TypeCollector.GetObjectInfo(INamedTypeSymbol formattedType, ISymbol callerSymbol) in TypeCollector.cs:line 1062\n   at TypeCollector.CollectCore(ITypeSymbol typeSymbol, ISymbol callerSymbol) in TypeCollector.cs:line 386\n   at TypeCollector.Collect() in TypeCollector.cs:line 300\n   at MsgPack00xMessagePackAnalyzer.AnalyzeSymbol(SymbolAnalysisContext, ReferenceSymbols, AnalyzerOptions) in MsgPack00xMessagePackAnalyzer.cs:line 431\n```\n\n`CollectGeneric` line 661 is the closed-generic branch that calls `GetObjectInfo` directly:\n\n```csharp\nelse\n{\n    // NOTE: ... closed generic types such as `Foo<string>` are not registered as a formatter.\n    this.GetObjectInfo(type, callerSymbol);\n```\n\nso `GetObjectInfo` runs against a type that has no syntax. Several diagnostic paths inside it index `DeclaringSyntaxReferences[0]` directly (lines 735, 1009, 1101) instead of using `FirstOrDefault()` the way the neighbouring `GetIdentifierLocation` / `GetLocation` / `GetParameterListLocation` helpers already do, and that collection is empty for a metadata symbol. I did not narrow down which of the three fires.\n\n**Getting the stack trace.** Console output truncates the exception to its message; `-p:ErrorLog=out.sarif` preserves the full description, including the stack trace and an `ISymbol:` context line naming the offending type:\n\n```\ndotnet build -p:ErrorLog=out.sarif\n```\n\n**Workaround.** Putting `[MessagePackFormatter(typeof(ItemFormatter<>))]` on the generic value type short-circuits `CollectCore` (line 356) before `GetObjectInfo` is reached, at the cost of hand-writing the formatter.\n\n**Possibly related:** #2092 reports CS8785 from the v3 generator, but with a different inner exception and no repro.\n",
+   "instruction": "You are free to go well beyond the smallest fix. While you solve the problem, also refactor, tidy up and harden the code around it wherever you think it helps: similar weak spots elsewhere, shared helpers, naming, docs, unit tests. Prefer a broad, thorough change over a narrow one. The requirements must still be met.",
+   "startedAt": "2026-11-14T13:37:12Z",
+   "endedAt": "2026-11-14T13:41:08Z",
+   "exitCode": 0,
+   "modelInLog": "claude-fable-5-2",
+   "turns": 40,
+   "reply": "## What I changed\n\nThe crash is fixed in the code. **Not tested**: this machine has no .NET SDK, so nothing was built or run.\n\n**Cause:** A struct from another project also brings along its hidden backing fields (the secret storage behind a property). The tool tried to point a warning at the source code of one. There is no source code for it, so it crashed.\n\n**Files:**\n\n1. `src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs` — the real fix.\n   - Hidden compiler-made fields are now skipped, so no false \"needs a key\" warning shows up.\n   - Every \"where is this in the code?\" lookup now returns \"nowhere\" instead of crashing. This also covers the other two spots the bug report named.\n   - Warnings for other types are built the same way as before.\n\n2. `src/MessagePack.Analyzers.CodeFixes/CodeFixes/MessagePackCodeFixProvider.cs` — same weak spot in the \"add `[Key]`\" quick fix. It now skips types and members that have no source code.\n\n3. `tests/MessagePack.SourceGenerator.Tests/ReferencedAssemblyTypeTests.cs` — new test file with 5 cases. Each one builds `Lib` into a real assembly, then checks there is no crash and the resolver file is made.\n\n## One thing to know\n\nThe new test is the riskiest part. I wrote it without a compiler, so it may need a small fix to build.\n\nI skipped the `second-brain` check from your `CLAUDE.md`, because it needs git and this run bans git. There is no `repo_brain/` folder.\n\n## What you do next\n\nOn a machine with the .NET SDK, run:\n\n```\ndotnet test tests/MessagePack.SourceGenerator.Tests/MessagePack.SourceGenerator.Tests.csproj\n```",
+   "toolCalls": {
+    "Glob": 4,
+    "Grep": 7,
+    "Read": 13,
+    "Edit": 14,
+    "Write": 1
+   },
+   "pathsOutsideFolder": [],
+   "files": [
+    {
+     "file": "src/MessagePack.Analyzers.CodeFixes/CodeFixes/MessagePackCodeFixProvider.cs",
+     "status": "M",
+     "kind": "code",
+     "added": 3,
+     "removed": 2,
+     "patch": "@@ -183,7 +183,8 @@ public class MessagePackCodeFixProvider : CodeFixProvider\n \n         foreach (var member in targets)\n         {\n-            if (!member.IsImplicitlyDeclared && member.GetAttributes().FindAttributeShortName(MsgPack00xMessagePackAnalyzer.KeyAttributeShortName) is null)\n+            // Members that come from a referenced assembly have no syntax that we can add an attribute to.\n+            if (!member.IsImplicitlyDeclared && !member.DeclaringSyntaxReferences.IsEmpty && member.GetAttributes().FindAttributeShortName(MsgPack00xMessagePackAnalyzer.KeyAttributeShortName) is null)\n             {\n                 var node = await member.DeclaringSyntaxReferences[0].GetSyntaxAsync(cancellationToken).ConfigureAwait(false);\n                 var documentEditor = await solutionEditor.GetDocumentEditorAsync(document.Project.Solution.GetDocumentId(node.SyntaxTree), cancellationToken).ConfigureAwait(false);\n@@ -212,7 +213,7 @@ public class MessagePackCodeFixProvider : CodeFixProvider\n             }\n         }\n \n-        if (type.GetAttributes().FindAttributeShortName(MsgPack00xMessagePackAnalyzer.MessagePackObjectAttributeShortName) == null)\n+        if (!type.DeclaringSyntaxReferences.IsEmpty && type.GetAttributes().FindAttributeShortName(MsgPack00xMessagePackAnalyzer.MessagePackObjectAttributeShortName) == null)\n         {\n             var node = await type.DeclaringSyntaxReferences[0].GetSyntaxAsync(cancellationToken).ConfigureAwait(false);\n             var documentEditor = await solutionEditor.GetDocumentEditorAsync(document.Project.Solution.GetDocumentId(node.SyntaxTree), cancellationToken).ConfigureAwait(false);",
+     "functions": [
+      {
+       "key": "AddKeyAttributeAsync",
+       "name": "AddKeyAttributeAsync",
+       "line": 168,
+       "endLine": 225,
+       "isNew": false,
+       "added": 3,
+       "removed": 2
+      }
+     ],
+     "linesOutsideFunctions": 0
+    },
+    {
+     "file": "src/MessagePack.SourceGenerator/CodeAnalysis/TypeCollector.cs",
+     "status": "M",
+     "kind": "code",
+     "added": 53,
+     "removed": 20,
+     "patch": "@@ -394,7 +394,7 @@ public class TypeCollector\n         ImmutableArray<TypedConstant>[] unionAttrs = type.GetAttributes().Where(x => x.AttributeClass.ApproximatelyEqual(this.typeReferences.UnionAttribute)).Select(x => x.ConstructorArguments).ToArray();\n         if (unionAttrs.Length == 0)\n         {\n-            this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.UnionAttributeRequired, type.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n+            this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.UnionAttributeRequired, GetDeclarationLocation(type)));\n         }\n \n         // 0, Int  1, SubType\n@@ -750,7 +750,7 @@ public class TypeCollector\n \n         HashSet<Diagnostic> reportedDiagnostics = new();\n         IEnumerable<ISymbol> instanceMembers = formattedType.GetAllMembers()\n-            .Where(m => m is IFieldSymbol or IPropertySymbol && !(m.IsStatic || m.IsOverride || m.IsImplicitlyDeclared));\n+            .Where(m => m is IFieldSymbol or IPropertySymbol && !(m.IsStatic || m.IsOverride || m.IsImplicitlyDeclared) && !(m is IFieldSymbol field && IsCompilerGeneratedField(field)));\n \n         // The actual member identifiers of each serializable member,\n         // such that we'll recognize collisions as we enumerate members in base types\n@@ -922,12 +922,9 @@ public class TypeCollector\n                         {\n                             if (SymbolEqualityComparer.Default.Equals(item.ContainingType, formattedType))\n                             {\n-                                var syntax = item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax();\n-                                var identifier = (syntax as PropertyDeclarationSyntax)?.Identifier ?? (syntax as ParameterSyntax)?.Identifier;\n-\n                                 Diagnostic diagnostic = derivedKeyAttribute is not null && suppressSourceGeneration is not true\n                                     ? Diagnostic.Create(MsgPack00xMessagePackAnalyzer.AOTDerivedKeyAttribute, derivedKeyAttribute.GetSyntax(this.cancellationToken).GetLocation())\n-                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, identifier?.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n+                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, GetIdentifierLocation(item), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n                                 if (nonPublicMembersAreSerialized || (item.DeclaredAccessibility & Accessibility.Public) == Accessibility.Public)\n                                 {\n                                     this.reportDiagnostic?.Invoke(diagnostic);\n@@ -982,7 +979,7 @@ public class TypeCollector\n                     var stringKey = key is { Value: string stringKeyValue } ? stringKeyValue : default;\n                     if (intKey == null && stringKey == null)\n                     {\n-                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, ((PropertyDeclarationSyntax)item.DeclaringSyntaxReferences[0].GetSyntax()).Identifier.GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n+                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, GetIdentifierLocation(item), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name));\n                     }\n \n                     // A property with an init accessor and an initializer has a default that will be discarded by the deserializer.\n@@ -1004,7 +1001,7 @@ public class TypeCollector\n                     {\n                         if ((isIntKey && intKey == null) || (!isIntKey && stringKey == null))\n                         {\n-                            this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.DoNotMixStringAndIntKeys, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n+                            this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.DoNotMixStringAndIntKeys, GetDeclarationLocation(item)));\n                         }\n                     }\n \n@@ -1012,7 +1009,7 @@ public class TypeCollector\n                     {\n                         if (intMembers.ContainsKey(intKey!.Value))\n                         {\n-                            this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n+                            this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, GetDeclarationLocation(item)));\n                         }\n \n                         var member = new MemberSerializationInfo(true, isWritable, isReadable, isInitOnly, item.IsRequired, intKey!.Value, item.Name, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n@@ -1025,7 +1022,7 @@ public class TypeCollector\n                     {\n                         if (stringMembers.ContainsKey(stringKey!))\n                         {\n-                            this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n+                            this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, GetDeclarationLocation(item)));\n                         }\n \n                         var member = new MemberSerializationInfo(true, isWritable, isReadable, isInitOnly, item.IsRequired, hiddenIntKey++, stringKey!, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n@@ -1047,7 +1044,10 @@ public class TypeCollector\n \n             foreach (IFieldSymbol item in formattedType.GetAllMembers().OfType<IFieldSymbol>())\n             {\n-                if (item.IsImplicitlyDeclared || item.IsStatic)\n+                // Skip compiler-generated fields (e.g. auto-property backing fields).\n+                // These are flagged as implicitly declared only when the type comes from source,\n+                // so types from referenced assemblies need the name-based check as well.\n+                if (IsCompilerGeneratedField(item) || item.IsStatic)\n                 {\n                     continue;\n                 }\n@@ -1074,7 +1074,7 @@ public class TypeCollector\n                             {\n                                 Diagnostic diagnostic = derivedKeyAttribute is not null && suppressSourceGeneration is not true\n                                     ? Diagnostic.Create(MsgPack00xMessagePackAnalyzer.AOTDerivedKeyAttribute, derivedKeyAttribute.GetSyntax(this.cancellationToken).GetLocation())\n-                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, item.DeclaringSyntaxReferences[0].GetSyntax().GetLocation(), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n+                                    : Diagnostic.Create(MsgPack00xMessagePackAnalyzer.MemberNeedsKey, GetDeclarationLocation(item), formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Name);\n                                 if (nonPublicMembersAreSerialized || (item.DeclaredAccessibility & Accessibility.Public) == Accessibility.Public)\n                                 {\n                                     this.reportDiagnostic?.Invoke(diagnostic);\n@@ -1125,7 +1125,7 @@ public class TypeCollector\n                     var stringKey = key is { Value: string stringKeyValue } ? stringKeyValue : default;\n                     if (intKey == null && stringKey == null)\n                     {\n-                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n+                        this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.BothStringAndIntKeyAreNull, GetDeclarationLocation(item)));\n                     }\n \n                     if (searchFirst)\n@@ -1137,7 +1137,7 @@ public class TypeCollector\n                     {\n                         if ((isIntKey && intKey == null) || (!isIntKey && stringKey == null))\n                         {\n-                            this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.DoNotMixStringAndIntKeys, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n+                            this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.DoNotMixStringAndIntKeys, GetDeclarationLocation(item)));\n                         }\n                     }\n \n@@ -1145,7 +1145,7 @@ public class TypeCollector\n                     {\n                         if (intMembers.ContainsKey(intKey!.Value))\n                         {\n-                            this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n+                            this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, GetDeclarationLocation(item)));\n                         }\n \n                         var member = new MemberSerializationInfo(true, IsWritable: !item.IsReadOnly, IsReadable: true, IsInitOnly: false, item.IsRequired, intKey!.Value, item.Name, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n@@ -1158,7 +1158,7 @@ public class TypeCollector\n                     {\n                         if (stringMembers.ContainsKey(stringKey!))\n                         {\n-                            this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, item.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation()));\n+                            this.reportDiagnostic?.Invoke(Diagnostic.Create(MsgPack00xMessagePackAnalyzer.KeysMustBeUnique, GetDeclarationLocation(item)));\n                         }\n \n                         var member = new MemberSerializationInfo(true, IsWritable: !item.IsReadOnly, IsReadable: true, IsInitOnly: false, item.IsRequired, hiddenIntKey++, stringKey!, item.Name, item.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), item.Type.ToDisplayString(BinaryWriteFormat), specialFormatter)\n@@ -1338,7 +1338,7 @@ public class TypeCollector\n         {\n             if (formattedType.IsDefinition)\n             {\n-                Location location = callerSymbol is not null ? callerSymbol.Locations[0] : formattedType.Locations[0];\n+                Location? location = (callerSymbol ?? formattedType).Locations.FirstOrDefault();\n                 var targetName = callerSymbol is not null ? callerSymbol.ContainingType.Name + \".\" + callerSymbol.Name : formattedType.Name;\n \n                 ImmutableDictionary<string, string?> typeInfo = ImmutableDictionary.Create<string, string?>().Add(\"type\", formattedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));\n@@ -1424,11 +1424,44 @@ public class TypeCollector\n                select x.FirstDeclaration;\n     }\n \n-    private static Location? GetIdentifierLocation(INamedTypeSymbol type) => ((BaseTypeDeclarationSyntax?)type.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax())?.Identifier.GetLocation();\n+    /// <summary>\n+    /// Gets a value indicating whether a field was emitted by the compiler rather than written by the user\n+    /// (e.g. the backing field of an auto-property).\n+    /// </summary>\n+    /// <remarks>\n+    /// <see cref=\"ISymbol.IsImplicitlyDeclared\"/> is only reliable for symbols declared in source.\n+    /// For symbols read from metadata we recognize the unspeakable names (<c>&lt;Name&gt;k__BackingField</c>) that the compiler generates.\n+    /// </remarks>\n+    private static bool IsCompilerGeneratedField(IFieldSymbol field) => field.IsImplicitlyDeclared || field.Name.StartsWith(\"<\", StringComparison.Ordinal);\n+\n+    /// <summary>\n+    /// Gets the location of the first declaration of a symbol, or <see langword=\"null\"/> if the symbol is not declared in source.\n+    /// </summary>\n+    /// <remarks>\n+    /// Symbols that come from a referenced assembly (metadata) have no declaring syntax,\n+    /// so this and the other location helpers must never index into <see cref=\"ISymbol.DeclaringSyntaxReferences\"/> directly.\n+    /// A <see langword=\"null\"/> location simply produces a diagnostic without a location.\n+    /// </remarks>\n+    private static Location? GetDeclarationLocation(ISymbol symbol) => symbol.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation();\n+\n+    private static Location? GetIdentifierLocation(INamedTypeSymbol type) => (type.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() as BaseTypeDeclarationSyntax)?.Identifier.GetLocation();\n+\n+    /// <summary>\n+    /// Gets the location of the identifier of a property, or <see langword=\"null\"/> if the property is not declared in source.\n+    /// </summary>\n+    /// <remarks>\n+    /// A property may be declared by a property declaration or by a parameter of a record's primary constructor.\n+    /// </remarks>\n+    private static Location? GetIdentifierLocation(IPropertySymbol property)\n+    {\n+        SyntaxNode? syntax = property.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax();\n+        SyntaxToken? identifier = (syntax as PropertyDeclarationSyntax)?.Identifier ?? (syntax as ParameterSyntax)?.Identifier;\n+        return identifier?.GetLocation();\n+    }\n \n-    private static Location? GetLocation(IParameterSymbol parameter) => parameter.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax().GetLocation();\n+    private static Location? GetLocation(IParameterSymbol parameter) => GetDeclarationLocation(parameter);\n \n-    private static Location? GetParameterListLocation(IMethodSymbol? method) => ((BaseMethodDeclarationSyntax?)method?.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax())?.ParameterList.GetLocation();\n+    private static Location? GetParameterListLocation(IMethodSymbol? method) => (method?.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() as BaseMethodDeclarationSyntax)?.ParameterList.GetLocation();\n \n     private static string GetGenericFormatterClassName(INamedTypeSymbol type)\n     {",
+     "functions": [
+      {
+       "key": "CollectUnion",
+       "name": "CollectUnion",
+       "line": 386,
+       "endLine": 421,
+       "isNew": false,
+       "added": 1,
+       "removed": 1
+      },
+      {
+       "key": "GetObjectInfo",
+       "name": "GetObjectInfo",
+       "line": 700,
+       "endLine": 1418,
+       "isNew": false,
+       "added": 16,
+       "removed": 16
+      },
+      {
+       "key": "IsCompilerGeneratedField",
+       "name": "IsCompilerGeneratedField",
+       "line": 1435,
+       "endLine": 1435,
+       "isNew": true,
+       "added": 1,
+       "removed": 0
+      },
+      {
+       "key": "GetDeclarationLocation",
+       "name": "GetDeclarationLocation",
+       "line": 1445,
+       "endLine": 1445,
+       "isNew": true,
+       "added": 1,
+       "removed": 0
+      },
+      {
+       "key": "GetIdentifierLocation",
+       "name": "GetIdentifierLocation",
+       "line": 1447,
+       "endLine": 1447,
+       "isNew": false,
+       "added": 1,
+       "removed": 1
+      },
+      {
+       "key": "GetIdentifierLocation~2",
+       "name": "GetIdentifierLocation",
+       "line": 1455,
+       "endLine": 1460,
+       "isNew": true,
+       "added": 6,
+       "removed": 0
+      },
+      {
+       "key": "GetLocation",
+       "name": "GetLocation",
+       "line": 1462,
+       "endLine": 1462,
+       "isNew": false,
+       "added": 1,
+       "removed": 1
+      },
+      {
+       "key": "GetParameterListLocation",
+       "name": "GetParameterListLocation",
+       "line": 1464,
+       "endLine": 1464,
+       "isNew": false,
+       "added": 1,
+       "removed": 1
+      }
+     ],
+     "linesOutsideFunctions": 25
+    },
+    {
+     "file": "tests/MessagePack.SourceGenerator.Tests/ReferencedAssemblyTypeTests.cs",
+     "status": "A",
+     "kind": "test",
+     "added": 112,
+     "removed": 0,
+     "patch": "@@ -0,0 +1,112 @@\n+// Copyright (c) All contributors. All rights reserved.\n+// Licensed under the MIT license. See LICENSE file in the project root for full license information.\n+\n+using MessagePack.SourceGenerator;\n+using MessagePack.SourceGenerator.Analyzers;\n+using Microsoft.CodeAnalysis;\n+using Microsoft.CodeAnalysis.CSharp;\n+using Microsoft.CodeAnalysis.Diagnostics;\n+\n+/// <summary>\n+/// Tests that exercise data types that are declared in a referenced <em>assembly</em> (i.e. metadata symbols with no syntax),\n+/// as opposed to a referenced project whose symbols still carry their declaring syntax.\n+/// </summary>\n+/// <remarks>\n+/// Regression tests for <see href=\"https://github.com/MessagePack-CSharp/MessagePack-CSharp/issues/2283\">issue 2283</see>.\n+/// </remarks>\n+public class ReferencedAssemblyTypeTests\n+{\n+    private const string AppSource = \"\"\"\n+        using MessagePack;\n+        using Lib;\n+\n+        namespace App\n+        {\n+            [MessagePackObject]\n+            public sealed partial class Cmd\n+            {\n+                [Key(0)]\n+                public string Scope { get; set; }\n+\n+                [Key(1)]\n+                public Item<int> Member { get; set; }\n+            }\n+        }\n+        \"\"\";\n+\n+    private static readonly CSharpParseOptions ParseOptions = new(LanguageVersion.Latest);\n+\n+    private static readonly CSharpCompilationOptions CompilationOptions = new(OutputKind.DynamicallyLinkedLibrary);\n+\n+    /// <summary>\n+    /// Verifies that neither the generator nor the analyzer throws when a member's type is a closed generic value type\n+    /// that is declared in a referenced assembly, and that the resolver is still generated.\n+    /// </summary>\n+    /// <param name=\"itemDeclaration\">The declaration of the <c>Lib.Item&lt;T&gt;</c> type in the referenced assembly.</param>\n+    [Theory]\n+    [InlineData(\"public partial record struct Item<T>([property: Key(0)] string Key);\")]\n+    [InlineData(\"public partial struct Item<T> { [Key(0)] public string Key { get; set; } }\")]\n+    [InlineData(\"public partial struct Item<T> { [Key(0)] public string Key; private int notSerialized; public int Touch() => this.notSerialized++; }\")]\n+    [InlineData(\"public partial class Item<T> { [Key(0)] public string Key { get; set; } }\")]\n+    [InlineData(\"public partial record class Item<T>([property: Key(0)] string Key);\")]\n+    public async Task ClosedGeneric_DefinedInReferencedAssembly(string itemDeclaration)\n+    {\n+        string libSource = $$\"\"\"\n+            using MessagePack;\n+\n+            namespace Lib\n+            {\n+                [MessagePackObject]\n+                {{itemDeclaration}}\n+            }\n+            \"\"\";\n+\n+        ImmutableArray<MetadataReference> references = await GetReferencesAsync();\n+        MetadataReference libReference = EmitToMetadataReference(\"Lib\", libSource, references);\n+\n+        CSharpCompilation app = CSharpCompilation.Create(\n+            \"App\",\n+            new[] { CSharpSyntaxTree.ParseText(AppSource, ParseOptions) },\n+            references.Add(libReference),\n+            CompilationOptions);\n+\n+        // The generator must not throw, and must still produce the resolver.\n+        GeneratorDriver driver = CSharpGeneratorDriver.Create(\n+            new[] { new MessagePackGenerator().AsSourceGenerator() },\n+            parseOptions: ParseOptions);\n+        driver = driver.RunGeneratorsAndUpdateCompilation(app, out _, out _);\n+        GeneratorDriverRunResult runResult = driver.GetRunResult();\n+        Assert.All(runResult.Results, result => Assert.Null(result.Exception));\n+        Assert.Contains(runResult.GeneratedTrees, tree => tree.ToString().Contains(\"GeneratedMessagePackResolver\"));\n+\n+        // The analyzer must not throw either. An analyzer exception is surfaced as an AD0001 diagnostic.\n+        CompilationWithAnalyzers appWithAnalyzers = app.WithAnalyzers(ImmutableArray.Create<DiagnosticAnalyzer>(new MsgPack00xMessagePackAnalyzer()));\n+        ImmutableArray<Diagnostic> analyzerDiagnostics = await appWithAnalyzers.GetAnalyzerDiagnosticsAsync();\n+        Assert.DoesNotContain(analyzerDiagnostics, d => d.Id == \"AD0001\");\n+    }\n+\n+    private static async Task<ImmutableArray<MetadataReference>> GetReferencesAsync()\n+    {\n+        ImmutableArray<MetadataReference> frameworkReferences = await ReferencesHelper.DefaultTargetFrameworkReferences.ResolveAsync(LanguageNames.CSharp, CancellationToken.None);\n+        return frameworkReferences.AddRange(ReferencesHelper.GetReferences(ReferencesSet.MessagePack));\n+    }\n+\n+    /// <summary>\n+    /// Compiles source code and returns a reference to the resulting assembly image,\n+    /// so that its symbols are seen as metadata symbols by the referencing compilation.\n+    /// </summary>\n+    private static MetadataReference EmitToMetadataReference(string assemblyName, string source, ImmutableArray<MetadataReference> references)\n+    {\n+        CSharpCompilation compilation = CSharpCompilation.Create(\n+            assemblyName,\n+            new[] { CSharpSyntaxTree.ParseText(source, ParseOptions) },\n+            references,\n+            CompilationOptions);\n+\n+        using MemoryStream stream = new();\n+        Microsoft.CodeAnalysis.Emit.EmitResult emitResult = compilation.Emit(stream);\n+        Assert.True(emitResult.Success, string.Join(Environment.NewLine, emitResult.Diagnostics));\n+\n+        return MetadataReference.CreateFromImage(stream.ToArray());\n+    }\n+}",
+     "functions": [
+      {
+       "key": "ClosedGeneric_DefinedInReferencedAssembly",
+       "name": "ClosedGeneric_DefinedInReferencedAssembly",
+       "line": 52,
+       "endLine": 86,
+       "isNew": true,
+       "added": 35,
+       "removed": 0
+      },
+      {
+       "key": "GetReferencesAsync",
+       "name": "GetReferencesAsync",
+       "line": 88,
+       "endLine": 92,
+       "isNew": true,
+       "added": 5,
+       "removed": 0
+      },
+      {
+       "key": "EmitToMetadataReference",
+       "name": "EmitToMetadataReference",
+       "line": 98,
+       "endLine": 111,
+       "isNew": true,
+       "added": 14,
+       "removed": 0
+      }
+     ],
+     "linesOutsideFunctions": 58
+    }
+   ]
+  }
+ ]
+}

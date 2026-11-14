@@ -19,32 +19,38 @@
       {
         "match": "success path",
         "title": "The working case was never tested",
-        "detail": "All 6 new unit tests that ran end with an error on purpose. None of them reaches the code that makes the output. So the main promise of the feature is unproven."
+        "detail": "All 6 new unit tests that ran end with an error on purpose. None of them reaches the code that makes the output. So the main promise of the feature is unproven.",
+        "fix": "Add a unit test where the feature works from start to end."
       },
       {
         "match": "IMessagePackSerializationCallbackReceiver",
         "title": "One kind of type gets generated code that does not build",
-        "detail": "Some types run extra steps before saving and after loading. If the type sets those up in one specific way, the generated code calls a method that does not exist. The build then fails."
+        "detail": "Some types run extra steps before saving and after loading. If the type sets those up in one specific way, the generated code calls a method that does not exist. The build then fails.",
+        "fix": "Call the method in the way that works for every type."
       },
       {
         "match": "UseMapMode",
         "title": "The new code ignores a project setting",
-        "detail": "A project can ask for all data to be saved in map form. The new code ignores that. So one type is saved as a list while the rest are saved as maps."
+        "detail": "A project can ask for all data to be saved in map form. The new code ignores that. So one type is saved as a list while the rest are saved as maps.",
+        "fix": "Read the project setting in the new code too."
       },
       {
         "match": "silently dropped",
         "title": "Generated code can vanish without a warning",
-        "detail": "If two pieces of generated code cover the same type, only the first one is kept. The user is not told."
+        "detail": "If two pieces of generated code cover the same type, only the first one is kept. The user is not told.",
+        "fix": "Warn the user when a second piece of generated code is dropped."
       },
       {
         "match": "MsgPack019-022",
         "title": "The README lists too few warnings",
-        "detail": "The README says the feature uses warnings MsgPack019 to MsgPack022. The code also raises MsgPack004, MsgPack005 and MsgPack007."
+        "detail": "The README says the feature uses warnings MsgPack019 to MsgPack022. The code also raises MsgPack004, MsgPack005 and MsgPack007.",
+        "fix": "List every warning the feature can raise in the README."
       },
       {
         "match": "Nesting types",
         "title": "A rule in the docs is not checked",
-        "detail": "The docs say outer classes must be marked partial. The code does not check this. The user gets a confusing compiler error, not the promised warning."
+        "detail": "The docs say outer classes must be marked partial. The code does not check this. The user gets a confusing compiler error, not the promised warning.",
+        "fix": "Add the check, or take the promise out of the docs."
       }
     ],
     "questions": [
@@ -98,6 +104,10 @@
   },
   "revisions": {
     "1": {
+      "tldr": {
+        "tone": "bad",
+        "text": "A new option to generate code for types from other projects, but the main use was never tested. Wait for that proof before merging."
+      },
       "tags": [
         {
           "label": "New feature",
@@ -165,6 +175,10 @@
       ]
     },
     "2": {
+      "tldr": {
+        "tone": "ok",
+        "text": "Same new option, and commit 2 adds unit tests for the main use. Ready for a person to review the smaller bugs left."
+      },
       "tags": [
         {
           "label": "New feature",

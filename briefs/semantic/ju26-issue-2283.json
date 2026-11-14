@@ -18,27 +18,32 @@
       {
         "match": "report filter silences",
         "title": "The fix hides more warnings than it needs to",
-        "detail": "The new check drops every warning that points outside this project. That stops the crash. But it also hides warnings in cases that never crashed. No unit test shows how many warnings are now hidden."
+        "detail": "The new check drops every warning that points outside this project. That stops the crash. But it also hides warnings in cases that never crashed. No unit test shows how many warnings are now hidden.",
+        "fix": "Only hide the warnings that point into another project."
       },
       {
         "match": "explicit null key",
         "title": "A bad key on one kind of property is no longer reported",
-        "detail": "If a property has an empty key, the old code crashed. The new code says nothing at all. So the user gets no warning about the bad key."
+        "detail": "If a property has an empty key, the old code crashed. The new code says nothing at all. So the user gets no warning about the bad key.",
+        "fix": "Show a warning for the bad key on the line that uses the type."
       },
       {
         "match": "MsgPack004 doc",
         "title": "The new help page does not match the code",
-        "detail": "The help page for warning MsgPack004 says it only covers code in your own project. The code can still raise it for a parent type that comes from another project."
+        "detail": "The help page for warning MsgPack004 says it only covers code in your own project. The code can still raise it for a parent type that comes from another project.",
+        "fix": "Change the help page so it says what the code does."
       },
       {
         "match": "resolver file exists",
         "title": "The new unit tests do not prove the fix works",
-        "detail": "They only check that the output file exists and that there are no warnings. They do not check that the file can save and load the type from the bug report."
+        "detail": "They only check that the output file exists and that there are no warnings. They do not check that the file can save and load the type from the bug report.",
+        "fix": "Add a unit test that saves and loads the type from the bug report."
       },
       {
         "match": "UnkeyedMember",
         "title": "One unit test locks in a missing warning",
-        "detail": "A member with no key now gives no warning in the project that uses it. The unit test treats that as correct. Its comment says the other project will report it, but no check shows that."
+        "detail": "A member with no key now gives no warning in the project that uses it. The unit test treats that as correct. Its comment says the other project will report it, but no check shows that.",
+        "fix": "Add a check that the other project really reports it."
       }
     ],
     "questions": [
@@ -92,6 +97,10 @@
   },
   "revisions": {
     "1": {
+      "tldr": {
+        "tone": "bad",
+        "text": "It fixes the crash, but by hiding warnings in places that never crashed. Do not merge yet: one extra unit test shows it changes more than the bug."
+      },
       "tags": [
         {
           "label": "Bug fix",
@@ -155,6 +164,10 @@
       ]
     },
     "2": {
+      "tldr": {
+        "tone": "ok",
+        "text": "It fixes the crash and now hides only the warnings it must. All unit tests pass: a person just needs to sign off."
+      },
       "tags": [
         {
           "label": "Bug fix",
