@@ -1,0 +1,22 @@
+{
+  "model": "shop coding agent",
+  "snapshot": "docs-example, commit 1",
+  "commit": "9f5f23307b28f0057e6b9bb3c8d9646f4b6e31d0",
+  "chat": [
+    {
+      "q": "Explain this change in plain words",
+      "keys": "explain plain words what does change mean summary simple",
+      "a": "I added one worked example to the pricing notes: an order of 200 cents with 10% off totals 180 cents. No code changed."
+    },
+    {
+      "q": "Could this affect anything else?",
+      "keys": "else affect affected reach other parts code",
+      "a": "No. Only `docs/pricing.md` changed. It is a note for people; no code reads it."
+    },
+    {
+      "q": "Is the example right?",
+      "keys": "right correct true example check verified test",
+      "a": "Yes. It matches the passing test at `tests/checkout.test.ts` line 5: 200 cents at 10% totals 180."
+    }
+  ]
+}

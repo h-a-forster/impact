@@ -1,0 +1,32 @@
+{
+  "model": "shop coding agent",
+  "snapshot": "req-17, commit 1",
+  "commit": "ae08cfbd40d82d45ac1dd7668a7e126acc194830",
+  "chat": [
+    {
+      "q": "Explain this change in plain words",
+      "keys": "explain plain words what does change mean summary simple",
+      "a": "Discounts used to round down to the whole cent. Now half a cent or more rounds up. Example: 10% off 1.05 is 10.5 cents; before it gave 10 cents off, now 11. I changed one line, in the shared `applyDiscount()` function."
+    },
+    {
+      "q": "What else uses the function you changed?",
+      "keys": "else uses callers affected who calls other parts reach shared",
+      "a": "Two parts of the shop call `applyDiscount()`: Checkout (`checkoutTotal()`) and Order Import (`importOrder()`). Both totals change with this edit."
+    },
+    {
+      "q": "Why did you change the shared function?",
+      "keys": "why approach chose shared function design instead",
+      "a": "REQ-17 asks for the same rounding in Checkout and in Order Import. Both already use the shared function, so one line there changes both, and they cannot drift apart."
+    },
+    {
+      "q": "What did you not test?",
+      "keys": "not test tested untested gap missing proof coverage",
+      "a": "I added a Checkout test for the new rounding (94 cents at 10% off 1.05). I did not add a test for Order Import. I relied on it calling the same function."
+    },
+    {
+      "q": "What were you least sure about?",
+      "keys": "unsure least sure risk worried doubt confident",
+      "a": "Order Import. It takes in orders from a file, and I did not run a REQ-17 case through it."
+    }
+  ]
+}

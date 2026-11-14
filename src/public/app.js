@@ -1742,7 +1742,7 @@ function askAgent(q) {
 /** Free text: a tool name or "merge" does that. Anything else is a question for the agent. */
 function handleText(q) {
   const s = q.toLowerCase();
-  if (/\b(merge|sign.?off|approve|ship it)\b/.test(s)) return startMerge(q);
+  if (!SESSION && /\b(merge|sign.?off|approve|ship it)\b/.test(s)) return startMerge(q); // in a session the runner records the decision
   if (/blast/.test(s)) return useTool("blast", q);
   if (/swarm|monte/.test(s)) return useTool("swarm", q);
   if (/whole repo|full map/.test(s)) return useTool("full", q);

@@ -267,6 +267,14 @@ function loadDescription(pr, brief, commit) {
     ai: ai ? { generatedBy: saved.generatedBy, ...ai } : null,
   };
 }
+/** The coding agent's saved answers for the chat, for the one commit they were written for (shop sample). */
+function loadChat(prId, sha) {
+  const file = path.join(BRIEFS, "chat", `${prId}.json`);
+  if (!fs.existsSync(file)) return null;
+  const chat = JSON.parse(fs.readFileSync(file, "utf8"));
+  return chat.commit === sha ? chat : null;
+}
+
 export function loadBrief(prId) {
   const file = path.join(BRIEFS, `${prId}.json`);
   return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : null;
@@ -620,5 +628,6 @@ export function buildModel(revisions, prId, sha, opts = {}) {
     reviewInput,
     classifier2: c2,
     labels: { claimVerifier: CLAIM_VERIFIER_LABEL },
+    agent: loadChat(prId, sha),
   };
 }
