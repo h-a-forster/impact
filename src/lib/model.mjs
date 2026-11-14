@@ -76,7 +76,8 @@ function buildTietoModel(pr, sha) {
     impact: { ...m.impact, unverified: [] },
     policy: m.policy,
     requirementText: m.requirementText,
-    diff: { files: [...m.diff.files, ...(o?.files ?? [])] },
+    // One entry per path: a file the made-up commit edits again keeps its real diff; its made-up change is in `since`.
+    diff: { files: [...m.diff.files, ...(o?.files ?? []).filter((f) => !m.diff.files.some((x) => x.file === f.file)).map((f) => ({ ...f, madeUp: true }))] },
     since: o ? { from: commit.index - 1, items: o.since ?? [], files: o.files ?? [] } : null,
     evidence: o?.fixed ? [] : m.evidence.filter((e) => e.status === "contradicted").map(({ rowIds, ...e }) => ({ ...e, statusLabel: "A targeted unit test fails here", missing: null })),
     brief: null,

@@ -1267,11 +1267,9 @@ async function tietoNodeHtml(n) {
     : `<div class="callout info">${chip("not edited", "info")} This code is <strong>not in the diff</strong>. It uses code the PR changed, so its behaviour can change.</div>`;
   if (n.evidence === "contradicted") body += `<div class="callout bad"><strong>A targeted unit test fails here.</strong> It passes before this change and fails after it.</div>`;
   if (links.length) body += `<h3>Links</h3><ul class="list">${links.map((e) => `<li>${nodeLink(e.from, labelOf(e.from))} <span class="muted">${esc(e.relation ?? "calls")}</span> ${nodeLink(e.to, labelOf(e.to))}</li>`).join("")}</ul>`;
-  // The changed lines that sit inside this function. Made-up commits come last in m.diff.files.
-  const madeUpFrom = m.diff.files.length - (m.since?.files.length ?? 0);
+  // The changed lines that sit inside this function: the real diff first, then the made-up commit's.
   const inside = (l) => l.t && l.at >= n.line && l.at <= n.endLine;
-  const changes = m.diff.files
-    .map((f, i) => ({ f, madeUp: i >= madeUpFrom }))
+  const changes = [...m.diff.files.filter((f) => !f.madeUp).map((f) => ({ f, madeUp: false })), ...(m.since?.files ?? []).map((f) => ({ f, madeUp: true }))]
     .filter((x) => x.f.file === n.file)
     .map((x) => ({ ...x, hunks: parseHunks(x.f.patch).filter((h) => h.lines.some(inside)) }))
     .filter((x) => x.hunks.length);

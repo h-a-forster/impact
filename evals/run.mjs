@@ -5,7 +5,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { readFileAt } from "../src/lib/git.mjs";
-import { buildModel, loadBrief, loadRevisions } from "../src/lib/model.mjs";
+import { buildModel, demoRevisions, loadBrief, loadRevisions } from "../src/lib/model.mjs";
 import { loadRun } from "../src/lib/runner.mjs";
 import { decisionView, recordDecision } from "../src/lib/decisions.mjs";
 import { findPr, prSummary } from "../src/lib/github.mjs";
@@ -203,6 +203,15 @@ group = "Planted faults (measurement)";
   check("commit 2: nothing escapes where the map said Unverified", p2.summary.escapedWhereMapSaidUnverified, e.commit2.escapedWhereMapSaidUnverified);
   check("known miss is reported, not hidden: a fault escapes where the map said Supported", [p1.summary.escapedWhereMapSaidSupported, p2.summary.escapedWhereMapSaidSupported], [e.commit1.escapedWhereMapSaidSupported, e.commit2.escapedWhereMapSaidSupported]);
   check("the planted-fault record is for the commits under review", [p1.sha, p2.sha], [c1, c2]);
+}
+
+// ---- 8. Demo PRs -----------------------------------------------------------
+group = "Demo PRs";
+{
+  const demo = demoRevisions();
+  const pr = demo.prs.find((p) => p.id === "ju26-issue-2283");
+  const files = buildModel(demo, pr.id, pr.commits[1].sha).diff.files.map((f) => f.file);
+  check("made-up commit 2 lists each edited file once", [files.length, new Set(files).size], [4, 4]);
 }
 
 // ---- Report ---------------------------------------------------------------
