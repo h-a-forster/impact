@@ -104,8 +104,15 @@ much ("wide"). What they touched is the zone a fix can reasonably reach. The rea
   Requirement, Why, Before/after (first part) and Must preserve rows of the AI PR, plus the bug
   report #2283 word for word. Left out: Summary, Approach, Alternatives, Checks run, Open gaps,
   Rollback (they describe the real fix). The 3 prompts differ only in the "How to work" lines.
-- **Nobody built the code or ran the unit tests** (no .NET SDK here). We do not know if any
-  agent's fix works. The tab says so.
+- **Unit tests, run both ways** (recorded afterwards on a machine with a .NET SDK, by
+  `node scripts/blast-tests.mjs <clone of the sample repository>`; saved in
+  `data/tieto/ju26-issue-2283/blast-tests.json`). The agents themselves could not build the code.
+  - The wide agent's own unit tests: 2 of 5 pass on the old code, 5 of 5 on the real change.
+    A test written without seeing the real change notices the bug, and the real change passes it.
+  - The real change's unit tests (19): 16 pass on the old code, 18 on each of the three agents' fixes.
+    The one that fails on all three, `ClosedGenericStruct_FromMetadataReference_UnkeyedMember`,
+    expects no MsgPack004 diagnostic for a type from a referenced assembly. No agent's fix silences
+    that diagnostic; only the real change does. The tab shows it as a question for a named person.
 - **Rebuild the record:** put the 3 agent folders under `.demo/blast/{minimal,normal,wide}`
   (git-ignored), run the agents, then `node scripts/record-blast.mjs`.
 - **Maths:** `src/lib/blast.mjs`, served by `GET /api/blast?pr=<id>`. Functions are found by a

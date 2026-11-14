@@ -309,6 +309,11 @@ button.danger { background: var(--bad); color: var(--card); border-color: var(--
 .blast-what { font-size: 14.5px; margin: 0 0 10px; }
 .blast-label { display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--line); border-left: 5px solid var(--muted); border-radius: 8px; padding: 9px 12px; background: var(--soft); margin-bottom: 10px; }
 .blast-label strong { font-size: 17px; line-height: 1.25; }
+.blast-tests { border: 1px solid var(--line); border-left: 5px solid var(--ok); border-radius: 8px; padding: 10px 14px; margin-top: 10px; }
+.blast-tests.warn { border-left-color: var(--warn); }
+.blast-tests ul { margin: 6px 0; padding-left: 20px; }
+.blast-tests li { margin: 3px 0; }
+.blast-tests li.only-real { color: var(--warn); }
 .blast-label.ok { border-left-color: var(--ok); background: var(--ok-bg); } .blast-label.ok strong { color: var(--ok); }
 .blast-label.warn { border-left-color: var(--warn); background: var(--warn-bg); } .blast-label.warn strong { color: var(--warn); }
 .blast-label.bad { border-left-color: var(--bad); background: var(--bad-bg); } .blast-label.bad strong { color: var(--bad); }
