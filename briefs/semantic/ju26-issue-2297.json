@@ -1,10 +1,10 @@
 {
   "pr": "ju26-issue-2297",
   "author": {
-    "by": "Stelian Vultur (vultuste) · commit message on branch ju26-issue-2297. Tieto's repo has branches, not pull requests.",
+    "by": "Stelian Vultur (vultuste) · commit message on branch ju26-issue-2297",
     "text": "implement issue #2297 : Add ExcludeFromCodeCoverage attribute to generated code"
   },
-  "generatedBy": "AI-written (Claude), saved for this demo",
+  "generatedBy": "Written by AI (Claude), saved for the demo",
   "verdict": {
     "classifier1": "The changed code is used in 6 other places that this PR does not edit.",
     "reason": "The unit tests passed and nothing is missing. A named person decides."

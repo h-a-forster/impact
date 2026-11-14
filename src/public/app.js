@@ -99,26 +99,27 @@ function renderHeader() {
 
 // ---------- verdict: one stamp per decision, each says who made it ----------
 const SEVERITY_TONE = { High: "bad", Medium: "warn", Low: "info" };
-const stamp = (label, value, tone, by, attrs = "") => `<${attrs ? "button type=\"button\"" : "div"} class="stamp ${tone}" ${attrs}><span class="stamp-label">${esc(label)}</span><span class="stamp-value">${esc(value)}</span><span class="stamp-by">${esc(by)}</span></${attrs ? "button" : "div"}>`;
+/** `tip` (who decided, and how) shows on hover. `note` is only for what must stay on screen, like "made up". */
+const stamp = (label, value, tone, tip, attrs = "", note = "") => `<${attrs ? "button type=\"button\"" : "div"} class="stamp ${tone}" title="${esc(tip)}" ${attrs}><span class="stamp-label">${esc(label)}</span><span class="stamp-value">${esc(value)}</span>${note ? `<span class="stamp-by">${esc(note)}</span>` : ""}</${attrs ? "button" : "div"}>`;
 function renderVerdict() {
   const m = state.model, el = $("routeCard"), c1 = m.classifier1, c2 = m.classifier2, r = m.review;
-  const signed = m.decisions.signedOff;
+  const signed = m.decisions.signedOff, madeUp = Boolean(m.selected.madeUp);
   const routeTone = c2.route.startsWith("Waiting") ? "warn" : c2.route.startsWith("Auto") ? "ok" : "info";
   const checkTone = (s) => (s === "passed" ? "ok" : s === "failed" ? "bad" : "warn");
   el.innerHTML = `<div class="stamps">
-      ${stamp("Severity", c2.severity, SEVERITY_TONE[c2.severity] ?? "plain", `Classifier 1 · rule ${c1.rule}`)}
-      ${stamp("Route", c2.route, routeTone, `Classifier 2 · rule ${c2.rule}`)}
-      ${m.checks.map((c) => stamp(c.label ?? "Check", `${c.name} · ${c.status}${c.counts ? ` ${c.counts.passed}/${c.counts.total}` : ""}`, checkTone(c.status), c.by ?? "Test run on this commit", m.run ? 'data-run="1"' : "")).join("")}
-      ${stamp("AI review", !r.available ? "Not available" : r.findings.length ? `${r.findings.length} finding${r.findings.length > 1 ? "s" : ""}` : "No findings", !r.available ? "plain" : r.findings.length ? "warn" : "ok", "AI reviewer · advice only", 'data-jump="reviewCard"')}
-      ${stamp("Sign-off", signed ? m.decisions.signOff.name : "None yet", signed ? "ok" : "plain", "Human · this commit only", 'data-jump="decisionCard"')}
+      ${stamp("Severity", c2.severity, SEVERITY_TONE[c2.severity] ?? "plain", `Set by fixed rules (Classifier 1, rule ${c1.rule})`)}
+      ${stamp("Route", c2.route, routeTone, `Set by fixed rules after the AI review (Classifier 2, rule ${c2.rule})`)}
+      ${m.checks.map((c) => stamp(c.label ?? "Check", c.counts ? `${c.counts.passed} of ${c.counts.total} pass` : c.status, checkTone(c.status), madeUp ? `${c.label ?? "Check"} (${c.name}). ${c.by ?? "Made up for the demo"}.` : `${c.label ?? "Check"} (${c.name}, recorded run, not CI)${m.run ? ". Click for the run." : ""}`, m.run ? 'data-run="1"' : "", madeUp ? "made up" : "")).join("")}
+      ${stamp("AI review", !r.available ? "Not available" : r.findings.length ? `${r.findings.length} finding${r.findings.length > 1 ? "s" : ""}` : "No findings", !r.available ? "plain" : r.findings.length ? "warn" : "ok", "Advice only. Click to read it.", 'data-jump="reviewCard"')}
+      ${stamp("Sign-off", signed ? m.decisions.signOff.name : "None yet", signed ? "ok" : "plain", "A named person. Counts for this commit only.", 'data-jump="decisionCard"')}
     </div>
     ${c2.blockers.length ? `<ul class="blockers">${c2.blockers.map((b) => `<li>${b.type === "evidence" ? `<button type="button" class="link" data-node="${esc(b.ref)}">${esc(b.text)}</button>` : esc(b.text)}</li>`).join("")}</ul>` : `<div class="verdict-reason">${esc(c2.reason)}</div>`}
     ${c2.notes.map((n) => `<div class="verdict-reason"><strong>${esc(n.text)}</strong></div>`).join("")}
-    ${m.since ? `<div class="since"><span class="tag warn">Made-up commit for the demo</span> <strong>Since commit ${m.since.from}:</strong> ${m.since.items.map(rich).join(" · ")} · <button type="button" class="link" data-since="1">Show the code change</button></div>` : ""}`;
+    ${m.since ? `<div class="since"><span class="tag warn">made up</span> <strong>Since commit ${m.since.from}:</strong> ${m.since.items.map(rich).join(" · ")} · <button type="button" class="link" data-since="1">Show the change</button></div>` : ""}`;
   // After a merge: a person can mark this PR as one that broke the system.
   el.insertAdjacentHTML("beforeend", m.evalCase
-    ? `<div class="evalcase on"><span class="tag bad">Eval test case</span> <span>This PR was merged and broke the system. It is saved as a test case for the AI review agent: a good reviewer must flag it. <span class="muted">Marked ${esc(m.evalCase.markedAt.slice(0, 16).replace("T", " "))} UTC</span></span> <button type="button" class="link" data-evalcase="off">Remove</button></div>`
-    : `<div class="evalcase"><button type="button" class="danger" data-evalcase="on">Eval test case</button> <span class="muted">Did this PR merge and then break the system? Mark it, and it becomes a test case for the AI review agent.</span></div>`);
+    ? `<div class="evalcase on"><span class="tag bad">Eval test case</span> <span title="Marked ${esc(m.evalCase.markedAt.slice(0, 16).replace("T", " "))} UTC">Merged, then broke things. Now a test for the AI reviewer.</span> <button type="button" class="link" data-evalcase="off">Remove</button></div>`
+    : `<div class="evalcase"><button type="button" class="danger" data-evalcase="on" title="Saves this PR as a test for the AI reviewer: a good reviewer must flag it.">Eval test case</button> <span class="muted">Mark this if the PR broke things after merge.</span></div>`);
   for (const b of el.querySelectorAll("[data-evalcase]")) b.onclick = async () => {
     await api("/api/evalcase", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pr: state.prId, on: b.dataset.evalcase === "on" }) });
     await load(state.prId, state.sha);
@@ -139,11 +140,11 @@ function renderDescription() {
     ? `<div class="tags">${d.ai.tags.map((t) => `<span class="tag ${esc(t.tone)}">${esc(t.label)}</span>`).join("")}</div>
        <p class="lead">${rich(d.ai.summary)}</p>
        <dl class="desc-grid">${d.ai.sections.map((s) => `<dt>${esc(s.title)}</dt><dd>${rich(s.text)}</dd>`).join("")}</dl>
-       <div class="byline">${esc(d.ai.generatedBy)}</div>`
+`
     : `${d.author.text.split("\n\n").map((p) => `<p>${rich(p)}</p>`).join("")}
-       <div class="byline">Written by: ${esc(d.author.by)}</div>`;
+`;
   el.innerHTML = `<div class="card-head"><h2>${esc(m.pr.title)}</h2>
-      <div class="tabs" role="tablist"><button type="button" data-view="author" class="${view === "author" ? "active" : ""}">Author's description</button><button type="button" data-view="ai" class="${view === "ai" ? "active" : ""}" ${d.ai ? "" : "disabled"}>AI PR</button></div></div>${body}${m.agent ? `<div class="byline">Agent snapshot (demo data): ${esc(m.agent.model)} · ${esc(m.agent.snapshot)} · <button type="button" class="link" data-ctx="1">context.md</button> (what the agent knew and decided)</div>` : ""}`;
+      <div class="tabs" role="group" aria-label="Description"><button type="button" data-view="author" class="${view === "author" ? "active" : ""}" aria-pressed="${view === "author"}">Author's description</button><button type="button" data-view="ai" class="${view === "ai" ? "active" : ""}" aria-pressed="${view === "ai"}" ${d.ai ? "" : "disabled"}>AI PR</button></div></div>${body}<div class="byline">${esc(view === "ai" ? d.ai.generatedBy : d.author.by)}${m.agent ? ` · <button type="button" class="link" data-ctx="1" title="What the coding agent knew and decided (${esc(m.agent.model)}, ${esc(m.agent.snapshot)}, demo data)">context.md</button>` : ""}</div>`;
   for (const b of el.querySelectorAll("[data-ctx]")) b.onclick = openContext;
   for (const b of el.querySelectorAll("[data-view]")) b.onclick = () => {
     state.descView = b.dataset.view;
@@ -318,32 +319,48 @@ function drawDots(el, nodes, allEdges, onNode, onEdge) {
   for (const b of el.querySelectorAll("[data-zoom]")) b.onclick = () => (b.dataset.zoom === "fit" ? network.fit({ animation: true }) : network.moveTo({ scale: network.getScale() * (b.dataset.zoom === "in" ? 1.3 : 1 / 1.3), animation: true }));
   markSelection();
 }
-/** Under the graph: where the links come from, and what Graphify missed. */
-function renderGraphNote(edges) {
-  const m = state.model, el = $("gfyNote"), full = state.mapScope === "full";
+/** Under the graph: a short colour key. Everything else sits behind "About this map". */
+function renderMapFoot(nodes, edges) {
+  const m = state.model, el = $("mapFoot"), full = state.mapScope === "full", dots = state.level === "function";
   const g = full ? state.full.graphify : m.graphify;
-  if (!g) {
-    el.innerHTML = `<span class="tag warn">Recorded graph</span> No saved Graphify run for this view. The links come from the recorded data.`;
-    return;
-  }
+  const sw = (cls, text) => `<span><i class="sw ${dots ? "dot " : ""}${cls}"></i> ${text}</span>`;
+  const ln = (cls, text) => `<span><i class="ln ${cls}"></i> ${text}</span>`;
+  // The key only names colours that are on the map right now.
+  const key = [
+    sw("sw-edited", full ? "edited so far" : "edited"),
+    full ? sw("sw-edited sw-now", "edited in this step") : "",
+    sw("sw-downstream", "affected, not edited"),
+    nodes.some((n) => n.evidence === "contradicted") ? sw("sw-failing", "a unit test fails") : "",
+  ].join("");
   const calls = edges.filter((e) => e.kind === "calls");
   const guessed = calls.filter((e) => e.resolution === "inferred").length;
-  const count = `On this view: ${calls.length - guessed} link${calls.length - guessed === 1 ? "" : "s"} read from the code, ${guessed} guessed.`;
-  if (full) {
-    el.innerHTML = `<span class="tag info">Saved Graphify graph</span> The links come from ${esc(g.tool)}, a tool that reads the code and maps it. It was run on the repo earlier and saved. This is not a live run.
-      ${state.level === "concept" ? `Concepts use every call link in the whole repo (${g.full.calls.toLocaleString("en")} links at base commit <span class="mono">${short(g.revision)}</span>), plus the references in the project files.` : `This level joins the saved graphs of the 4 PRs.`} ${count}`;
-    return;
-  }
   const li = (x, why) => `<li><code>${esc(x.label)}</code> <span class="mono muted">${esc(x.file.split("/").pop())}:${x.line}</span>${why ? ` · ${esc(why)}` : ""}</li>`;
-  el.innerHTML = `<span class="tag info">Saved Graphify graph</span> The links come from ${esc(g.tool)}, a tool that reads the code and maps it. It was run on the code of this PR (commit <span class="mono">${short(g.revision)}</span>) and saved. This is not a live run.
-    ${count} <a href="/api/graphify?pr=${encodeURIComponent(state.prId)}" target="_blank" rel="noopener">Open the saved graph.json</a>
-    ${g.missed.length ? `<details><summary>Graphify did not find ${g.missed.length} thing${g.missed.length === 1 ? "" : "s"} that the compiler data has</summary><div class="muted">The compiler data (Roslyn, recorded earlier) knows every use of every name. Graphify reads the text of the code, so it can miss some.</div><ul>${g.missed.map((x) => li(x, x.reason)).join("")}</ul></details>` : ""}
-    ${g.added.length ? `<details><summary>Graphify found ${g.added.length} caller${g.added.length === 1 ? "" : "s"} that the compiler data does not list</summary><ul>${g.added.map((x) => li(x)).join("")}</ul></details>` : ""}`;
+  const lines = `${ln("ln-solid", "link read from the code")}${ln("ln-dashed", "link guessed from a name")}`;
+  const more = dots
+    ? `${sw("sw-none", "not changed")}${sw("sw-test", "unit test file")}${full ? "" : `<span><i class="sw sw-pr"></i> the PR and its issue</span>`}${lines}${full ? "" : ln("ln-dotted", "the PR edits this")}`
+    : lines;
+  const how = dots
+    ? "An arrow points from the user to the thing it uses. A bigger dot has more links. Click a dot to see its code. Drag a dot to move it."
+    : "An arrow points from the user to the thing it uses. Click a box to see its code. Drag to move the map. Zoom with + and −, or Ctrl and scroll.";
+  const source = !g
+    ? "No saved Graphify run for this view. The links come from the recorded data."
+    : `The links come from ${esc(g.tool)}, a tool that reads code and maps it. It ran earlier on ${full ? "the repo" : `commit <span class="mono">${short(g.revision)}</span>`} and was saved. Not a live run. Here: ${calls.length - guessed} link${calls.length - guessed === 1 ? "" : "s"} read from the code, ${guessed} guessed.${
+        full
+          ? ` Snapshot of ${esc(state.full.repo)}: ${state.full.totals.files} files, taken ${state.full.takenAt.slice(0, 10)}.${state.level === "concept" ? ` Areas use all ${g.full.calls.toLocaleString("en")} call links in the repo.` : ""}`
+          : ` <a href="/api/graphify?pr=${encodeURIComponent(state.prId)}" target="_blank" rel="noopener">Open graph.json</a>`
+      }`;
+  const gaps = full || !g ? "" : `
+      ${g.missed.length ? `<details><summary>${g.missed.length} thing${g.missed.length === 1 ? "" : "s"} Graphify missed</summary><div class="muted">The compiler data (Roslyn, recorded earlier) knows every use of every name. Graphify reads the text of the code, so it can miss some.</div><ul>${g.missed.map((x) => li(x, x.reason)).join("")}</ul></details>` : ""}
+      ${g.added.length ? `<details><summary>${g.added.length} caller${g.added.length === 1 ? "" : "s"} only Graphify found</summary><ul>${g.added.map((x) => li(x)).join("")}</ul></details>` : ""}`;
+  el.innerHTML = `<details class="map-about" ${state.aboutOpen ? "open" : ""}><summary><span class="legend">${key}</span><span class="about-link">About this map</span></summary>
+      <div class="about-body"><div class="legend">${more}</div><p>${how}</p><p>${source}</p>${gaps}</div></details>`;
+  el.querySelector(".map-about").ontoggle = (ev) => (state.aboutOpen = ev.target.open);
 }
 function renderGraph() {
   const m = state.model;
   for (const b of $("levelTabs").querySelectorAll("button")) {
     b.classList.toggle("active", b.dataset.level === state.level);
+    b.setAttribute("aria-pressed", b.dataset.level === state.level);
     b.onclick = () => {
       state.level = b.dataset.level;
       if (state.sel?.type === "node" && !m.graph.nodes.some((n) => n.id === state.sel.id && n.level === state.level)) state.sel = null;
@@ -355,15 +372,14 @@ function renderGraph() {
   const full = state.mapScope === "full";
   for (const b of $("scopeTabs").querySelectorAll("button")) {
     b.classList.toggle("active", b.dataset.scope === state.mapScope);
+    b.setAttribute("aria-pressed", b.dataset.scope === state.mapScope);
     b.onclick = () => setScope(b.dataset.scope);
   }
   $("fullBar").hidden = !full;
-  $("legendPr").hidden = full;
-  $("legendFull").hidden = !full;
   if (full) return renderFull();
-  const edges = m.graph.edges.filter((e) => e.level === state.level);
-  drawGraph(m.graph.nodes.filter((n) => n.level === state.level), edges, selectNode, (id) => select({ type: "edge", id }));
-  renderGraphNote(edges);
+  const edges = m.graph.edges.filter((e) => e.level === state.level), nodes = m.graph.nodes.filter((n) => n.level === state.level);
+  drawGraph(nodes, edges, selectNode, (id) => select({ type: "edge", id }));
+  renderMapFoot(nodes, edges);
 }
 /** Hands the boxes and links to the React Flow graph (src/graph/main.jsx, built into graph.bundle.js). */
 function drawBoxes(el, nodes, edges, onNode, onEdge) {
@@ -401,7 +417,7 @@ async function setScope(scope, { play = true } = {}) {
   if (scope === "full") {
     state.level = "concept";
     if (!state.full) state.full = await api("/api/fullmap");
-    if (play) playFull(0);
+    if (play && !matchMedia("(prefers-reduced-motion: reduce)").matches) playFull(0);
   }
   writeHash();
   render();
@@ -426,18 +442,18 @@ function playFull(from) {
   }, FULL_STEP_MS);
 }
 const FULL_HINT = {
-  concept: "Whole repo, by area. A link means one area uses the other.",
-  file: "Every file a demo PR edits or reaches. The rest of the repo is not indexed at this level.",
-  function: "Every function a demo PR edits or reaches. The rest of the repo is not indexed at this level.",
+  concept: "The whole repo, by area.",
+  file: "Only the files the 4 demo PRs edit or reach.",
+  function: "Only the functions the 4 demo PRs edit or reach.",
 };
 function renderFull() {
   const f = state.full, level = state.level, last = f.commits.length;
   const step = (state.fullStep = Math.max(0, Math.min(last, state.fullStep)));
   const cur = step ? f.commits[step - 1] : null;
-  $("fullHint").textContent = `${FULL_HINT[level]} Snapshot of ${f.repo}: ${f.totals.files} files, taken ${f.takenAt.slice(0, 10)}.`;
+  $("fullHint").textContent = FULL_HINT[level];
   $("fullStep").innerHTML = cur
     ? `<strong>Step ${step} of ${last}</strong> · PR #${cur.prNumber} · commit ${cur.index} <span class="mono">${cur.short}</span>${cur.madeUp ? ` <span class="tag warn">made up</span>` : ""}<div class="muted">${esc(cur.message)}</div>`
-    : `<strong>Start</strong> · the repo before any PR<div class="muted">Each step adds one commit. Press → or Play.</div>`;
+    : `<strong>Start</strong> · the repo before any PR<div class="muted">Each step adds one commit.</div>`;
   $("fullDots").innerHTML = Array.from({ length: last + 1 }, (_, i) => `<i class="${i <= step ? "on" : ""} ${i === step ? "cur" : ""}"></i>`).join("");
   const go = (to) => {
     stopFull();
@@ -474,7 +490,7 @@ function renderFull() {
     return { ...n, now: now.has(n.id), state: editedBy ? "edited" : affected ? "downstream" : "none", badge: editedBy ? [now.has(n.id) ? "EDITED NOW" : `EDITED${editedBy > 1 ? ` · ${editedBy} COMMITS` : ""}`, "edited"] : affected ? ["AFFECTED", "info"] : null };
   });
   drawGraph(nodes, f.levels[level].edges, (id) => select({ type: "fullnode", id }), null);
-  renderGraphNote(f.levels[level].edges);
+  renderMapFoot(nodes, f.levels[level].edges);
 }
 function fullNodeHtml(id) {
   const f = state.full, level = state.level;
@@ -500,23 +516,23 @@ const patchBlock = (file, from, to) => changeBlock(file.file, parseHunks(file.pa
 // ---------- AI review (advice only) ----------
 function renderReview() {
   const m = state.model, el = $("reviewCard"), r = m.review;
-  const cite = (c) => (c.valid ? `<button type="button" class="link mono" data-src="${esc(c.file)}" data-line="${c.line}">${esc(c.file)}:${c.line}</button>` : `<span class="mono bad-text" title="${esc(c.problem)}">${esc(c.file)}:${esc(c.line)} (invalid)</span>`);
+  const cite = (c) => (c.valid ? `<button type="button" class="link mono" data-src="${esc(c.file)}" data-line="${c.line}" title="${esc(c.file)}">${esc(c.file.split("/").pop())}:${c.line}</button>` : `<span class="mono bad-text" title="${esc(c.problem)}">${esc(c.file)}:${esc(c.line)} (invalid)</span>`);
   const c1 = m.classifier1, c2 = m.classifier2;
   const sev = (s) => `<span class="tag ${SEVERITY_TONE[s] ?? ""}">${esc(s)}</span>`;
-  el.innerHTML = `<div class="card-head"><h2>Review steps</h2><span class="muted">The rules come from <button type="button" class="link" data-doc="REVIEW.md">REVIEW.md</button> and <button type="button" class="link" data-doc="review-policy.yml">review-policy.yml</button></span></div>
-    <div class="step"><div class="step-head"><span class="step-n">1</span><strong>Classifier 1</strong> ${sev(c1.severity)} <span class="muted">rule ${esc(c1.rule)} · before the AI review</span></div>
+  el.innerHTML = `<div class="card-head"><h2>Review steps</h2><span class="muted">Rules: <button type="button" class="link" data-doc="REVIEW.md">REVIEW.md</button> · <button type="button" class="link" data-doc="review-policy.yml">review-policy.yml</button></span></div>
+    <div class="step"><div class="step-head"><span class="step-n">1</span><strong>Classifier 1</strong> ${sev(c1.severity)} <span class="muted">fixed rules · ${esc(c1.rule)}</span></div>
       <div>${esc(c1.reason)}</div></div>
     <div class="step"><div class="step-head"><span class="step-n">2</span><strong>AI review</strong> <span class="tag ${r.findings.length ? "warn" : "ok"}">${r.findings.length} finding${r.findings.length === 1 ? "" : "s"}</span> <span class="muted">advice only</span></div>
     <div>${esc(r.summary)}</div>
-    ${r.findings.map((f) => `<details class="finding ${f.category === "Minor" ? "plain" : "warn"}" ${f.category === "Minor" ? "" : "open"}>
+    ${r.findings.map((f) => `<details class="finding ${f.category === "Minor" ? "plain" : "warn"}">
         <summary><span class="tag ${f.category === "Minor" ? "" : "warn"}">${esc(f.category)}</span> <strong>${esc(f.title)}</strong></summary>
         <div>${esc(f.detail)}</div>
         ${f.suggestedCheck ? `<div><strong>Check to add:</strong> ${esc(f.suggestedCheck)}</div>` : ""}
         ${f.citations.length ? `<div class="muted">Code: ${f.citations.map(cite).join(", ")}</div>` : ""}</details>`).join("")}
-    ${r.couldNotDecide.length ? `<details class="finding plain"><summary><strong>${r.couldNotDecide.length} questions the AI could not answer</strong></summary>${r.couldNotDecide.map((q) => `<div>${esc(q.question)}<div class="muted">Would help: ${esc(q.checkThatWouldHelp)}</div></div>`).join("")}</details>` : ""}
+    ${r.couldNotDecide.length ? `<details class="finding plain"><summary><strong>${r.couldNotDecide.length} question${r.couldNotDecide.length === 1 ? "" : "s"} the AI could not answer</strong></summary>${r.couldNotDecide.map((q) => `<div>${esc(q.question)}<div class="muted">Would help: ${esc(q.checkThatWouldHelp)}</div></div>`).join("")}</details>` : ""}
     <div class="byline">${esc(r.modeLabel)}</div></div>
-    <div class="step"><div class="step-head"><span class="step-n">3</span><strong>Classifier 2</strong> ${sev(c2.severity)} <span class="tag">${esc(c2.route)}</span> <span class="muted">rule ${esc(c2.rule)} · after the AI review</span></div>
-      <div>${esc(c2.reason)}</div></div>`;
+    <div class="step"><div class="step-head"><span class="step-n">3</span><strong>Classifier 2</strong> ${sev(c2.severity)} <span class="tag">${esc(c2.route)}</span> <span class="muted">fixed rules · ${esc(c2.rule)}</span></div>
+      ${c2.blockers.length ? `<div>${esc(c2.reason)}</div>` : ""}</div>`;
   for (const b of el.querySelectorAll("[data-doc]")) b.onclick = () => select({ type: "doc", file: b.dataset.doc });
   for (const b of el.querySelectorAll("[data-src]")) b.onclick = () => select({ type: "source", file: b.dataset.src, line: Number(b.dataset.line) });
 }
@@ -530,14 +546,14 @@ function renderDecision() {
   const historyHtml = d.history.length
     ? `<ul class="history">${[...d.history].reverse().map((h) => `<li class="${h.appliesToSelection ? "" : "other"}"><strong>${esc(verb[h.action])}</strong> by ${esc(h.name)} on commit ${h.commitIndex} <span class="mono">${short(h.commit)}</span>${h.appliesToSelection ? "" : ` <span class="muted">· other commit, no effect here</span>`}${h.requestedCheck || h.residualRisk ? `<div class="muted">${esc(h.requestedCheck || h.residualRisk)}</div>` : ""}</li>`).join("")}</ul>`
     : "";
-  el.innerHTML = `<div class="card-head"><h2>Your decision</h2><span class="muted">Counts for ${esc(stepText(m))} only</span></div>
+  el.innerHTML = `<div class="card-head"><h2>Your decision</h2><span class="muted">For ${esc(stepText(m))} only</span></div>
     <form id="decisionForm" class="form-grid">
-      <label for="dName">Your name</label><input id="dName" type="text" autocomplete="name" />
+      <label for="dName">Your name</label><input id="dName" name="name" type="text" autocomplete="name" />
       <span>Action</span><div class="actions">
         <label><input type="radio" name="action" value="request-check" ${d.canSignOff ? "" : "checked"}/> Request a check</label>
         <label><input type="radio" name="action" value="escalate"/> Escalate</label>
-        <label><input type="radio" name="action" value="sign-off" ${d.canSignOff ? "checked" : "disabled"}/> Sign off${d.canSignOff ? "" : ` <span class="muted">(blocked until the evidence is in)</span>`}</label></div>
-      <label for="dNote" id="dNoteLabel"></label><textarea id="dNote"></textarea>
+        <label><input type="radio" name="action" value="sign-off" ${d.canSignOff ? "checked" : "disabled"}/> Sign off${d.canSignOff ? "" : ` <span class="muted">(blocked: a check is missing)</span>`}</label></div>
+      <label for="dNote" id="dNoteLabel"></label><textarea id="dNote" name="note"></textarea>
       <span></span><div><button class="primary" type="submit">Record decision</button><div id="decisionError" class="error"></div></div>
     </form>${historyHtml}`;
   const action = () => el.querySelector('input[name="action"]:checked')?.value;
@@ -628,7 +644,7 @@ async function sideHtml() {
   if (sel.type === "fullnode") return fullNodeHtml(sel.id);
   if (sel.type === "doc") {
     const text = await (await fetch(`demo/${sel.file}`)).text();
-    const note = sel.file.startsWith("context/") ? "Demo version, made up. The coding agent saves this file with the pull request. The Q&A agent reads it to answer your questions." : "Demo version. In a real repo this file sits at the top of the repo, and the copy on the base branch is the one that counts.";
+    const note = sel.file.startsWith("context/") ? "Made up for the demo. The coding agent saves this file with the PR. The chat answers from it." : "Demo version. In a real repo, the copy on the base branch is the one that counts.";
     return `<h2>${esc(sel.title ?? sel.file)}</h2><div class="where">${note}</div><pre class="raw doc">${esc(text)}</pre>`;
   }
   if (sel.type === "since") return `<h2>Code change in commit ${m.selected.index}</h2><div class="where">${esc(m.selected.message)} · made up for the demo</div>${m.since.files.map((f) => patchBlock(f, m.since.from, m.selected.index)).join("<div style='height:8px'></div>")}`;
@@ -795,15 +811,15 @@ function renderAgent() {
   if (!chat.open) return;
   const log = (chat.logs[state.prId] ??= []);
   const open = a.chat.filter((c) => !log.some((x) => x.text === c.q));
-  box.innerHTML = `<div class="agent-head"><div><strong>Ask the agent that wrote this PR</strong><div class="muted">${esc(a.model)} · snapshot ${esc(a.snapshot)}</div><div class="muted">Answers come from <button type="button" class="link" data-ctx="1">context.md</button>: ${esc(a.context)}</div></div><button type="button" id="agentClose" class="close" aria-label="Close">✕</button></div>
-    <div class="agent-log" id="agentLog">${log.map((x) => `<div class="msg ${x.who}">${rich(x.text)}</div>`).join("") || `<div class="muted">Pick a question, or type your own.</div>`}</div>
+  box.innerHTML = `<div class="agent-head"><div><strong>Ask the agent that wrote this PR</strong><div class="muted" title="Snapshot ${esc(a.snapshot)}. It holds: ${esc(a.context)}.">${esc(a.model)} · answers from <button type="button" class="link" data-ctx="1">context.md</button></div></div><button type="button" id="agentClose" class="close" aria-label="Close">✕</button></div>
+    <div class="agent-log" id="agentLog">${log.map((x) => `<div class="msg ${x.who}">${rich(x.text)}</div>`).join("")}</div>
     <div class="agent-suggest">${open.map((c) => `<button type="button" data-q="${esc(c.q)}">${esc(c.q)}</button>`).join("")}</div>
-    <form id="agentForm"><input id="agentInput" type="text" placeholder="Ask a question" autocomplete="off" /><button class="primary" type="submit">Send</button></form>
-    <div class="byline">Demo data: sample answers saved with the snapshot. No live model is called.</div>`;
+    <form id="agentForm"><input id="agentInput" name="question" type="text" aria-label="Your question" placeholder="Ask a question…" autocomplete="off" /><button class="primary" type="submit">Send</button></form>
+    <div class="byline">Demo: saved answers, no live model.</div>`;
   const ask = (q) => {
     const words = q.toLowerCase().match(/[a-z]{4,}/g) ?? [];
     const best = a.chat.map((c) => ({ c, n: words.filter((w) => `${c.q} ${c.keys ?? ""}`.toLowerCase().includes(w)).length })).sort((x, y) => y.n - x.n)[0];
-    log.push({ who: "me", text: q }, { who: "agent", text: best.n ? best.c.a : "This demo snapshot only holds answers to the suggested questions." });
+    log.push({ who: "me", text: q }, { who: "agent", text: best.n ? best.c.a : "The demo only has answers to the suggested questions." });
     renderAgent();
   };
   $("agentClose").onclick = () => {
