@@ -4,7 +4,7 @@
   "commit": "9f5f23307b28f0057e6b9bb3c8d9646f4b6e31d0",
   "chat": [
     {
-      "q": "Explain this change in plain words",
+      "q": "What did you change?",
       "keys": "explain plain words what does change mean summary simple",
       "a": "I added one worked example to the pricing notes: an order of 200 cents with 10% off totals 180 cents. No code changed."
     },
@@ -17,6 +17,36 @@
       "q": "Is the example right?",
       "keys": "right correct true example check verified test",
       "a": "Yes. It matches the passing test at `tests/checkout.test.ts` line 5: 200 cents at 10% totals 180."
+    },
+    {
+      "q": "Is it safe to merge?",
+      "keys": "safe merge ready ok good should fast lane auto",
+      "a": "The rules put it on the fast lane: Low risk, only `docs/pricing.md` changed, the tests pass and the AI review found nothing. In this demo that is a dry-run label; nothing merges by itself."
+    },
+    {
+      "q": "What did you not test?",
+      "keys": "not test tested untested gap missing run",
+      "a": "There is nothing to run: it is one sentence in a note. Its numbers match the passing test at `tests/checkout.test.ts` line 5."
+    },
+    {
+      "q": "How do I undo it?",
+      "keys": "undo revert back out remove",
+      "a": "Revert the commit. It is one sentence in `docs/pricing.md`."
+    },
+    {
+      "q": "Why did you add it?",
+      "keys": "why reason task asked purpose way requirement",
+      "a": "The task asked for one worked example in the pricing notes. I used numbers that a passing test already checks."
+    },
+    {
+      "q": "What could break?",
+      "keys": "break wrong fail happen could go bad worst",
+      "a": "Nothing in the shop: no code reads `docs/pricing.md`. At worst a reader sees a wrong example, and the test at line 5 shows it is right."
+    },
+    {
+      "q": "What were you least sure about?",
+      "keys": "unsure least sure worried doubt confident",
+      "a": "Nothing in particular. It is one sentence, and its numbers match a passing test."
     }
   ]
 }

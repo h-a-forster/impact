@@ -2,7 +2,7 @@ import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { readFileAt, revisionExists } from "./lib/git.mjs";
-import { buildFullMap, buildModel, demoRevisions, loadRevisions } from "./lib/model.mjs";
+import { buildFullMap, buildModel, demoRevisions, loadAbout, loadRevisions } from "./lib/model.mjs";
 import { ledgerSource } from "./lib/ledger.mjs";
 import { loadTietoSlice } from "./lib/graphify-tieto.mjs";
 import { buildBlast } from "./lib/blast.mjs";
@@ -22,7 +22,7 @@ const RATE_LIMIT = 600;
 const PUBLIC = path.join(ROOT, "src", "public");
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".mjs": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml" };
 // Browser-safe lib modules the page imports, so the UI and the evals share one copy.
-const SHARED = new Map(["comment.mjs", "edit-check-view.mjs", "reach.mjs", "verdict.mjs"].map((f) => [`/lib/${f}`, path.join(ROOT, "src", "lib", f)]));
+const SHARED = new Map(["ask.mjs", "comment.mjs", "edit-check-view.mjs", "reach.mjs", "verdict.mjs"].map((f) => [`/lib/${f}`, path.join(ROOT, "src", "lib", f)]));
 
 if (!fs.existsSync(REVISIONS_FILE) || !fs.existsSync(SAMPLE_REPO)) {
   console.error("The demo is not set up yet. Run:  npm run setup");
@@ -108,6 +108,10 @@ const handler = async (req, res) => {
     }
     if (url.pathname === "/api/model") {
       return json(res, 200, modelFor(url.searchParams.get("pr"), url.searchParams.get("sha"), demoRevisions()));
+    }
+    if (url.pathname === "/api/about") {
+      // The chat's saved answers about the app itself, the same on every PR.
+      return json(res, 200, { chat: loadAbout() });
     }
     if (url.pathname === "/api/graphify") {
       // The saved Graphify export for a PR (a slice of graph.json), as a file to read.

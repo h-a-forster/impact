@@ -4,7 +4,7 @@
   "commit": "e549d909b123c0609ffd2793f2414cd35db11231",
   "chat": [
     {
-      "q": "Explain this change in plain words",
+      "q": "What did you change?",
       "keys": "explain plain words what does change mean summary simple",
       "a": "Order Import used to accept a row with a negative subtotal, so `A-3,-500,0` became an order of minus 500 cents. Now such a row is rejected with a clear error. I added one check in `parseOrderRow()`."
     },
@@ -20,8 +20,38 @@
     },
     {
       "q": "Why not turn a negative subtotal into zero?",
-      "keys": "why approach instead clamp zero alternative reject",
+      "keys": "why approach instead clamp zero alternative reject way",
       "a": "That would hide a broken partner file. REQ-22 asks for a clear error, the same way a row with a missing column is rejected."
+    },
+    {
+      "q": "What did you not test?",
+      "keys": "not test tested untested gap missing checkout",
+      "a": "Nothing in REQ-22's scope. Checkout does not read order rows, so I did not test it for this change."
+    },
+    {
+      "q": "What could break?",
+      "keys": "break wrong fail happen could go bad worst effect partner file",
+      "a": "A row with a negative subtotal now throws \"negative subtotal in order row\" instead of becoming a minus order. A valid row and a zero subtotal import as before; tests check both."
+    },
+    {
+      "q": "How do I undo it?",
+      "keys": "undo revert back out remove",
+      "a": "Revert the commit: one check in `parseOrderRow()`, three Order Import tests and the REQ-22 requirement file. Nothing else to clean up."
+    },
+    {
+      "q": "Is it safe to merge?",
+      "keys": "safe merge ready ok good should",
+      "a": "The rules send it to a person: Medium risk, Human review required. All tests pass, the AI review raised no findings, and Checkout is not touched."
+    },
+    {
+      "q": "What were you least sure about?",
+      "keys": "unsure least sure worried doubt confident other callers",
+      "a": "That `importOrder()` is the only caller of `parseOrderRow()`. I found no other, but that comes from the code index, not from a test."
+    },
+    {
+      "q": "What is REQ-22?",
+      "keys": "req 22 requirement task asked ticket spec must stay same",
+      "a": "Order Import must reject a row with a negative subtotal, with a clear error. A valid row still imports at its discounted total, and a zero subtotal is still allowed. Checkout is not part of it."
     }
   ]
 }

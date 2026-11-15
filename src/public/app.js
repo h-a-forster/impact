@@ -1,4 +1,5 @@
 // Code Review Impact Map - frontend. No framework. One model per (PR, revision).
+import { asksQuestion, match as matchQuestion } from "./lib/ask.mjs";
 import { prComment } from "./lib/comment.mjs";
 import { editCheckSummary } from "./lib/edit-check-view.mjs";
 import { reachRings } from "./lib/reach.mjs";
@@ -1952,7 +1953,7 @@ function scoreRows() {
   const m = state.model, sc = ui.scores[state.prId] ?? {}, rows = [];
   const files = things(m.diff.files.length, "file", "files") + " edited", red = m.graph.nodes.some((x) => x.evidence === "contradicted");
   const reached = reachedNames();
-  rows.push({ scope: "pr", name: "Impact Map", tone: red ? "bad" : "info", score: red ? "Unit test fails" : files, why: red ? files : reached ? `Also reaches ${reached}` : m.classifier1.reason });
+  rows.push({ scope: "pr", name: "Impact Map", tone: red ? "bad" : "info", score: red ? "Unit test fails" : files, why: red ? files : reached ? `Also reaches ${reached}` : m.classifier1.reason, html: reachLine(m) });
   const b = sc.blast, extra = b?.tests?.onlyReal?.length ?? 0;
   const neutral = (tone) => toolTone(tone, b);
   if (!b) rows.push({ scope: "blast", name: "Blast radius", wait: true });
@@ -2008,6 +2009,19 @@ function advice(m = state.model, sc = ui.scores[state.prId] ?? {}) {
     : m.review.findings.length ? { act: "issues", name: "The issues", why: important ? "Read the important ones, with their fix." : "Only small points are left." }
     : null;
   return { score, verdict, parts, blocked, look, waiting: !sc.blast || !sc.swarm };
+}
+/** The Reach fact in plain words: how many functions use the edited code, and how many of those no test checks. */
+function reachLine(m) {
+  const r = reachRings(m.graph), reached = r.rings.slice(1).flat().map((id) => r.byId.get(id));
+  if (!reached.length) return "";
+  const failing = reached.filter((n) => n.evidence === "contradicted").length;
+  const bare = reached.filter((n) => n.evidence !== "contradicted" && untested(n)).length;
+  const have = (n) => (n === 1 ? "has" : "have");
+  return [
+    `${things(reached.length, "function uses", "functions use")} the edit`,
+    failing ? `<span class="bad">${failing} ${have(failing)} a failing unit test</span>` : "",
+    bare ? `<span class="warn">${bare} ${have(bare)} no test</span>` : "",
+  ].filter(Boolean).join(" · ");
 }
 /**
  * Code the change reaches but never edits, named at the broadest map level that has any: areas, else files.
@@ -2070,7 +2084,7 @@ const TOOL_SCOPE = {
 };
 function scoresHtml() {
   return `<div class="scores">${scoreRows().map((r) => `<button type="button" class="score" data-act="tool" data-scope="${r.scope}" title="${esc(TOOL_SCOPE[r.scope])} Click to open.">
-    <b>${esc(r.name)}</b>${r.wait ? `<span class="muted">working it out…</span><span></span>` : `<span class="tag ${esc(r.tone)}">${esc(r.score)}</span><span class="score-why">${esc(r.why)}${r.madeUp ? ` <span class="tag warn">made up</span>` : ""}</span>`}<i aria-hidden="true">›</i></button>`).join("")}</div>`;
+    <b>${esc(r.name)}</b>${r.wait ? `<span class="muted">working it out…</span><span></span>` : `<span class="tag ${esc(r.tone)}">${esc(r.score)}</span><span class="score-why">${r.html || esc(r.why)}${r.madeUp ? ` <span class="tag warn">made up</span>` : ""}</span>`}<i aria-hidden="true">›</i></button>`).join("")}</div>`;
 }
 /**
  * Merge is the main choice when the advice says it is fine, and lights up once every point is acknowledged.
@@ -2222,29 +2236,49 @@ async function signOff(form) {
     <button type="button" data-act="evalcase" data-on="1">Eval test case</button>`);
 }
 
-// ----- ask the agent that wrote the PR (demo: saved answers that come with the PR's context.md) -----
+// ----- ask: a typed question gets the closest saved answer (src/lib/ask.mjs), never new text. No model runs. -----
+// The coding agent's answers come with the PR's context.md; the app's own answers about itself are the same on every PR.
 const suggestHtml = (list) => `<div class="choices">${list.map((c) => `<button type="button" class="choice" data-act="q" data-q="${esc(c.q)}"><b>${esc(c.q)}</b></button>`).join("")}</div>`;
+let aboutAnswers = null;
+// A failed load offers the agent's answers only, and the next question tries again.
+const loadAbout = () => (aboutAnswers ??= api("/api/about").then((r) => r.chat ?? []).catch(() => ((aboutAnswers = null), [])));
+async function savedAnswers() {
+  const about = await loadAbout();
+  return [...(state.model.agent?.chat ?? []).map((c) => ({ ...c, from: "agent" })), ...about.map((c) => ({ ...c, from: "about" }))];
+}
+const asked = (q) => threadOf().some((x) => x.who === "me" && x.text === q);
 function agentIntro(said) {
   me(said ?? "Ask the agent that wrote this PR");
   const a = state.model.agent;
   if (!a) return bot(`<p>This PR has no saved notes from its coding agent.</p>`);
-  bot(`<p>Ask why the PR was written this way: the answers come from the coding agent's own notes, <button type="button" class="link" data-act="ctx">context.md</button>.</p>
-    ${suggestHtml(a.chat)}`);
+  bot(`<p>Ask why the PR was written this way: the answers come from the coding agent's own notes, <button type="button" class="link" data-act="ctx">context.md</button>. Or type your own question.</p>
+    ${suggestHtml(a.chat.slice(0, 4))}`);
   $("askInput").focus();
 }
-function askAgent(q) {
+async function askAgent(q, hit) {
   me(q);
-  const a = state.model.agent;
-  if (!a) return bot(`<p>This PR has no saved notes from its coding agent.</p>`);
-  const words = q.toLowerCase().match(/[a-z]{4,}/g) ?? [];
-  const best = a.chat.map((c) => ({ c, n: words.filter((w) => `${c.q} ${c.keys ?? ""}`.toLowerCase().includes(w)).length })).sort((x, y) => y.n - x.n)[0];
-  if (!best?.n) return bot(`<p>The demo only has saved answers. Try one of these:</p>${suggestHtml(a.chat)}`);
-  const left = a.chat.filter((c) => c !== best.c && !threadOf().some((x) => x.who === "me" && x.text === c.q));
-  return bot(`<p>${rich(best.c.a)}</p><div class="byline">Saved answer from <button type="button" class="link" data-act="ctx">context.md</button> · ${esc(modelName(a.model))}</div>${left.length ? suggestHtml(left.slice(0, 2)) : ""}`, 700);
+  const all = await savedAnswers();
+  if (!all.length) return bot(`<p>This PR has no saved notes from its coding agent.</p>`);
+  hit ??= matchQuestion(q, all);
+  if (!hit.entry) {
+    const none = state.model.agent ? "" : "This commit has no saved notes from its coding agent. ";
+    return bot(`<p>${none}The demo has saved answers only. ${hit.near ? "Closest:" : "Try one of these:"}</p>${suggestHtml(hit.suggestions)}`);
+  }
+  const e = hit.entry, a = state.model.agent;
+  const source = e.from === "about" ? "· About Impact" : `from <button type="button" class="link" data-act="ctx">context.md</button> · ${esc(modelName(a.model))}`;
+  const left = all.filter((c) => c.from === e.from && c.q !== e.q && !asked(c.q));
+  return bot(`<p>${rich(e.a)}</p><div class="byline">Saved answer for “${esc(e.q)}” ${source} · no live model</div>${left.length ? suggestHtml(left.slice(0, 2)) : ""}`);
 }
-/** Free text: a tool name or "merge" does that. Anything else is a question for the agent. */
-function handleText(q) {
+/**
+ * Free text: a question with a saved answer gets it ("what is blast radius?"); a tool name or "merge" does that
+ * ("run the blast radius"); anything else is a question.
+ */
+async function handleText(q) {
   const s = q.toLowerCase();
+  if (asksQuestion(q)) {
+    const hit = matchQuestion(q, await savedAnswers());
+    if (hit.entry) return askAgent(q, hit);
+  }
   if (/\b(merge|sign.?off|approve|ship it)\b/.test(s)) return startMerge(q);
   if (/blast/.test(s)) return useTool("blast", q);
   if (/swarm|monte/.test(s)) return useTool("swarm", q);

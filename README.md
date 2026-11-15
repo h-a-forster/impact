@@ -81,7 +81,7 @@ npm run -s brake            # AI reviewer answers that must never lighten the ro
 node evals/edit-check.mjs   # the "too much, too little" check on known cases
 ```
 
-At the time of writing: 137 of 137 evals pass, 92 of 92 attempts are held, 7,217 of 7,217 brake
+At the time of writing: 160 of 160 evals pass, 92 of 92 attempts are held, 7,217 of 7,217 brake
 checks pass, and all 24 edit-check cases come out as expected.
 
 ## How it's built
