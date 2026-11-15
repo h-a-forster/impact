@@ -1,7 +1,9 @@
 // Review evals. They test whether the system finds the right path, cites the
 // right evidence and takes the expected route. (Rounding itself is tested by
 // the sample's own tests.)   Run with:  npm run evals
+import { spawn } from "node:child_process";
 import fs from "node:fs";
+import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { readFileAt } from "../src/lib/git.mjs";
@@ -15,7 +17,7 @@ import { prComment } from "../src/lib/comment.mjs";
 import { reachRings } from "../src/lib/reach.mjs";
 import { loadReview } from "../src/lib/reviewer.mjs";
 import { SENTENCE_MAX, cutAtWord, issueList, verdictSentence } from "../src/lib/verdict.mjs";
-import { DATA } from "../src/lib/paths.mjs";
+import { DATA, DECISIONS_FILE, DEMO } from "../src/lib/paths.mjs";
 import { prOverlays, reviewSampleChange } from "../src/lib/edit-check.mjs";
 import { editCheckSummary } from "../src/lib/edit-check-view.mjs";
 import { ROOT } from "../src/lib/paths.mjs";
@@ -372,6 +374,53 @@ group = "Too much, too little";
   const ledger = revisions.prs.find((p) => p.id === "ledger-note");
   const ledgerCheck = editCheckSummary(buildModel(revisions, ledger.id, ledger.commits[0].sha).editCheck);
   check("a passenger is named in the summary and raises a question", [ledgerCheck.tone, ledgerCheck.lines[0].includes("`src/payments/ledger.ts:12`")], ["warn", true]);
+}
+
+// ---- 15. Public demo ------------------------------------------------------
+// The hosted copy runs with PUBLIC_DEMO=1: reads work, and no visitor can change the shared files.
+group = "Public demo";
+{
+  const port = await new Promise((resolve) => {
+    const probe = net.createServer().listen(0, "127.0.0.1", () => {
+      const { port } = probe.address();
+      probe.close(() => resolve(port));
+    });
+  });
+  const shared = [DECISIONS_FILE, path.join(DEMO, "eval-cases.json")];
+  const sharedNow = () => shared.map((f) => (fs.existsSync(f) ? fs.readFileSync(f, "utf8") : null));
+  const before = sharedNow();
+  const server = spawn(process.execPath, [path.join(ROOT, "src", "server.mjs")], { env: { ...process.env, PUBLIC_DEMO: "1", HOST: "127.0.0.1", PORT: String(port) }, stdio: ["ignore", "pipe", "inherit"] });
+  const call = (route, body) =>
+    fetch(`http://127.0.0.1:${port}${route}`, { signal: AbortSignal.timeout(5000), ...(body && { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }) });
+  try {
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("the app did not start within 10 s")), 10_000);
+      server.stdout.once("data", () => resolve(clearTimeout(timer)));
+      server.once("exit", (code) => reject(new Error(`the app exited (${code})`)));
+    });
+    const demo = demoRevisions();
+    const pr = demo.prs.find((p) => p.id === "req-17");
+    const sha = pr.commits.at(-1).sha;
+    const listed = await (await call("/api/revisions")).json();
+    check("reads work and say the mode", [listed.publicDemo, listed.prs.length], [true, demo.prs.length]);
+    const model = await call(`/api/model?pr=req-17&sha=${sha}`);
+    check("the model of a PR is served", [model.status, (await model.json()).pr.id], [200, "req-17"]);
+    const sign = await (await call("/api/decisions", { pr: "req-17", sha, name: "Eval Visitor", action: "sign-off", residualRisk: "none" })).json();
+    check("a sign-off is checked and sent back for the browser to keep", [sign.ok, sign.decision?.name], [true, "Eval Visitor"]);
+    const early = await (await call("/api/decisions", { pr: "req-17", sha: pr.commits[0].sha, name: "Eval Visitor", action: "sign-off", residualRisk: "none" })).json();
+    check("a sign-off the rules refuse is still refused", early.ok, false);
+    const mark = await (await call("/api/evalcase", { pr: "req-17", on: true })).json();
+    check("an eval mark is sent back for the browser to keep", [mark.ok, Boolean(mark.evalCase?.markedAt)], [true, true]);
+    check("reset answers", (await call("/api/reset", {})).status, 200);
+    check("no shared file changed", sharedNow(), before);
+    let limitedAt = null;
+    for (let n = 1; n <= 200 && !limitedAt; n++) if ((await call("/no-such-page")).status === 429) limitedAt = n;
+    check("a visitor over 120 requests a minute gets 429", limitedAt !== null && limitedAt <= 121, true);
+  } catch (err) {
+    check("the public demo app answers", err.message, "no error");
+  } finally {
+    server.kill();
+  }
 }
 
 // ---- Report ---------------------------------------------------------------

@@ -14,6 +14,7 @@ export function loadDecisions(file = DECISIONS_FILE) {
  * - Old decisions are never edited or removed.
  * - A decision only applies to the commit it was made on.
  * - Sign-off is only accepted once the required evidence is in for that commit.
+ * With file null the decision is checked and returned, not saved (public demo).
  */
 export function recordDecision(model, input, file = DECISIONS_FILE) {
   const name = String(input.name ?? "").trim();
@@ -55,10 +56,12 @@ export function recordDecision(model, input, file = DECISIONS_FILE) {
     residualRisk: String(input.residualRisk ?? "").trim() || null,
     note: String(input.note ?? "").trim() || null,
   };
-  const all = loadDecisions(file);
-  all.push(decision);
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, JSON.stringify(all, null, 2) + "\n");
+  if (file) {
+    const all = loadDecisions(file);
+    all.push(decision);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(all, null, 2) + "\n");
+  }
   return { ok: true, decision };
 }
 

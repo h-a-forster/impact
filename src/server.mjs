@@ -12,6 +12,11 @@ import { findPr, prSummary } from "./lib/github.mjs";
 import { DECISIONS_FILE, DEMO, REVISIONS_FILE, ROOT, SAMPLE_REPO } from "./lib/paths.mjs";
 
 const PORT = Number(process.env.PORT ?? 4317);
+const HOST = process.env.HOST; // unset: this machine only (127.0.0.1 and ::1)
+// Public demo (PUBLIC_DEMO=1, for a hosted copy): visitors can try everything, but no request changes
+// the shared files. Sign-offs and eval marks are checked and sent back, and the visitor's browser keeps them.
+const PUBLIC_DEMO = process.env.PUBLIC_DEMO === "1";
+const RATE_LIMIT = 120; // requests per visitor per minute, public demo only
 const PUBLIC = path.join(ROOT, "src", "public");
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".mjs": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml" };
 // Browser-safe lib modules the page imports, so the UI and the evals share one copy.
@@ -46,17 +51,31 @@ function refuseWrite(req) {
   return `Cross-site request from ${origin} refused`;
 }
 
+// Fixed one-minute windows. Behind Modal's proxy the visitor's address is the last X-Forwarded-For entry.
+let rateMinute = 0;
+let rateCounts = new Map();
+function overRateLimit(req) {
+  const minute = Math.floor(Date.now() / 60_000);
+  if (minute !== rateMinute) [rateMinute, rateCounts] = [minute, new Map()];
+  const visitor = req.headers["x-forwarded-for"]?.split(",").at(-1).trim() || req.socket.remoteAddress;
+  const count = (rateCounts.get(visitor) ?? 0) + 1;
+  rateCounts.set(visitor, count);
+  return count > RATE_LIMIT;
+}
+
 // Eval test cases: PRs a person marked as "merged, then broke the system".
 // They become test cases for the AI review agent. Saved per PR.
 const EVAL_CASES_FILE = path.join(DEMO, "eval-cases.json");
 const loadEvalCases = () => (fs.existsSync(EVAL_CASES_FILE) ? JSON.parse(fs.readFileSync(EVAL_CASES_FILE, "utf8")) : {});
 function setEvalCase(prId, on) {
+  const mark = on ? { markedAt: new Date().toISOString() } : null;
+  if (PUBLIC_DEMO) return mark;
   const cases = loadEvalCases();
-  if (on) cases[prId] = { markedAt: new Date().toISOString() };
+  if (mark) cases[prId] = mark;
   else delete cases[prId];
   fs.mkdirSync(DEMO, { recursive: true });
   fs.writeFileSync(EVAL_CASES_FILE, JSON.stringify(cases, null, 2) + "\n");
-  return cases[prId] ?? null;
+  return mark;
 }
 
 // Session mode (?session=1, used by timed review sessions): the routes serve the shop sample's
@@ -72,12 +91,13 @@ const handler = async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const demoRevisions = revisionsSource(url); // shadows the import, so every route below follows the session switch
   try {
+    if (PUBLIC_DEMO && overRateLimit(req)) return json(res, 429, { error: "Too many requests. Wait a minute, then try again." });
     if (req.method === "POST") {
       const refused = refuseWrite(req);
       if (refused) return json(res, 403, { error: refused });
     }
     if (url.pathname === "/api/revisions") {
-      return json(res, 200, demoRevisions());
+      return json(res, 200, PUBLIC_DEMO ? { ...demoRevisions(), publicDemo: true } : demoRevisions());
     }
     if (url.pathname === "/api/evalcase" && req.method === "POST") {
       const input = JSON.parse(await readBody(req));
@@ -135,12 +155,12 @@ const handler = async (req, res) => {
       const input = JSON.parse(await readBody(req));
       const revisions = demoRevisions();
       const model = buildModel(revisions, input.pr, input.sha);
-      const result = recordDecision(model, input);
+      const result = recordDecision(model, input, PUBLIC_DEMO ? null : undefined);
       return json(res, result.ok ? 200 : 400, result);
     }
     if (url.pathname === "/api/reset" && req.method === "POST") {
       // "Reset demo" in the chat UI: forget every saved sign-off, so a merge can be shown again.
-      fs.rmSync(DECISIONS_FILE, { force: true });
+      if (!PUBLIC_DEMO) fs.rmSync(DECISIONS_FILE, { force: true });
       return json(res, 200, { ok: true });
     }
     // Static files.
@@ -158,9 +178,10 @@ const handler = async (req, res) => {
 };
 const server = http.createServer(handler);
 // Also answer on IPv6 loopback: Node resolves "localhost" to ::1 first, browsers may use either.
-http.createServer(handler).on("error", () => {}).listen(PORT, "::1");
+if (!HOST) http.createServer(handler).on("error", () => {}).listen(PORT, "::1");
 
-server.listen(PORT, "127.0.0.1", () => {
+server.listen(PORT, HOST ?? "127.0.0.1", () => {
+  if (PUBLIC_DEMO) console.log("Public demo mode: nothing a visitor does is saved on the server.");
   console.log(`Code Review Impact Map: http://localhost:${PORT}`);
   console.log(`Open Impact Map link for the demo PR: http://localhost:${PORT}/#pr=ju26-issue-2283`);
   console.log(`GitHub replica link form:              http://localhost:${PORT}/?repo=<owner/name>&pr=<number>&sha=<sha>`);

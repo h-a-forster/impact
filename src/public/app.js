@@ -21,7 +21,32 @@ async function api(path, opts) {
   const res = await fetch(path, opts);
   const body = await res.json();
   if (!res.ok && !body.error) throw new Error(`Request failed: ${res.status}`);
+  if (state.revisions?.publicDemo) {
+    if (opts?.method === "POST") keepInBrowser(path, JSON.parse(opts.body), body);
+    if (path.startsWith("/api/model?") && !body.error) return withBrowserState(body);
+  }
   return body;
+}
+// Public demo: the server saves nothing a visitor does, so this browser keeps their sign-offs and eval marks.
+const BROWSER_KEY = "impact-map-public-demo";
+let browserState = { decisions: [], evalCases: {} };
+try { browserState = JSON.parse(localStorage.getItem(BROWSER_KEY)) ?? browserState; } catch {}
+function keepInBrowser(path, input, body) {
+  if (path.startsWith("/api/decisions") && body.ok) browserState.decisions.push(body.decision);
+  if (path.startsWith("/api/evalcase") && body.ok) {
+    if (body.evalCase) browserState.evalCases[input.pr] = body.evalCase;
+    else delete browserState.evalCases[input.pr];
+  }
+  if (path.startsWith("/api/reset")) browserState.decisions = [];
+  try { localStorage.setItem(BROWSER_KEY, JSON.stringify(browserState)); } catch {}
+}
+function withBrowserState(model) {
+  const signOff = browserState.decisions.findLast((d) => d.pr === model.pr.id && d.commit === model.selected.sha && d.action === "sign-off");
+  return {
+    ...model,
+    decisions: signOff ? { ...model.decisions, signedOff: true, signOff } : model.decisions,
+    evalCase: browserState.evalCases[model.pr.id] ?? model.evalCase,
+  };
 }
 async function getSource(sha, file) {
   const key = `${state.prId}:${sha}:${file}`;
@@ -2195,7 +2220,7 @@ async function signOff(form) {
   me(`Sign off as ${name}`);
   await load(state.prId, state.sha);
   bot(`<div class="okbox"><b>Merged.</b> ${esc(name)} signed off ${esc(stepText(state.model))}.</div>
-    <p class="muted">Demo: the sign-off is saved with this commit. Nothing is pushed to GitHub.</p>
+    <p class="muted">${state.revisions.publicDemo ? "Public demo: the sign-off is kept in this browser only." : "Demo: the sign-off is saved with this commit."} Nothing is pushed to GitHub.</p>
     <p>If this PR breaks something later, mark it. It then becomes a test for the AI reviewer.</p>
     <button type="button" data-act="evalcase" data-on="1">Eval test case</button>`);
 }
