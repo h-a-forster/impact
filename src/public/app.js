@@ -45,7 +45,7 @@ function withBrowserState(model) {
   const signOff = browserState.decisions.findLast((d) => d.pr === model.pr.id && d.commit === model.selected.sha && d.action === "sign-off");
   return {
     ...model,
-    decisions: signOff ? { ...model.decisions, signedOff: true, signOff } : model.decisions,
+    decisions: signOff ? { ...model.decisions, signedOff: true, signOff, overridden: Boolean(signOff.override) } : model.decisions,
     evalCase: browserState.evalCases[model.pr.id] ?? model.evalCase,
   };
 }
@@ -175,7 +175,9 @@ function renderVerdict() {
       ${stamp("Route", c2.route, routeTone, `Set by fixed rules after the AI review (Classifier 2, rule ${c2.rule})`)}
       ${m.checks.map((c) => stamp(c.label ?? "Check", c.counts ? `${c.counts.passed} of ${c.counts.total} pass` : c.status, checkTone(c.status), madeUp ? `${c.label ?? "Check"} (${c.name}). ${c.by ?? "Made up for the demo"}.` : `${c.label ?? "Check"} (${c.name}, recorded run, not CI)${m.run ? ". Click for the run." : ""}`, m.run ? 'data-run="1"' : "", madeUp ? "made up" : "")).join("")}
       ${stamp("AI review", !r.available ? "Not available" : r.findings.length ? `${r.findings.length} finding${r.findings.length > 1 ? "s" : ""}` : "No findings", !r.available ? "plain" : r.findings.length ? "warn" : "ok", "Advice only. Click to read it.", 'data-jump="reviewCard"')}
-      ${stamp("Sign-off", signed ? m.decisions.signOff.name : "None yet", signed ? "ok" : "plain", "A named person. Counts for this commit only.", 'data-jump="decisionCard"')}
+      ${m.decisions.overridden
+        ? stamp("Override", m.decisions.signOff.name, "warn", `Merged against the rules: ${m.decisions.signOff.override.reason}`, 'data-jump="decisionCard"')
+        : stamp("Sign-off", signed ? m.decisions.signOff.name : "None yet", signed ? "ok" : "plain", "A named person. Counts for this commit only.", 'data-jump="decisionCard"')}
     </div>
     ${c2.blockers.length ? `<ul class="blockers">${c2.blockers.map((b) => `<li>${b.type === "evidence" ? `<button type="button" class="link" data-node="${esc(b.ref)}">${esc(b.text)}</button>` : esc(b.text)}</li>`).join("")}</ul>` : `<div class="verdict-reason">${esc(c2.reason)}</div>`}
     ${c2.notes.map((n) => `<div class="verdict-reason"><strong>${esc(n.text)}</strong></div>`).join("")}
@@ -1558,6 +1560,16 @@ function editCheckHtml(m) {
   return `<div class="step"><div class="step-head"><strong>Too much, too little</strong> <span class="tag ${c.tone}">${esc(c.tag)}</span> <span class="muted" title="Each edit is taken out again and the tests re-run; the untouched code is searched for the old form of each edited line.">tests re-run, no AI</span></div>
     ${c.lines.map((l) => `<div>${rich(l)}</div>`).join("")}${fold}</div>`;
 }
+/** The person's step, once someone signed off this commit. An override says what the rules still held open. */
+function signOffStepHtml(m) {
+  const so = m.decisions.signOff;
+  if (!so) return "";
+  const when = esc(so.at.slice(0, 16).replace("T", " "));
+  return so.override
+    ? `<div class="step"><div class="step-head"><span class="step-n">4</span><strong>Override</strong> <span class="tag warn">Merged against the rules</span> <span class="muted">${esc(so.name)} · ${when} UTC</span></div>
+      <div><b>Reason:</b> ${esc(so.override.reason)}</div>${so.override.open.length ? `<div class="muted">Not proven: ${so.override.open.map(esc).join(" ")}</div>` : ""}</div>`
+    : `<div class="step"><div class="step-head"><span class="step-n">4</span><strong>Sign-off</strong> <span class="tag ok">Signed off</span> <span class="muted">${esc(so.name)} · ${when} UTC</span></div></div>`;
+}
 function renderReview() {
   const m = state.model, el = $("reviewCard"), r = m.review;
   const cite = (c) => (c.valid ? `<button type="button" class="link mono" data-src="${esc(c.file)}" data-line="${esc(c.line)}" title="${esc(c.file)}">${esc(c.file.split("/").pop())}:${esc(c.line)}</button>` : `<span class="mono bad-text" title="${esc(c.problem)}">${esc(c.file)}:${esc(c.line)} (invalid)</span>`);
@@ -1578,6 +1590,7 @@ function renderReview() {
     <div class="byline">${esc(r.modeLabel)}</div></div>
     <div class="step"><div class="step-head"><span class="step-n">3</span><strong>Classifier 2</strong> ${sev(c2.severity)} <span class="tag">${esc(c2.route)}</span> <span class="muted">fixed rules · ${esc(c2.rule)}</span></div>
       ${c2.blockers.length ? `<div>${esc(c2.reason)}</div>` : ""}</div>
+    ${signOffStepHtml(m)}
     ${editCheckHtml(m)}`;
   for (const b of el.querySelectorAll("[data-doc]")) b.onclick = () => select({ type: "doc", file: b.dataset.doc });
   for (const b of el.querySelectorAll("[data-src]")) b.onclick = () => select({ type: "source", file: b.dataset.src, line: Number(b.dataset.line) });
@@ -1912,7 +1925,7 @@ function issuesHtml() {
     : "";
   const fixedHtml = fixed.map((x) => `<div class="issue fixed"><div class="issue-main"><span class="issue-mark" aria-hidden="true">✓</span>
       <div class="issue-text"><strong>${esc(x.title)}</strong><div class="issue-state">Fixed in commit ${m.selected.index}${m.selected.madeUp ? ` <span class="tag warn">made up</span>` : ""}</div></div></div></div>`).join("");
-  const foot = merged ? `<div class="okbox"><b>Merged.</b> ${esc(m.decisions.signOff.name)} signed off ${esc(stepText(m))}.</div>` : "";
+  const foot = merged ? mergedHtml(m) : "";
   return `${head}${meter}${main.map(issueHtml).join("")}${minorHtml}${fixedHtml}${foot}`;
 }
 /** Every issue list in the chat shows the same live state. */
@@ -2049,7 +2062,7 @@ function sentenceOf(a, points) {
     points,
     checksPassed: m.checks.length > 0 && m.checks.every((c) => c.status === "passed"),
     docsOnly: m.diff.files.length > 0 && m.diff.files.every((f) => DOCS.test(f.file)),
-    signedOff: so && { name: so.name, step: stepText(m) },
+    signedOff: so && { name: so.name, step: stepText(m), reason: so.override?.reason },
     because: [...a.parts].sort((x, y) => y[0] - x[0])[0]?.[1] ?? "",
   });
 }
@@ -2063,7 +2076,8 @@ function pointLinesHtml(points, lead) {
 }
 function adviceHtml() {
   const a = advice(), m = state.model, points = pointsNow(), s = sentenceOf(a, points), fixed = fixedList();
-  const merged = m.decisions.signedOff, howOpen = ui.openMore.has("advice");
+  // An override merges what is still open, so the open points and the score's reason stay on screen.
+  const merged = m.decisions.signedOff && !m.decisions.overridden, howOpen = ui.openMore.has("advice");
   const look = a.look && a.look.act !== "issues" && s.tone !== "ok"
     ? `<p class="verdict-look">Look at this first: <button type="button" class="link" data-act="${a.look.act}" data-scope="${a.look.scope ?? ""}">${esc(a.look.name)}</button>. ${esc(a.look.why)}</p>`
     : "";
@@ -2071,7 +2085,7 @@ function adviceHtml() {
     <p class="verdict-say"><span class="verdict-word">${esc(s.verdict)}:</span> <span${s.cut ? ` title="${esc(s.full)}"` : ""}>${esc(s.reason)}${s.reason.endsWith("…") ? "" : "."}</span>
       <button type="button" class="verdict-score" data-act="score" aria-expanded="${howOpen}" title="Trust score. 100 = nothing found. Click to see how it is worked out.">Trust ${a.waiting ? "…" : a.score}/100</button></p>
     ${merged ? "" : pointLinesHtml(points, s.lead)}
-    ${!merged && points.some((x) => !x.done) ? `<button type="button" class="verdict-go" data-act="issues">Go through them</button>` : ""}
+    ${!m.decisions.signedOff && points.some((x) => !x.done) ? `<button type="button" class="verdict-go" data-act="issues">Go through them</button>` : ""}
     ${fixed.length ? `<p class="verdict-note">${things(fixed.length, "point was", "points were")} fixed since commit 1${m.selected.madeUp ? " (made up)" : ""}.</p>` : ""}
     ${a.blocked && !merged ? `<p class="verdict-look"><b>Why 0?</b> Missing proof always means 0, whatever the other checks say. Blast radius and the swarm check how far the change reaches, not whether it is tested.</p>` : ""}
     ${look}
@@ -2196,18 +2210,36 @@ function showPage(page, said) {
 }
 
 // ----- merge: flag open issues, ask "are you sure", then a named sign-off -----
+// Missing proof: the rules refuse, but a person can still merge anyway (an override), on the record.
 const nameForm = (lead) => `${lead}<p>Type your name to sign off. It is saved with ${esc(stepText(state.model))} only.</p>
   <form class="name-form" data-form="merge"><input name="name" type="text" placeholder="Your name" aria-label="Your name" autocomplete="name" /><button class="primary" type="submit">Sign off and merge</button><div class="error" role="alert"></div></form>`;
+const REASON_MIN = 10; // the server's OVERRIDE_REASON_MIN
+const overrideForm = () => `<p><b>Merge anyway?</b> Only if it cannot wait. It is saved with ${esc(stepText(state.model))} as a merge against the rules, with your name and reason.</p>
+  <form class="name-form override-form" data-form="override">
+    <label class="override-tick"><input name="sure" type="checkbox" /> I know this is not proven and I take responsibility</label>
+    <input name="reason" type="text" placeholder="Why it must merge now (at least ${REASON_MIN} characters)" aria-label="Reason" maxlength="300" />
+    <input name="name" type="text" placeholder="Your name" aria-label="Your name" autocomplete="name" />
+    <button class="danger" type="submit" disabled>Merge anyway</button><div class="error" role="alert"></div></form>`;
+/** Merge anyway lights up only once the box is ticked and the reason is long enough. */
+const overrideReady = (form) => form.elements.sure.checked && form.elements.reason.value.trim().length >= REASON_MIN;
+/** The merged state, in the chat. An override never shows in green. */
+function mergedHtml(m) {
+  const so = m.decisions.signOff;
+  return so.override
+    ? `<div class="warnbox"><b>Merged against the rules by ${esc(so.name)}:</b> ${esc(so.override.reason)}</div>`
+    : `<div class="okbox"><b>Merged.</b> ${esc(so.name)} signed off ${esc(stepText(m))}.</div>`;
+}
 function startMerge(said) {
   me(said ?? "Merge this PR");
   if (SESSION) return bot(`<p>In this test you give your decision with the buttons below this screen.</p>`);
   const m = state.model, all = issueList(m), open = all.filter((x) => !acked(x.id)), hard = open.filter((x) => x.level === "block");
-  if (m.decisions.signedOff) return bot(`<p><b>Already merged.</b> ${esc(m.decisions.signOff.name)} signed off ${esc(stepText(m))}.</p>`);
+  if (m.decisions.signedOff) return bot(`<p><b>Already merged.</b></p>${mergedHtml(m)}`);
   if (hard.length) {
-    const next = currentPr().commits.find((c) => c.index > m.selected.index);
-    return bot(`<div class="warnbox bad"><b>I can't merge this yet.</b> ${things(hard.length, "thing has", "things have")} no proof:<ul>${hard.map((x) => `<li>${esc(x.title)}</li>`).join("")}</ul></div>
-      <p>A sign-off cannot cover missing proof. The author must add it first.</p>
-      ${next ? `<div class="choices"><button type="button" class="choice" data-act="commit" data-sha="${next.sha}"><b>Look at commit ${next.index}${next.madeUp ? " · made up" : ""}</b><span>${esc(next.message)}</span></button></div>` : ""}`);
+    const next = currentPr().commits.find((c) => c.index > m.selected.index), rest = open.filter((x) => x.level !== "block");
+    return bot(`<div class="warnbox bad"><b>I can't merge this yet.</b> ${things(hard.length, "thing has", "things have")} no proof:<ul>${hard.map((x) => `<li>${esc(x.title)}</li>`).join("")}</ul>${rest.length ? `<p>Also open:</p><ul>${rest.map((x) => `<li>${esc(x.title)}</li>`).join("")}</ul>` : ""}</div>
+      <p>A normal sign-off cannot cover missing proof. Best: the author adds it first.</p>
+      ${next ? `<div class="choices"><button type="button" class="choice" data-act="commit" data-sha="${next.sha}"><b>Look at commit ${next.index}${next.madeUp ? " · made up" : ""}</b><span>${esc(next.message)}</span></button></div>` : ""}
+      ${overrideForm()}`);
   }
   if (open.length) {
     return bot(`<div class="warnbox"><b>Are you sure?</b> ${things(open.length, "issue is", "issues are")} still open:<ul>${open.map((x) => `<li>${esc(x.title)}</li>`).join("")}</ul></div>
@@ -2232,7 +2264,27 @@ async function signOff(form) {
   for (const x of form.querySelectorAll("input, button")) x.disabled = true;
   me(`Sign off as ${name}`);
   await load(state.prId, state.sha);
-  bot(`<div class="okbox"><b>Merged.</b> ${esc(name)} signed off ${esc(stepText(state.model))}.</div>
+  mergedReply();
+}
+async function overrideSignOff(form) {
+  const name = form.elements.name.value.trim(), reason = form.elements.reason.value.trim(), err = form.querySelector(".error");
+  err.textContent = "";
+  if (!overrideReady(form)) return void (err.textContent = `Tick the box and give a reason of at least ${REASON_MIN} characters.`);
+  if (!name) return void (err.textContent = "Type your name first.");
+  const titles = issueList(state.model).map((x) => x.title);
+  const res = await api("/api/decisions", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ pr: state.prId, sha: state.sha, name, action: "sign-off", override: true, reason, residualRisk: `Not proven: ${titles.join("; ")}` }),
+  });
+  if (!res.ok) return void (err.textContent = res.error);
+  for (const x of form.querySelectorAll("input, button")) x.disabled = true;
+  me(`Merge anyway as ${name}: ${reason}`);
+  await load(state.prId, state.sha);
+  mergedReply();
+}
+function mergedReply() {
+  bot(`${mergedHtml(state.model)}
     <p class="muted">${state.revisions.publicDemo ? "Public demo: the sign-off is kept in this browser only." : "Demo: the sign-off is saved with this commit."} Nothing is pushed to GitHub.</p>
     <p>If this PR breaks something later, mark it. It then becomes a test for the AI reviewer.</p>
     <button type="button" data-act="evalcase" data-on="1">Eval test case</button>`);
@@ -2346,6 +2398,7 @@ async function copyComment(b) {
     points: openIssues(),
     notRun: rows.filter((r) => r.tone === "plain").map((r) => r.name),
     url: location.href,
+    signOff: state.model.decisions.signOff,
   });
   try {
     await navigator.clipboard.writeText(text);
@@ -2376,6 +2429,11 @@ function initChat() {
   $("thread").addEventListener("submit", (ev) => {
     ev.preventDefault();
     if (ev.target.dataset.form === "merge") signOff(ev.target);
+    if (ev.target.dataset.form === "override") overrideSignOff(ev.target);
+  });
+  $("thread").addEventListener("input", (ev) => {
+    const form = ev.target.closest?.('[data-form="override"]');
+    if (form) form.querySelector('button[type="submit"]').disabled = !overrideReady(form);
   });
   $("askForm").onsubmit = (ev) => {
     ev.preventDefault();

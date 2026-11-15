@@ -44,7 +44,7 @@
     {
       "q": "How do I sign off?",
       "keys": "sign off signoff name record decision approve accept",
-      "a": "Press Merge this PR. If issues are open, acknowledge each one, or all at once, then type your name. The sign-off counts for that one commit only. If proof is missing, the rules refuse a sign-off until the author adds it. In the hosted demo it is kept in your browser, and nothing is pushed to GitHub."
+      "a": "Press Merge this PR. If issues are open, acknowledge each one, or all at once, then type your name. The sign-off counts for that one commit only. If proof is missing, the rules refuse a normal sign-off until the author adds it. You can still merge anyway: tick that you take responsibility and give a reason. It is recorded and shown as a merge against the rules. In the hosted demo it is kept in your browser, and nothing is pushed to GitHub."
     },
     {
       "q": "What is the fast lane?",

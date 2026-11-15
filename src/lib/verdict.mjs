@@ -7,7 +7,7 @@ export const SENTENCE_MAX = 72;
 
 /**
  * The open points of one commit, each as one line of problem and one line of fix.
- * - "block": proof is missing. The rules refuse a sign-off, so it cannot be acknowledged.
+ * - "block": proof is missing. The rules refuse a normal sign-off, so it cannot be acknowledged (only overridden).
  * - "major": the rule that raised the risk, and the AI review's important findings.
  * - "minor": the AI review's small findings. Shown folded.
  * An AI finding about the same code as a missing proof is folded into it, so one problem is one line.
@@ -96,7 +96,8 @@ const count = (n, one, many) => (n === 1 ? one : `${n} ${many}`);
  * - auto: the rules would merge this by itself (route "Auto-merge eligible").
  * - points: issueList() of the commit, each with done = acknowledged.
  * - checksPassed: every required check passed. docsOnly: the change edits docs only.
- * - signedOff: { name, step } once someone signed off this commit.
+ * - signedOff: { name, step, reason } once someone signed off this commit. reason is set only when
+ *   they overrode the rules: then the sentence says so, never in green.
  * - because: the largest reason the score went down, said when no open point explains the verdict.
  * Returns the verdict and tone to show, the reason (cut to fit), the full reason, the point it names (lead), and whether it was cut.
  */
@@ -106,6 +107,7 @@ export function verdictSentence({ verdict, tone, auto = false, points = [], chec
     const reason = shorten(full, max - v.length - 3); // ": " and the end stop
     return { verdict: v, tone: t, reason, full, lead, cut: reason !== full, text: `${v}: ${reason}${reason.endsWith("…") ? "" : "."}` };
   };
+  if (signedOff?.reason) return say(`Merged against the rules by ${signedOff.name}`, "warn", String(signedOff.reason).trim().replace(/\.$/, ""));
   if (signedOff) return say("Merged", "ok", `${signedOff.name} signed off ${signedOff.step}`);
   // Blockers cannot be acknowledged, so "nothing open" here means every point was acknowledged.
   if (points.length && !open.length) return say("Ready for your sign-off", "ok", points.length === 1 ? "you acknowledged the one point" : `you acknowledged all ${points.length} points`);

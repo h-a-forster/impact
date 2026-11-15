@@ -7,6 +7,8 @@
 // count as a silent one. A third group goes through git itself: a link, a submodule pointer, an
 // executable or a binary file can all be named notes.md. A fourth group hides an instruction to
 // the AI reviewer in the change, and assumes the reviewer obeyed: it stays silent.
+// Last, merging against the rules (an override) must stay a named person's act: the fast lane
+// can never produce one, and one never moves a change onto the fast lane.
 //   Run with:  npm run fastlane
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -16,6 +18,8 @@ import { classifier1, classifier2, loadApprovedPolicy, ROUTES } from "../src/lib
 import { changedFiles as gitChangedFiles } from "../src/lib/git.mjs";
 import { buildModel, loadBrief, loadRevisions } from "../src/lib/model.mjs";
 import { loadReview } from "../src/lib/reviewer.mjs";
+import { recordDecision } from "../src/lib/decisions.mjs";
+import { prSummary } from "../src/lib/github.mjs";
 
 const revisions = loadRevisions();
 const policy = loadApprovedPolicy(revisions.base.sha);
@@ -252,6 +256,32 @@ const AI_TOOLS_EDIT = (add) => add("100644", AI_TOOLS_PAGE, "docs/notes.md");
 const [[, gitBaseline], [, gitSettingsBaseline], [, aiToolsBaseline], ...gitRoutes] = throughGit([["a plain edit to a document", PLAIN_EDIT], ["a plain edit beside git settings", PLAIN_EDIT, GIT_SETTINGS], ["a docs page about AI tools", AI_TOOLS_EDIT], ...THROUGH_GIT]);
 for (const [name, route] of gitRoutes) results.push({ name, route, held: route !== ROUTES.AUTO });
 const leaks = results.filter((r) => !r.held);
+
+// Overrides, on a throwaway decisions file. An override is accepted only from a named person who
+// ticks the box and gives a reason, on a commit the rules hold back.
+function overrideChecks() {
+  const file = path.join(os.tmpdir(), `fastlane-overrides-${process.pid}.json`);
+  fs.rmSync(file, { force: true });
+  const req17 = revisions.prs.find((p) => p.id === "req-17"), blockedSha = req17.commits[0].sha;
+  const blocked = () => buildModel(revisions, req17.id, blockedSha), docs = buildModel(revisions, docsPr.id, docsSha);
+  const ask = { name: "Eval Engineer", action: "sign-off", override: true, reason: "Hotfix for an outage, test follows", residualRisk: "not proven" };
+  try {
+    const onFastLane = recordDecision(docs, ask, file).ok;
+    const unnamed = recordDecision(blocked(), { ...ask, name: "" }, file).ok;
+    const recorded = recordDecision(blocked(), ask, file).ok;
+    const commit = prSummary(revisions, req17, file).commits[0], docsCommit = prSummary(revisions, docsPr, file).commits.at(-1);
+    return [
+      ["the fast lane's own change cannot be overridden: nothing to override", !onFastLane],
+      ["an override with no named person is refused", !unnamed],
+      ["a named override is recorded as an override", recorded && Boolean(commit.signedOff?.override)],
+      ["after an override the rules still hold the change back", blocked().classifier2.route === ROUTES.WAITING],
+      ["the fast lane's change carries no sign-off and no override", docsCommit.route === ROUTES.AUTO && docsCommit.signedOff === null],
+    ];
+  } finally {
+    fs.rmSync(file, { force: true });
+  }
+}
+const overrides = overrideChecks();
 const pipelineBaseline = pipelineRoute((record) => record);
 
 console.log(`Fast-lane test: ${results.length} ways to get the wrong change auto-merged\n`);
@@ -264,7 +294,10 @@ for (const [name, alter] of KNOWN_LIMITS) {
 const baselines = [["the plain docs-only change", baselineRoute], ["the same change by an author on the trusted list", trustedRoute], ["the recorded docs-only pull request, whole pipeline", pipelineBaseline], ["a plain edit to a document, through git", gitBaseline], ["a plain edit beside a .gitattributes that names *.md", gitSettingsBaseline], ["a plain docs page about AI tools, through git", aiToolsBaseline], ["a description that mentions the AI reviewer in prose", routeOf({ ...docsOnlyChange(), description: PLAIN_DESCRIPTION })]];
 console.log("");
 for (const [name, route] of baselines) console.log(`  ${route === ROUTES.AUTO ? "ok    " : "BROKEN"} ${name.padEnd(52)} -> ${route}`);
-console.log(`\n${results.length - leaks.length} of ${results.length} held. ${leaks.length} got through.`);
+console.log("");
+for (const [name, ok] of overrides) console.log(`  ${ok ? "ok    " : "BROKEN"} ${name}`);
+const overrideBroken = overrides.filter(([, ok]) => !ok).length;
+console.log(`\n${results.length - leaks.length} of ${results.length} held. ${leaks.length} got through. ${overrides.length - overrideBroken} of ${overrides.length} override checks pass.`);
 const accepts = baselines.every(([, route]) => route === ROUTES.AUTO);
 if (!accepts) console.log("The fast lane no longer accepts the change it exists for.");
-process.exit(leaks.length || !accepts ? 1 : 0);
+process.exit(leaks.length || !accepts || overrideBroken ? 1 : 0);

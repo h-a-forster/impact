@@ -205,6 +205,20 @@ group = "Decision integrity";
   check("commit 2 is signed off", v2.signedOff, true);
   check("commit 2 sign-off has no effect on commit 1", v1.signedOff, e.commit2SignOffAppliesToCommit1);
   check("older decision stays visible in history from the other commit", [v1.history.length, v2.history.length, v2.history.some((h) => h.commit === c1 && !h.appliesToSelection)], [2, 2, e.historyKept]);
+  // Merge anyway: a person overrides the rules on commit 1, knowingly and on the record.
+  const anyway = { name: "Eval Engineer", action: "sign-off", override: true, reason: "Outage fix, the test follows today", residualRisk: "not proven" };
+  check("override without the tick is refused", [recordDecision(m1, { ...anyway, override: undefined }, file).ok, recordDecision(m1, { ...anyway, override: "true" }, file).ok], [false, false]);
+  check("override without a reason, or a too short one, is refused", [recordDecision(m1, { ...anyway, reason: "" }, file).ok, recordDecision(m1, { ...anyway, reason: "  because  " }, file).ok], [false, false]);
+  check("override where nothing blocks is refused", recordDecision(m2, anyway, file).ok, false);
+  check("the refused attempts left no record", decisionView(m1, file).history.length, 2);
+  const over = recordDecision(m1, anyway, file);
+  check("override with the tick and a reason is recorded as an override, with what was open",
+    [over.ok, over.decision?.name, over.decision?.commit, Boolean(over.decision?.at), over.decision?.override?.reason, over.decision?.override?.open.length === m1.classifier2.blockers.length && m1.classifier2.blockers.length > 0],
+    [true, "Eval Engineer", c1, true, anyway.reason, true]);
+  const ov1 = decisionView(m1, file);
+  check("an override is not a normal sign-off", [ov1.signedOff, ov1.overridden, decisionView(m2, file).overridden, decisionView(m2, file).signOff?.override], [true, true, false, null]);
+  const head = prSummary(revisions, req17, file).commits[0];
+  check("the check summary says it was merged against the rules", [head.status, head.route.endsWith("· overridden"), head.summary.startsWith("Merged against the rules by Eval Engineer"), Boolean(head.signedOff?.override)], ["success", true, true, true]);
   fs.rmSync(file, { force: true });
 }
 
@@ -299,6 +313,8 @@ group = "PR comment";
   check("req-17 commit 1: the unverified import claim is under Not checked", lines.slice(at("**Not checked**")).some((l) => /^- Claim unverified: Order Import/.test(l)), true);
   check("req-17 commit 1: ends with the link back", lines.at(-1), `[Open in Impact Map](${url})`);
   const many = prComment({ model: m, verdict: "Look closer first", score: 50, points: Array.from({ length: 7 }, (_, i) => ({ level: "minor", title: `Point ${i}` })), url }).split("\n");
+  const signOff = { name: "Ana", override: { reason: "Outage fix, the test follows today", open: [] } };
+  check("an override is said under the heading", prComment({ model: m, verdict: "Cannot merge yet", score: 0, points, url, signOff }).split("\n")[3], "**Merged against the rules by Ana:** Outage fix, the test follows today");
   check("open points stop at 5, then one line for the rest", [many.filter((l) => /^- Minor: Point/.test(l)).length, many.includes("- …and 2 more in the Impact Map")], [5, true]);
 }
 
@@ -317,6 +333,9 @@ group = "Verdict sentence";
   check("every point acknowledged: ready for a sign-off", verdictSentence({ verdict: "Look closer first", tone: "warn", points: issueList(m2297).map((x) => ({ ...x, done: true })) }).text, "Ready for your sign-off: you acknowledged all 4 points.");
   // The failing-test point is too long for one line, so the next important point that fits whole is named.
   check("signed off: says who, on which commit", verdictSentence({ verdict: "Cannot merge yet", tone: "bad", points: issueList(m2297), signedOff: { name: "Ana", step: "commit 1 · a0aa5ab" } }).text, "Merged: Ana signed off commit 1 · a0aa5ab.");
+  check("overridden: says against the rules, by whom and why, never in green",
+    (({ text, tone }) => [text, tone])(verdictSentence({ verdict: "Cannot merge yet", tone: "bad", points: issueList(m2297), signedOff: { name: "Ana", step: "commit 1 · a0aa5ab", reason: "Outage fix, test follows." } })),
+    ["Merged against the rules by Ana: Outage fix, test follows.", "warn"]);
   check("a reason too long for one line gives way to one that fits", say(at(demo, "ju26-issue-2283"), "Do not merge yet", "bad").text, "Do not merge yet: the fix hides more warnings than it needs to.");
   const long = "One extra unit test passes on the old code and fails on the new code, and it also reaches the importer";
   const cut = verdictSentence({ verdict: "Do not merge yet", tone: "bad", points: [{ id: "x", level: "major", title: long }] });
@@ -469,6 +488,10 @@ group = "Public demo";
     check("a sign-off is checked and sent back for the browser to keep", [sign.ok, sign.decision?.name], [true, "Eval Visitor"]);
     const early = await (await call("/api/decisions", { pr: "req-17", sha: pr.commits[0].sha, name: "Eval Visitor", action: "sign-off", residualRisk: "none" })).json();
     check("a sign-off the rules refuse is still refused", early.ok, false);
+    const anyway = await (await call("/api/decisions", { pr: "req-17", sha: pr.commits[0].sha, name: "Eval Visitor", action: "sign-off", override: true, reason: "Outage fix, the test follows today", residualRisk: "not proven" })).json();
+    check("an override is checked and sent back for the browser to keep", [anyway.ok, Boolean(anyway.decision?.override)], [true, true]);
+    const noReason = await (await call("/api/decisions", { pr: "req-17", sha: pr.commits[0].sha, name: "Eval Visitor", action: "sign-off", override: true, reason: "", residualRisk: "not proven" })).json();
+    check("an override without a reason is refused", noReason.ok, false);
     const mark = await (await call("/api/evalcase", { pr: "req-17", on: true })).json();
     check("an eval mark is sent back for the browser to keep", [mark.ok, Boolean(mark.evalCase?.markedAt)], [true, true]);
     check("reset answers", (await call("/api/reset", {})).status, 200);

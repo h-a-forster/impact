@@ -47,6 +47,9 @@ and four real AI-written pull requests from Tieto's C# sample repository (Messag
   in a comment ([docs/hidden-instructions.md](docs/hidden-instructions.md)).
 - **A person signs one exact commit.** A sign-off names the person and the commit, and is never
   edited. `npm run gate` passes only when the latest commit is signed off. Nothing is merged for real.
+- **A person can merge anyway, on the record.** When proof is missing, they tick "I know this is not
+  proven", give a reason and sign. It is shown everywhere as a merge against the rules (the gate says
+  MERGE ALLOWED BY OVERRIDE), the trust score does not move, and no rule or AI path can make one.
 
 ## Run it
 
@@ -81,8 +84,8 @@ npm run -s brake            # AI reviewer answers that must never lighten the ro
 node evals/edit-check.mjs   # the "too much, too little" check on known cases
 ```
 
-At the time of writing: 160 of 160 evals pass, 92 of 92 attempts are held, 7,217 of 7,217 brake
-checks pass, and all 24 edit-check cases come out as expected.
+At the time of writing: 171 of 171 evals pass, 92 of 92 attempts are held, 5 of 5 override checks
+pass, 7,217 of 7,217 brake checks pass, and all 24 edit-check cases come out as expected.
 
 ## How it's built
 
