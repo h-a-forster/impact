@@ -77,7 +77,6 @@ button.primary, .choice.main, .send { background: var(--ink); border-color: var(
 .choice { border-radius: var(--r); padding: 8px 12px; background: transparent; }
 .choice:hover:not(.main) { background: var(--soft); }
 /* Impact Map: the feature to show, as large as the merge button, outlined so merge stays the one solid action */
-.choice.map { border: 1px solid var(--ink); color: var(--ink); }
 
 /* Rail */
 .rail { background: var(--card); padding: 16px 8px; }

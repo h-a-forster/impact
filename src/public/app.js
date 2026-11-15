@@ -2097,7 +2097,7 @@ function choicesHtml() {
   const points = pointsNow(), ready = points.length > 0 && points.every((x) => x.done) && !state.model.decisions.signedOff;
   const fine = ready || advice().verdict[0] === "Fine to merge";
   return `<div class="choices"><button type="button" class="choice${fine ? " main" : ""}${ready ? " ready" : ""}" data-act="merge"><b>Merge this PR</b><span>Sign off with your name.</span></button>
-    <button type="button" class="choice map" data-act="tool" data-scope="pr"><b>Impact Map</b><span>What this change touches.</span></button></div>`;
+    <button type="button" class="choice${fine ? "" : " main"}" data-act="tool" data-scope="pr"><b>Impact Map</b><span>What this change touches.</span></button></div>`;
 }
 const nextHtml = () => `<p><b>What the tools say.</b></p>
   <div class="scores-live"></div>
