@@ -499,9 +499,12 @@ function renderGraph() {
   $("fullBar").hidden = !full;
   if (blast) return renderBlast();
   if (swarm) {
-    // The swarm view draws itself once per PR. After that it keeps its own state (menus, a run in play),
-    // unless a replay was cut short: then it draws the saved result again.
-    if (swarmUI.pr !== state.prId || swarmUI.cut) renderSwarm();
+    // The swarm view plays its runs each time it comes on screen (applyCanvas forgets it when it goes), at OPEN_PACE.
+    // After that it keeps its own state (menus, a run in play), unless a replay was cut short: then it draws the saved result again.
+    if (swarmUI.seen !== reviewKey() && $("swarmView").checkVisibility()) {
+      swarmUI.seen = reviewKey();
+      renderSwarm({ autoplay: true, pace: OPEN_PACE });
+    } else if (swarmUI.pr !== state.prId || swarmUI.cut) renderSwarm();
     return;
   }
   if (full) return renderFull();
@@ -1022,23 +1025,26 @@ function blastBox(x) {
 }
 // The tab works at file level only: one box and one table row per file. Function numbers sit in a fold.
 // The Run button: replays the 3 recorded runs (sped up), then shows the result. Nothing is computed live.
-const blastRun = { pr: null, phase: "idle", timers: [], reveal: false };
+const blastRun = { pr: null, phase: "idle", timers: [], reveal: false, pace: 1 };
+// Blast radius and the swarm play their runs each time their tab comes on screen, at this pace (0.5 = twice as fast).
+// "↻ Replay" plays them at 1. The CSS reads it as --pace.
+const OPEN_PACE = 0.5;
 const BLAST_TOLD = { minimal: "told: touch as little as you can", normal: "told: solve it the way you normally would", wide: "told: refactor and tidy freely" };
 function stopBlast() {
   for (const t of blastRun.timers) clearTimeout(t);
   blastRun.timers = [];
   if (blastRun.phase === "running") blastRun.phase = "idle";
 }
-function playBlast() {
+function playBlast({ pace = 1 } = {}) {
   for (const t of blastRun.timers) clearTimeout(t);
   blastRun.timers = [];
   const b = state.blast[state.prId], el = $("blastView");
-  blastRun.pr = state.prId;
-  blastRun.phase = "running";
+  Object.assign(blastRun, { pr: state.prId, phase: "running", pace });
   el.dataset.stage = "running";
+  el.style.setProperty("--pace", pace);
   const agents = b.runs.filter((r) => r.id !== "real");
   const fast = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-  const later = (ms, fn) => blastRun.timers.push(setTimeout(fn, fast ? 0 : ms));
+  const later = (ms, fn) => blastRun.timers.push(setTimeout(fn, fast ? 0 : ms * pace));
   el.innerHTML = `<p class="blast-what">We give the same task to 3 agents: one careful, one normal, one that changes too much. What they touch is the "blast radius" of the task. Then we lay the real change over it.</p>
     <div class="swarm-stage">
       <div class="swarm-flow">
@@ -1057,7 +1063,7 @@ function playBlast() {
     const work = Math.min(4000, Math.max(1200, secs * 20));
     later(start, () => {
       rows[i].classList.add("working");
-      rows[i].style.setProperty("--work", `${work}ms`);
+      rows[i].style.setProperty("--work", `${work * pace}ms`);
       rows[i].querySelector(".swarm-status").textContent = "reading the task, then writing a fix…";
       $("blastStep").textContent = "The agents are working…";
     });
@@ -1161,10 +1167,15 @@ function renderBlast() {
     el.innerHTML = `<p class="blast-what">We give the same task to 3 agents: one careful, one normal, one that changes too much. What they touch is the "blast radius" of the task. Then we lay the real change over it.</p><div class="callout info">${esc(b.message)}</div>`;
     return;
   }
-  // The tab opens on the saved result. "↻ Replay" plays the 3 recorded runs, then shows it again.
+  // The tab plays the 3 recorded runs each time it comes on screen (applyCanvas forgets it when it goes), at OPEN_PACE.
+  // "↻ Replay" plays them at normal speed. Both end on the saved result.
+  if (blastRun.seen !== reviewKey() && el.checkVisibility()) {
+    blastRun.seen = reviewKey();
+    return playBlast({ pace: OPEN_PACE });
+  }
   if (blastRun.pr === state.prId && blastRun.phase === "running") {
     // The animation owns the box while it runs. A redraw of the page must not restart it.
-    if (el.dataset.stage !== "running") playBlast();
+    if (el.dataset.stage !== "running") playBlast({ pace: blastRun.pace });
     return;
   }
   el.dataset.stage = "done";
@@ -1256,7 +1267,7 @@ function renderBlast() {
   el.classList.toggle("reveal", blastRun.reveal);
   if (blastRun.reveal) {
     blastRun.reveal = false;
-    setTimeout(() => el.classList.remove("reveal"), 2500);
+    setTimeout(() => el.classList.remove("reveal"), 2500 * blastRun.pace);
   }
 }
 /** Side panel for one box: what each of the 4 changes did there. */
@@ -1304,7 +1315,7 @@ function swarmDefault() {
   swarmUI.model = s.defaultSet;
   swarmUI.count = swarmSet(s.defaultSet).runs.length;
 }
-async function renderSwarm({ autoplay = false, model = null, count = null } = {}) {
+async function renderSwarm({ autoplay = false, pace = 1, model = null, count = null } = {}) {
   const el = $("swarmView");
   if (swarmUI.pr !== state.prId) {
     // One load per PR. A second call while it loads waits for the same load.
@@ -1331,7 +1342,7 @@ async function renderSwarm({ autoplay = false, model = null, count = null } = {}
   }
   // The model and agent count are a set's own names ("demo", "mix") or a model id.
   const label = (id) => (MODEL_NAMES[id] ? modelName(id) : swarmSet(id)?.label ?? id);
-  // The tab opens on the saved result. The pickers sit behind "Change"; "↻ Replay" plays the pick.
+  // The pickers sit behind "Change"; "↻ Replay" plays the pick.
   el.innerHTML = wrap(`
     <div class="swarm-controls">
       <button type="button" class="primary" id="swarmGo">↻ Replay</button>
@@ -1359,10 +1370,10 @@ async function renderSwarm({ autoplay = false, model = null, count = null } = {}
   // A deep link can pick the model and the count first (&model=<id>&n=<count>).
   if (model) swarmUI.model = model;
   if (count) swarmUI.count = count;
-  playSwarm({ animate: autoplay });
+  playSwarm({ animate: autoplay, pace });
 }
-/** Draws the picked set of runs: played out (`animate`), or straight to the saved result. */
-function playSwarm({ animate = true } = {}) {
+/** Draws the picked set of runs: played out (`animate`, at `pace`), or straight to the saved result. */
+function playSwarm({ animate = true, pace = 1 } = {}) {
   stopSwarm();
   swarmUI.cut = false;
   const s = swarmUI.data;
@@ -1382,9 +1393,10 @@ function playSwarm({ animate = true } = {}) {
   const runs = swarmSet(swarmUI.model).runs.slice(0, swarmUI.count).map(swarmRun);
   const stage = $("swarmStage");
   stage.hidden = false;
+  stage.style.setProperty("--pace", pace);
   const fast = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   // Not animated: every step runs now, in order, so the saved result is drawn at once.
-  const later = (ms, fn) => (animate ? swarmUI.timers.push(setTimeout(fn, fast ? 0 : ms)) : fn());
+  const later = (ms, fn) => (animate ? swarmUI.timers.push(setTimeout(fn, fast ? 0 : ms * pace)) : fn());
   swarmUI.playing = animate;
   // Stacked dots: runs with the same score sit on top of each other.
   const seen = new Map();
@@ -1428,7 +1440,7 @@ function playSwarm({ animate = true } = {}) {
     const work = Math.min(4000, Math.max(1200, (r.seconds ?? 20) * 100));
     later(start, () => {
       rows[i].classList.add("working");
-      rows[i].style.setProperty("--work", `${work}ms`);
+      rows[i].style.setProperty("--work", `${work * pace}ms`);
       rows[i].querySelector(".swarm-status").textContent = "reading the task, then writing a fix…";
     });
     // 3. It lands on the scale.
@@ -1841,8 +1853,10 @@ function applyCanvas() {
   $("pagePr").hidden = ui.canvas !== "pr";
   $("pageReview").hidden = ui.canvas !== "review";
   $("mapCard").hidden = ui.canvas !== "map";
-  // Reach plays its ripple each time it comes on screen (lens, tab or panel), like the other drawings form.
+  // Reach, Blast radius and the swarm play each time they come on screen (lens, tab or panel), like the other drawings form.
   if (!$("graphReach").checkVisibility()) reachView.key = null;
+  if (!$("blastView").checkVisibility()) blastRun.seen = null;
+  if (!$("swarmView").checkVisibility()) swarmUI.seen = null;
 }
 async function openCanvas(kind, scope) {
   ui.canvas = kind;
@@ -2194,7 +2208,7 @@ async function useTool(scope, said) {
     const [, tests] = blastScore(b).why;
     return bot(`<p><b>Blast radius:</b> ${esc(verdict)}.${tests?.tone === "warn" ? ` ${rich(tests.text)}` : ""}${blastCaveat(b)} Details on the right.</p>`, 900);
   }
-  // The tab draws its saved result as it opens (renderGraph). Wait for that draw, not a second one.
+  // The tab draws itself as it opens (renderGraph). Wait for that draw, not a second one.
   await swarmUI.loading;
   const s = swarmUI.data;
   if (!s?.recorded) return bot(`<p>${esc(s?.message ?? "No runs are recorded for this PR yet.")}</p>`);
@@ -2518,7 +2532,10 @@ async function init() {
     await setScope("blast");
     await loadBlast();
     // &run=1 plays the runs. &done=1 or &box=<id> shows the result straight away.
-    if (q.get("done") === "1" || q.get("box")) Object.assign(blastRun, { pr: state.prId, phase: "done" });
+    if (q.get("done") === "1" || q.get("box")) {
+      stopBlast();
+      Object.assign(blastRun, { pr: state.prId, phase: "done", seen: reviewKey() });
+    }
     render();
     if (q.get("run") === "1") playBlast();
     if (q.get("box")) selectBlast(q.get("box"));
