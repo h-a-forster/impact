@@ -4,7 +4,7 @@
 
 [![Watch the pitch video](docs/img/video-thumb.png)](VIDEO_URL)
 
-[Live demo](https://impact--map.modal.run) · [Explainer (PDF)](docs/explainer.pdf) · [Pitch video](VIDEO_URL)
+[Live demo](https://impact--map.modal.run) · [Pitch video](VIDEO_URL) · [Pitch deck (PDF)](docs/pitch-deck.pdf) · [Explainer (PDF)](docs/explainer.pdf)
 
 Built for Junction 2026, Tieto challenge *Earned Trust in AI Code*.
 
