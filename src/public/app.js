@@ -2100,7 +2100,7 @@ function choicesHtml() {
     <button type="button" class="choice map" data-act="tool" data-scope="pr"><b>Impact Map</b><span>What this change touches.</span></button>
     <button type="button" class="choice" data-act="ask"><b>Ask the agent</b><span>Why it was written this way.</span></button></div>`;
 }
-const nextHtml = () => `<p><b>What the tools say.</b> <span class="muted">Click one to drill down.</span></p>
+const nextHtml = () => `<p><b>What the tools say.</b></p>
   <div class="scores-live"></div>
   <div class="next-live"></div>`;
 
