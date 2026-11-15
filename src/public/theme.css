@@ -182,9 +182,9 @@ button.primary, .choice.main, .send { background: var(--ink); border-color: var(
 .quick { gap: 4px; }
 .quick button { border-radius: var(--r); padding: 3px 10px; font-size: 12px; }
 .quick .eval-btn { border-color: color-mix(in srgb, var(--bad) 50%, transparent); }
-.ask { border-radius: var(--r); box-shadow: none; background: var(--card); padding: 4px 4px 4px 12px; }
-.ask input { font: 14px var(--prose); }
-.send { width: 30px; height: 30px; border-radius: 4px; font-size: 14px; }
+.ask { border-radius: 999px; box-shadow: none; background: var(--card); padding: 7px 7px 7px 20px; }
+.ask input { font: 15px var(--prose); padding: 8px 0; }
+.send { width: 38px; height: 38px; border-radius: 50%; font-size: 17px; }
 .composer-note { font-size: 11.5px; }
 
 /* Right panel and cards */
@@ -233,5 +233,5 @@ div.vis-tooltip { border-radius: var(--r); font: 12px/1.45 var(--ui); background
 
 @media (prefers-reduced-motion: reduce) { .gnode, .meter i { transition: none; } }
 
-/* The three big buttons span the same width as the tool rows above them. */
+/* The big buttons span the same width as the tool rows above them. */
 .next-live .choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
