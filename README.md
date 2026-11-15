@@ -10,7 +10,7 @@ One map, two kinds of pull request:
 
 | Repo | What it is | Where the evidence comes from |
 |---|---|---|
-| `junction-demo/shop-sample` | Synthetic TypeScript repo. The two-commit REQ-17 story that ends in a sign-off. | Built, indexed, tested and reviewed **by this project**. |
+| `junction-demo/shop-sample` | Synthetic TypeScript repo. Six agent-written PRs, plainest first: the two-commit REQ-17 story that ends in a sign-off, a docs change that could merge by itself, a clean REQ-22 fix, a judge's attack (REQ-21, [docs/negative-price-attack.md](docs/negative-price-attack.md)), an edit no test needs, and a change that loosens its own review policy. | Built, indexed, tested and reviewed **by this project**. |
 | `te-industry-tech-office/junction26-messagepack-csharp` | The **real Tieto sample**. Four agent-written C# PRs. | **Recorded packs** from the teammate project [Impact Ledger](https://github.com/h-a-forster/junction26-earned-trust), in `data/tieto/`. Shown here, not recomputed. |
 
 On the real PR #1 (issue 2283) the suite is green (170/170), the route is *Waiting for checks or
@@ -47,7 +47,7 @@ and no Graphify install.
 | `npm run review:live` | Re-run the independent AI review for every PR commit. Needs the `claude` CLI, signed in. |
 | `npm start` | Start the app only. |
 | `npm run build:graph` | Rebuild the map graph (React Flow + Dagre) from `src/graph/main.jsx` into `src/public/graph.bundle.js`. Only needed after editing that file; the built bundle is committed. |
-| `npm run evals` | Run the 128 review evals. |
+| `npm run evals` | Run the 129 review evals. |
 | `npm run planted` | Plant known bugs into each REQ-17 commit and measure what the tests and the map catch. Writes `docs/measurement.md`. |
 | `npm run editcheck` | Take each edit of a change out again and see whether any test notices. Finds edits nobody asked for, and old code the change left behind. Setup records the result for each shop PR commit in `data/shop/<pr>/edit-check.json`; the review steps show it as "Too much, too little". |
 | `npm run gate -- <pr id or number> [owner/name]` | Merge gate. Exit 0 only when the latest step is signed off by a named person. |

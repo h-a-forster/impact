@@ -1,0 +1,230 @@
+{
+ "schema": "impact-map/blast/v1",
+ "pr": "req-21",
+ "recordedAt": "2026-11-15T02:03:58.024Z",
+ "model": "claude-sonnet-5-5",
+ "base": "2e22bc2b2fe422595d6030cac407032205406315",
+ "how": {
+  "source": "Three agents run on the shop sample (pull request req-21), 2026-11-15: minimal = the 'careful' brief, normal = the 'normal' brief, wide = the 'greedy' brief. Each ran once, alone, at the same time as the others. None saw the pull request.",
+  "command": "claude -p --model claude-sonnet-5-5 --setting-sources user --permission-mode acceptEdits --disallowedTools Bash PowerShell WebFetch WebSearch Agent Skill --strict-mcp-config --output-format stream-json --verbose < the run's prompt (saved under runs[].prompt)",
+  "folders": "Each agent worked in its own clean copy of the base commit (git fetch --depth 1 of the base only), so the real change was never there. No shell, no git, no web. Files an agent saved with Windows line endings were turned back to the shop's own, so a line counts only when its text changed (listed per run under lineEndingsNormalised).",
+  "same": "Same model, same requirements and same code for all three. Only the 'How to work' lines differ.",
+  "functions": "Functions are found by a simple reader of the TypeScript text (scanFunctions in src/lib/blast.mjs: `function` declarations, ended by brace matching), the same way for all 4 changes. A function counts as edited when a changed line sits inside it. Callers come from the shop's saved Graphify code index at the base commit."
+ },
+ "notBuilt": "The agents had no shell. Nobody ran the unit tests on their changes.",
+ "given": {
+  "file": "requirements/REQ-21.md",
+  "text": "# REQ-21 A negative promo percent means no discount\n\nOperations sometimes enter -5 in the promo field to mean \"no promotion\".\nToday applyDiscount() throws on it: the customer sees an error page at\ncheckout, and Order Import rejects the row.\n\n- A negative percent counts as no discount: a 200-cent cart at -5% totals\n  200 cents, and an imported 105-cent row at -5% totals 105 cents.\n- Behaviour to preserve: percents from 0 to 100 give the same totals as before.\n\nAffected workflows: Checkout, Order Import.\n",
+  "kept": [
+   "The pull request description's Why, Before and after, and Must preserve",
+   "The requirement REQ-21, word for word",
+   "The shop's code and tests from before the change"
+  ],
+  "leftOut": [
+   "The pull request: its title, approach, commits and code"
+  ],
+  "note": null
+ },
+ "real": {
+  "id": "real",
+  "head": "977be6ed6999a61ba6da17444181688842068a80",
+  "source": "the shop sample's req-21 commit 1 (977be6e) against its base (2e22bc2)",
+  "files": [
+   {
+    "file": "requirements/REQ-21.md",
+    "status": "A",
+    "kind": "doc",
+    "added": 11,
+    "removed": 0,
+    "patch": "@@ -0,0 +1,11 @@\n+# REQ-21 A negative promo percent means no discount\n+\n+Operations sometimes enter -5 in the promo field to mean \"no promotion\".\n+Today applyDiscount() throws on it: the customer sees an error page at\n+checkout, and Order Import rejects the row.\n+\n+- A negative percent counts as no discount: a 200-cent cart at -5% totals\n+  200 cents, and an imported 105-cent row at -5% totals 105 cents.\n+- Behaviour to preserve: percents from 0 to 100 give the same totals as before.\n+\n+Affected workflows: Checkout, Order Import.",
+    "functions": []
+   },
+   {
+    "file": "src/pricing/discount.ts",
+    "status": "M",
+    "kind": "code",
+    "added": 3,
+    "removed": 4,
+    "patch": "@@ -3,9 +3,8 @@\n  * Used by Checkout and Order Import.\n  */\n export function applyDiscount(subtotalCents: number, percent: number): number {\n-  if (percent < 0 || percent > 100) {\n-    throw new RangeError(\"percent must be between 0 and 100\");\n-  }\n-  const discountCents = Math.floor((subtotalCents * percent) / 100);\n+  // REQ-21: a bad promo percent must not fail checkout. A negative percent means no discount.\n+  const safePercent = Math.max(0, percent);\n+  const discountCents = Math.floor((subtotalCents * safePercent) / 100);\n   return subtotalCents - discountCents;\n }",
+    "functions": [
+     {
+      "key": "applyDiscount",
+      "name": "applyDiscount",
+      "line": 5,
+      "endLine": 10,
+      "isNew": false,
+      "added": 3,
+      "removed": 4
+     }
+    ],
+    "linesOutsideFunctions": 0
+   },
+   {
+    "file": "tests/checkout.test.ts",
+    "status": "M",
+    "kind": "test",
+    "added": 15,
+    "removed": 0,
+    "patch": "@@ -6,3 +6,18 @@ test(\"checkout: 200 cents at 10% totals 180 cents\", () => {\n   const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: 10 };\n   assert.equal(checkoutTotal(cart), 180);\n });\n+\n+test(\"REQ-21 checkout: a negative promo percent counts as no discount\", () => {\n+  const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: -5 };\n+  assert.equal(checkoutTotal(cart), 200);\n+});\n+\n+test(\"REQ-21 checkout: a bad promo percent no longer fails checkout\", () => {\n+  const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: 150 };\n+  assert.doesNotThrow(() => checkoutTotal(cart));\n+});\n+\n+test(\"REQ-21 checkout: percents from 0 to 100 keep their totals\", () => {\n+  const total = (discountPercent: number) => checkoutTotal({ items: [{ priceCents: 100, quantity: 2 }], discountPercent });\n+  assert.deepEqual([0, 10, 100].map(total), [200, 180, 0]);\n+});",
+    "functions": [],
+    "linesOutsideFunctions": 15
+   },
+   {
+    "file": "tests/orderImport.test.ts",
+    "status": "M",
+    "kind": "test",
+    "added": 4,
+    "removed": 0,
+    "patch": "@@ -5,3 +5,7 @@ import { importOrder } from \"../src/import/orderImport.ts\";\n test(\"import: a row with the wrong column count is rejected\", () => {\n   assert.throws(() => importOrder(\"A-1,105\"), /expected 3 columns/);\n });\n+\n+test(\"REQ-21 import: a row with a negative percent imports at full price\", () => {\n+  assert.equal(importOrder(\"A-2,105,-5\").totalCents, 105);\n+});",
+    "functions": [],
+    "linesOutsideFunctions": 4
+   }
+  ]
+ },
+ "runs": [
+  {
+   "id": "minimal",
+   "brief": "careful",
+   "prompt": "You are working in a copy of the shop-sample repository (TypeScript), at the commit just before the change. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- You cannot run commands, so you cannot run the unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nMake the smallest change that meets the requirements. Touch as few files, as few functions and as few lines as you can. No refactoring, no tidy-ups, no renames and no doc changes. Add no unit tests unless the requirements cannot be met without them.\n\n## Requirements (from the pull request description)\n\nRequirement: REQ-21 in the shop sample (requirements/REQ-21.md).\n\nWhy: REQ-21: operations enter -5 in the promo field to mean no promotion. applyDiscount() threw a RangeError on it, so checkout showed an error page and Order Import rejected the row.\n\nBefore and after: Before: a 200-cent cart at -5% throws RangeError. Checkout fails. After: a 200-cent cart at -5% totals 200 cents. A bad promo percent no longer fails checkout.\n\nMust preserve: Percents from 0 to 100 give the same totals as before.\n\n## The requirement the Requirement row points to (requirements/REQ-21.md, word for word)\n\n# REQ-21 A negative promo percent means no discount\n\nOperations sometimes enter -5 in the promo field to mean \"no promotion\".\nToday applyDiscount() throws on it: the customer sees an error page at\ncheckout, and Order Import rejects the row.\n\n- A negative percent counts as no discount: a 200-cent cart at -5% totals\n  200 cents, and an imported 105-cent row at -5% totals 105 cents.\n- Behaviour to preserve: percents from 0 to 100 give the same totals as before.\n\nAffected workflows: Checkout, Order Import.\n",
+   "instruction": "Make the smallest change that meets the requirements. Touch as few files, as few functions and as few lines as you can. No refactoring, no tidy-ups, no renames and no doc changes. Add no unit tests unless the requirements cannot be met without them.",
+   "startedAt": "2026-11-15T02:03:24.290Z",
+   "endedAt": "2026-11-15T02:03:43.853Z",
+   "exitCode": 0,
+   "modelInLog": "claude-sonnet-5-5",
+   "turns": 4,
+   "reply": "I changed one file, [src/pricing/discount.ts](src/pricing/discount.ts:6). In `applyDiscount()`, a negative percent now returns the subtotal unchanged instead of throwing.\n\nCheckout and Order Import both call this function, so one change covers both. A 200-cent cart at -5% now totals 200, and an imported 105-cent row at -5% totals 105. Percents from 0 to 100 use the same code path as before, and percents above 100 still throw. I couldn't run the tests, so this comes from reading the code.",
+   "toolCalls": {
+    "Grep": 1,
+    "Read": 1,
+    "Edit": 1
+   },
+   "pathsOutsideFolder": [],
+   "lineEndingsNormalised": [],
+   "files": [
+    {
+     "file": "src/pricing/discount.ts",
+     "status": "M",
+     "kind": "code",
+     "added": 4,
+     "removed": 1,
+     "patch": "@@ -3,7 +3,10 @@\n  * Used by Checkout and Order Import.\n  */\n export function applyDiscount(subtotalCents: number, percent: number): number {\n-  if (percent < 0 || percent > 100) {\n+  if (percent < 0) {\n+    return subtotalCents;\n+  }\n+  if (percent > 100) {\n     throw new RangeError(\"percent must be between 0 and 100\");\n   }\n   const discountCents = Math.floor((subtotalCents * percent) / 100);",
+     "functions": [
+      {
+       "key": "applyDiscount",
+       "name": "applyDiscount",
+       "line": 5,
+       "endLine": 14,
+       "isNew": false,
+       "added": 4,
+       "removed": 1
+      }
+     ],
+     "linesOutsideFunctions": 0
+    }
+   ]
+  },
+  {
+   "id": "normal",
+   "brief": "normal",
+   "prompt": "You are working in a copy of the shop-sample repository (TypeScript), at the commit just before the change. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- You cannot run commands, so you cannot run the unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nSolve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.\n\n## Requirements (from the pull request description)\n\nRequirement: REQ-21 in the shop sample (requirements/REQ-21.md).\n\nWhy: REQ-21: operations enter -5 in the promo field to mean no promotion. applyDiscount() threw a RangeError on it, so checkout showed an error page and Order Import rejected the row.\n\nBefore and after: Before: a 200-cent cart at -5% throws RangeError. Checkout fails. After: a 200-cent cart at -5% totals 200 cents. A bad promo percent no longer fails checkout.\n\nMust preserve: Percents from 0 to 100 give the same totals as before.\n\n## The requirement the Requirement row points to (requirements/REQ-21.md, word for word)\n\n# REQ-21 A negative promo percent means no discount\n\nOperations sometimes enter -5 in the promo field to mean \"no promotion\".\nToday applyDiscount() throws on it: the customer sees an error page at\ncheckout, and Order Import rejects the row.\n\n- A negative percent counts as no discount: a 200-cent cart at -5% totals\n  200 cents, and an imported 105-cent row at -5% totals 105 cents.\n- Behaviour to preserve: percents from 0 to 100 give the same totals as before.\n\nAffected workflows: Checkout, Order Import.\n",
+   "instruction": "Solve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.",
+   "startedAt": "2026-11-15T02:03:25.552Z",
+   "endedAt": "2026-11-15T02:03:56.244Z",
+   "exitCode": 0,
+   "modelInLog": "claude-sonnet-5-5",
+   "turns": 11,
+   "reply": "I made a negative promo percent mean no discount. I couldn't run the tests, so none of this has been run.\n\n- `src/pricing/discount.ts`: `applyDiscount()` now returns the subtotal unchanged when the percent is negative. Checkout and Order Import both call it, so one change fixes both. Percents from 0 to 100 take the same path as before. Percents above 100 still throw `RangeError`, because REQ-21 only covers negatives.\n- `tests/checkout.test.ts`: added a test that a 200-cent cart at -5% totals 200.\n- `tests/orderImport.test.ts`: added a test that the row `A-1,105,-5` totals 105.\n\nThe pull request text says \"a bad promo percent no longer fails checkout\", which could be read as covering values above 100 too. I followed the requirement file, which only mentions negatives.",
+   "toolCalls": {
+    "Grep": 2,
+    "Read": 4,
+    "Edit": 3,
+    "Glob": 1
+   },
+   "pathsOutsideFolder": [],
+   "lineEndingsNormalised": [],
+   "files": [
+    {
+     "file": "src/pricing/discount.ts",
+     "status": "M",
+     "kind": "code",
+     "added": 6,
+     "removed": 2,
+     "patch": "@@ -3,8 +3,12 @@\n  * Used by Checkout and Order Import.\n  */\n export function applyDiscount(subtotalCents: number, percent: number): number {\n-  if (percent < 0 || percent > 100) {\n-    throw new RangeError(\"percent must be between 0 and 100\");\n+  // A negative percent (e.g. -5) means \"no promotion\" (REQ-21).\n+  if (percent < 0) {\n+    return subtotalCents;\n+  }\n+  if (percent > 100) {\n+    throw new RangeError(\"percent must be at most 100\");\n   }\n   const discountCents = Math.floor((subtotalCents * percent) / 100);\n   return subtotalCents - discountCents;",
+     "functions": [
+      {
+       "key": "applyDiscount",
+       "name": "applyDiscount",
+       "line": 5,
+       "endLine": 15,
+       "isNew": false,
+       "added": 6,
+       "removed": 2
+      }
+     ],
+     "linesOutsideFunctions": 0
+    },
+    {
+     "file": "tests/checkout.test.ts",
+     "status": "M",
+     "kind": "test",
+     "added": 5,
+     "removed": 0,
+     "patch": "@@ -6,3 +6,8 @@ test(\"checkout: 200 cents at 10% totals 180 cents\", () => {\n   const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: 10 };\n   assert.equal(checkoutTotal(cart), 180);\n });\n+\n+test(\"checkout: negative promo percent means no discount (REQ-21)\", () => {\n+  const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: -5 };\n+  assert.equal(checkoutTotal(cart), 200);\n+});",
+     "functions": [],
+     "linesOutsideFunctions": 5
+    },
+    {
+     "file": "tests/orderImport.test.ts",
+     "status": "M",
+     "kind": "test",
+     "added": 4,
+     "removed": 0,
+     "patch": "@@ -5,3 +5,7 @@ import { importOrder } from \"../src/import/orderImport.ts\";\n test(\"import: a row with the wrong column count is rejected\", () => {\n   assert.throws(() => importOrder(\"A-1,105\"), /expected 3 columns/);\n });\n+\n+test(\"import: a negative promo percent means no discount (REQ-21)\", () => {\n+  assert.equal(importOrder(\"A-1,105,-5\").totalCents, 105);\n+});",
+     "functions": [],
+     "linesOutsideFunctions": 4
+    }
+   ]
+  },
+  {
+   "id": "wide",
+   "brief": "greedy",
+   "prompt": "You are working in a copy of the shop-sample repository (TypeScript), at the commit just before the change. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- You cannot run commands, so you cannot run the unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nYou are free to go well beyond the smallest fix. While you solve the problem, also refactor, tidy up and harden the code around it wherever you think it helps: similar weak spots elsewhere, shared helpers, naming, docs, unit tests. Prefer a broad, thorough change over a narrow one. The requirements must still be met.\n\n## Requirements (from the pull request description)\n\nRequirement: REQ-21 in the shop sample (requirements/REQ-21.md).\n\nWhy: REQ-21: operations enter -5 in the promo field to mean no promotion. applyDiscount() threw a RangeError on it, so checkout showed an error page and Order Import rejected the row.\n\nBefore and after: Before: a 200-cent cart at -5% throws RangeError. Checkout fails. After: a 200-cent cart at -5% totals 200 cents. A bad promo percent no longer fails checkout.\n\nMust preserve: Percents from 0 to 100 give the same totals as before.\n\n## The requirement the Requirement row points to (requirements/REQ-21.md, word for word)\n\n# REQ-21 A negative promo percent means no discount\n\nOperations sometimes enter -5 in the promo field to mean \"no promotion\".\nToday applyDiscount() throws on it: the customer sees an error page at\ncheckout, and Order Import rejects the row.\n\n- A negative percent counts as no discount: a 200-cent cart at -5% totals\n  200 cents, and an imported 105-cent row at -5% totals 105 cents.\n- Behaviour to preserve: percents from 0 to 100 give the same totals as before.\n\nAffected workflows: Checkout, Order Import.\n",
+   "instruction": "You are free to go well beyond the smallest fix. While you solve the problem, also refactor, tidy up and harden the code around it wherever you think it helps: similar weak spots elsewhere, shared helpers, naming, docs, unit tests. Prefer a broad, thorough change over a narrow one. The requirements must still be met.",
+   "startedAt": "2026-11-15T02:03:26.920Z",
+   "endedAt": "2026-11-15T02:03:46.428Z",
+   "exitCode": 0,
+   "modelInLog": "claude-sonnet-5-5",
+   "turns": 4,
+   "reply": "I changed one file, `src/pricing/discount.ts`. I didn't run any tests, as instructed.\n\nIn `applyDiscount()`, a negative percent now returns the subtotal unchanged, so a 200-cent cart at -5% totals 200 and an imported 105-cent row at -5% totals 105. Checkout and Order Import both call this function, so one change covers both.\n\nPercents from 0 to 100 take the same path as before, so their totals are unchanged. A percent above 100 still throws `RangeError`. I changed that error message to \"percent must not exceed 100\".\n\nI kept the change small even though you allowed a broader one. The requirement only covers negative percents, and widening it would risk changing behaviour for values it doesn't mention. I didn't add or edit unit tests.",
+   "toolCalls": {
+    "Grep": 1,
+    "Read": 1,
+    "Edit": 1
+   },
+   "pathsOutsideFolder": [],
+   "lineEndingsNormalised": [],
+   "files": [
+    {
+     "file": "src/pricing/discount.ts",
+     "status": "M",
+     "kind": "code",
+     "added": 6,
+     "removed": 2,
+     "patch": "@@ -3,8 +3,12 @@\n  * Used by Checkout and Order Import.\n  */\n export function applyDiscount(subtotalCents: number, percent: number): number {\n-  if (percent < 0 || percent > 100) {\n-    throw new RangeError(\"percent must be between 0 and 100\");\n+  // REQ-21: a negative percent means \"no promotion\".\n+  if (percent < 0) {\n+    return subtotalCents;\n+  }\n+  if (percent > 100) {\n+    throw new RangeError(\"percent must not exceed 100\");\n   }\n   const discountCents = Math.floor((subtotalCents * percent) / 100);\n   return subtotalCents - discountCents;",
+     "functions": [
+      {
+       "key": "applyDiscount",
+       "name": "applyDiscount",
+       "line": 5,
+       "endLine": 15,
+       "isNew": false,
+       "added": 6,
+       "removed": 2
+      }
+     ],
+     "linesOutsideFunctions": 0
+    }
+   ]
+  }
+ ]
+}

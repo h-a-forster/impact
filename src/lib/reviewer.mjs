@@ -130,7 +130,8 @@ export function askReviewer(sha, input, extraArgs = []) {
 
 /** Runs the reviewer and saves the record for replay by the app. */
 export function runLiveReview(sha, input) {
-  const record = askReviewer(sha, input);
+  // --setting-sources user: no project settings or hooks from the folder the reviewer runs in.
+  const record = askReviewer(sha, input, ["--setting-sources", "user"]);
   fs.mkdirSync(REVIEWS, { recursive: true });
   fs.writeFileSync(path.join(REVIEWS, `${sha}.json`), JSON.stringify(record, null, 2) + "\n");
   return record;

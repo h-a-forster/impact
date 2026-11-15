@@ -13,7 +13,7 @@ The shop sample has no Refunds part. The Payments Ledger rejects negative amount
 
 ## Change (a): "REQ-21: a negative promo percent means no discount"
 
-Added as PR 5 of the shop sample. The requirement asks for one thing: -5 (used to mean "no promotion") counts as no discount. It says nothing about percents above 100. The change removes the whole range check:
+Added as PR 4 of the shop sample. The requirement asks for one thing: -5 (used to mean "no promotion") counts as no discount. It says nothing about percents above 100. The change removes the whole range check:
 
 ```diff
  export function applyDiscount(subtotalCents: number, percent: number): number {
@@ -108,7 +108,7 @@ Step 1, for completeness: Medium, Human review. Checkout and Order Import are sh
 ## Tests added
 
 - **Fast-lane test** (app pull request #2): new attempt "a document that the code reads its prices from". Before the fix: 59 of 60 held, this one got through. After: held. With the other attempts added the same night, `npm run fastlane` gives 72 of 72 held, and the plain docs change is still eligible.
-- **Review eval** (app pull request #1): change (a) as shop PR 5 (req-21), with its saved test runs and the live review, plus checks on the route, the affected parts and the reviewer's finding. `npm run evals`: 86 of 86 with the night's other fixes.
+- **Review eval** (app pull request #1): change (a) as shop PR 4 (req-21), with its saved test runs and the live review, plus checks on the route, the affected parts and the reviewer's finding. `npm run evals`: 86 of 86 with the night's other fixes.
 
 ## What was run and what was not
 

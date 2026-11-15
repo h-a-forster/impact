@@ -1,0 +1,22 @@
+{
+  "pr": "req-22",
+  "generatedBy": "AI-written (Claude), saved for this demo",
+  "revisions": {
+    "1": {
+      "tags": [
+        { "label": "Input check", "tone": "ok" },
+        { "label": "One function", "tone": "ok" },
+        { "label": "Reaches 1 workflow", "tone": "info" },
+        { "label": "Tests cover 1 of 1", "tone": "ok" }
+      ],
+      "summary": "Order Import now rejects a row with a negative subtotal. One new check in the function that reads each row; nothing else changes.",
+      "sections": [
+        { "title": "What changes", "text": "`parseOrderRow()` throws when the subtotal is below zero. The row `A-3,-500,0` is rejected instead of importing as -500 cents." },
+        { "title": "Why", "text": "REQ-22: partner files sometimes carry a negative subtotal by mistake." },
+        { "title": "What it reaches", "text": "`importOrder()` in Order Import, the only caller of `parseOrderRow()`. Checkout does not read order rows." },
+        { "title": "What is tested", "text": "Order Import: three REQ-22 tests pass (negative row rejected, valid row still 105 cents, zero subtotal allowed)." },
+        { "title": "What stays the same", "text": "Valid rows import at the same totals. A zero subtotal is still allowed." }
+      ]
+    }
+  }
+}

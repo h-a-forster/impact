@@ -24,14 +24,14 @@ export function loadRevisions() {
   return { ...revisions, prs: shop };
 }
 
-/** The shop PRs the demo leads with: the trap (Order Import untested) and a clean docs change. */
-const SHOWCASE = ["req-17", "docs-example"];
-
 /**
- * The pull requests the demo shows: the shop showcase first, then the Tieto
- * example PRs (facts from recorded packs in data/tieto/). The other shop PRs
- * are for the evals and sessions only (loadRevisions).
+ * The shop PRs in the order the demo shows them, plainest first: the trap (Order Import untested),
+ * a docs change that merges by itself, a clean fix, a judge's attack, an edit no test needs,
+ * and a change that loosens its own review rules. Their numbers follow this order (sample/manifest.json).
  */
+const SHOWCASE = ["req-17", "docs-example", "req-22", "req-21", "ledger-note", "policy-self-patch"];
+
+/** The pull requests the demo shows: the shop showcase first, then the Tieto example PRs (facts from recorded packs in data/tieto/). */
 export function demoRevisions() {
   const revisions = loadRevisions();
   const shop = SHOWCASE.map((id) => revisions.prs.find((p) => p.id === id));

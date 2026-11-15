@@ -46,34 +46,19 @@
       "number": 2
     },
     {
-      "id": "ledger-note",
-      "title": "Ledger: tidy the charge note text",
-      "requirement": null,
-      "branch": "pr/ledger-note",
+      "id": "req-22",
+      "title": "REQ-22: Order Import rejects a row with a negative subtotal",
+      "requirement": "REQ-22",
+      "branch": "pr/req-22",
       "kind": "eval",
       "commits": [
         {
-          "overlay": "sensitive",
-          "message": "Ledger: tidy the charge note text",
-          "date": "2026-11-04T10:00:00Z"
+          "overlay": "neg-subtotal",
+          "message": "REQ-22: reject a negative subtotal in Order Import; add tests",
+          "date": "2026-11-05T11:00:00Z"
         }
       ],
       "number": 3
-    },
-    {
-      "id": "policy-self-patch",
-      "title": "Ledger note tweak that also loosens review-policy.yml",
-      "requirement": null,
-      "branch": "pr/policy-self-patch",
-      "kind": "eval",
-      "commits": [
-        {
-          "overlay": "policy",
-          "message": "Ledger note tweak; relax review policy",
-          "date": "2026-11-04T11:00:00Z"
-        }
-      ],
-      "number": 4
     },
     {
       "id": "req-21",
@@ -88,7 +73,37 @@
           "date": "2026-11-05T09:00:00Z"
         }
       ],
+      "number": 4
+    },
+    {
+      "id": "ledger-note",
+      "title": "Ledger: tidy the charge note text",
+      "requirement": null,
+      "branch": "pr/ledger-note",
+      "kind": "eval",
+      "commits": [
+        {
+          "overlay": "sensitive",
+          "message": "Ledger: tidy the charge note text",
+          "date": "2026-11-04T10:00:00Z"
+        }
+      ],
       "number": 5
+    },
+    {
+      "id": "policy-self-patch",
+      "title": "Ledger note tweak that also loosens review-policy.yml",
+      "requirement": null,
+      "branch": "pr/policy-self-patch",
+      "kind": "eval",
+      "commits": [
+        {
+          "overlay": "policy",
+          "message": "Ledger note tweak; relax review policy",
+          "date": "2026-11-04T11:00:00Z"
+        }
+      ],
+      "number": 6
     }
   ],
   "github": {

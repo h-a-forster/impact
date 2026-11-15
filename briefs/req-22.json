@@ -1,0 +1,27 @@
+{
+  "pr": "req-22",
+  "requirement": "REQ-22",
+  "author": "Coding agent (authoring pass)",
+  "authorKind": "agent",
+  "why": "REQ-22: partner files sometimes carry a negative subtotal by mistake. Order Import accepted such a row, so it became an order of minus 500 cents.",
+  "before": "The row A-3,-500,0 imports as an order of -500 cents.",
+  "after": "The row A-3,-500,0 is rejected with a clear error, like a row with a missing column.",
+  "preserve": "A valid row still imports at its discounted total, and a zero subtotal is still allowed.",
+  "approach": "In parseOrderRow(), after the existing number checks, throw when the subtotal is below zero. importOrder() calls parseOrderRow(), so every imported row gets the check.",
+  "alternatives": "Clamp a negative subtotal to zero. Rejected: it would hide a broken partner file instead of reporting it.",
+  "rollback": "Revert the PR commit. No data migration.",
+  "revisions": {
+    "1": {
+      "checksRun": [{ "label": "npm test, run locally before push", "check": "unit-tests" }],
+      "openGaps": [],
+      "claims": [
+        { "id": "c1", "text": "parseOrderRow() rejects a row whose subtotal is below zero.", "kind": "symbol-changed", "symbol": "fn:src/import/orderImport.ts#parseOrderRow", "cite": { "file": "src/import/orderImport.ts", "line": 20 } },
+        { "id": "c2", "text": "Order Import rejects the row A-3,-500,0.", "kind": "test-passed", "test": "test:tests/orderImport.test.ts#REQ-22 import: a row with a negative subtotal is rejected", "supports": "fn:src/import/orderImport.ts#importOrder" },
+        { "id": "c3", "text": "A valid 105-cent row still imports at 105 cents.", "kind": "test-passed", "test": "test:tests/orderImport.test.ts#REQ-22 import: a valid row still imports at its total", "supports": "fn:src/import/orderImport.ts#importOrder" },
+        { "id": "c4", "text": "A zero subtotal is still allowed.", "kind": "test-passed", "test": "test:tests/orderImport.test.ts#REQ-22 import: a zero subtotal is still allowed", "supports": "fn:src/import/orderImport.ts#importOrder" },
+        { "id": "c5", "text": "All tests pass.", "kind": "suite-green" },
+        { "id": "c6", "text": "parseOrderRow() has no callers other than importOrder().", "kind": "callers-complete", "symbol": "fn:src/import/orderImport.ts#parseOrderRow" }
+      ]
+    }
+  }
+}

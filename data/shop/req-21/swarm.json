@@ -1,0 +1,297 @@
+{
+ "schema": "impact-map/swarm/v1",
+ "pr": "req-21",
+ "recordedAt": "2026-11-15T02:04:52.704Z",
+ "base": "2e22bc2b2fe422595d6030cac407032205406315",
+ "realFrom": {
+  "commit": "977be6ed6999a61ba6da17444181688842068a80",
+  "note": "The real change: the first commit of req-21 in the shop sample, against its base."
+ },
+ "real": {
+  "files": [
+   {
+    "file": "requirements/REQ-21.md",
+    "status": "A",
+    "kind": "doc",
+    "added": 11,
+    "removed": 0,
+    "patch": "@@ -0,0 +1,11 @@\n+# REQ-21 A negative promo percent means no discount\n+\n+Operations sometimes enter -5 in the promo field to mean \"no promotion\".\n+Today applyDiscount() throws on it: the customer sees an error page at\n+checkout, and Order Import rejects the row.\n+\n+- A negative percent counts as no discount: a 200-cent cart at -5% totals\n+  200 cents, and an imported 105-cent row at -5% totals 105 cents.\n+- Behaviour to preserve: percents from 0 to 100 give the same totals as before.\n+\n+Affected workflows: Checkout, Order Import.",
+    "functions": []
+   },
+   {
+    "file": "src/pricing/discount.ts",
+    "status": "M",
+    "kind": "code",
+    "added": 3,
+    "removed": 4,
+    "patch": "@@ -3,9 +3,8 @@\n  * Used by Checkout and Order Import.\n  */\n export function applyDiscount(subtotalCents: number, percent: number): number {\n-  if (percent < 0 || percent > 100) {\n-    throw new RangeError(\"percent must be between 0 and 100\");\n-  }\n-  const discountCents = Math.floor((subtotalCents * percent) / 100);\n+  // REQ-21: a bad promo percent must not fail checkout. A negative percent means no discount.\n+  const safePercent = Math.max(0, percent);\n+  const discountCents = Math.floor((subtotalCents * safePercent) / 100);\n   return subtotalCents - discountCents;\n }",
+    "functions": [
+     {
+      "key": "applyDiscount",
+      "name": "applyDiscount",
+      "line": 5,
+      "endLine": 10,
+      "isNew": false,
+      "added": 3,
+      "removed": 4
+     }
+    ],
+    "linesOutsideFunctions": 0
+   },
+   {
+    "file": "tests/checkout.test.ts",
+    "status": "M",
+    "kind": "test",
+    "added": 15,
+    "removed": 0,
+    "patch": "@@ -6,3 +6,18 @@ test(\"checkout: 200 cents at 10% totals 180 cents\", () => {\n   const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: 10 };\n   assert.equal(checkoutTotal(cart), 180);\n });\n+\n+test(\"REQ-21 checkout: a negative promo percent counts as no discount\", () => {\n+  const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: -5 };\n+  assert.equal(checkoutTotal(cart), 200);\n+});\n+\n+test(\"REQ-21 checkout: a bad promo percent no longer fails checkout\", () => {\n+  const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: 150 };\n+  assert.doesNotThrow(() => checkoutTotal(cart));\n+});\n+\n+test(\"REQ-21 checkout: percents from 0 to 100 keep their totals\", () => {\n+  const total = (discountPercent: number) => checkoutTotal({ items: [{ priceCents: 100, quantity: 2 }], discountPercent });\n+  assert.deepEqual([0, 10, 100].map(total), [200, 180, 0]);\n+});",
+    "functions": [],
+    "linesOutsideFunctions": 15
+   },
+   {
+    "file": "tests/orderImport.test.ts",
+    "status": "M",
+    "kind": "test",
+    "added": 4,
+    "removed": 0,
+    "patch": "@@ -5,3 +5,7 @@ import { importOrder } from \"../src/import/orderImport.ts\";\n test(\"import: a row with the wrong column count is rejected\", () => {\n   assert.throws(() => importOrder(\"A-1,105\"), /expected 3 columns/);\n });\n+\n+test(\"REQ-21 import: a row with a negative percent imports at full price\", () => {\n+  assert.equal(importOrder(\"A-2,105,-5\").totalCents, 105);\n+});",
+    "functions": [],
+    "linesOutsideFunctions": 4
+   }
+  ]
+ },
+ "prompt": {
+  "file": "data/shop/req-21/swarm-prompt.txt",
+  "text": "You are working in a copy of the shop-sample repository (TypeScript), at the commit just before the change. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- You cannot run commands, so you cannot run the unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nSolve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.\n\n## Requirements (from the pull request description)\n\nRequirement: REQ-21 in the shop sample (requirements/REQ-21.md).\n\nWhy: REQ-21: operations enter -5 in the promo field to mean no promotion. applyDiscount() threw a RangeError on it, so checkout showed an error page and Order Import rejected the row.\n\nBefore and after: Before: a 200-cent cart at -5% throws RangeError. Checkout fails. After: a 200-cent cart at -5% totals 200 cents. A bad promo percent no longer fails checkout.\n\nMust preserve: Percents from 0 to 100 give the same totals as before.\n\n## The requirement the Requirement row points to (requirements/REQ-21.md, word for word)\n\n# REQ-21 A negative promo percent means no discount\n\nOperations sometimes enter -5 in the promo field to mean \"no promotion\".\nToday applyDiscount() throws on it: the customer sees an error page at\ncheckout, and Order Import rejects the row.\n\n- A negative percent counts as no discount: a 200-cent cart at -5% totals\n  200 cents, and an imported 105-cent row at -5% totals 105 cents.\n- Behaviour to preserve: percents from 0 to 100 give the same totals as before.\n\nAffected workflows: Checkout, Order Import.\n",
+  "note": "Every agent got this prompt, word for word: the normal agent's brief (own judgement, as for a normal pull request)."
+ },
+ "how": "Runs on the shop sample (pull request req-21), 2026-11-15. Each of 5 agents ran once with `claude -p --model claude-sonnet-5-5`, alone, in its own copy of the shop sample at the commit before req-21. Every agent got the same normal prompt (swarm-prompt.txt). No shell, no git, no web. At most 3 ran at the same time.",
+ "notBuilt": "The agents had no shell. Nobody ran the unit tests on their changes. We do not know if any agent's change passes them.",
+ "models": {
+  "claude-sonnet-5-5": {
+   "label": "Sonnet 5.5",
+   "runs": [
+    {
+     "n": 1,
+     "startedAt": "2026-11-15T02:04:00.320Z",
+     "endedAt": "2026-11-15T02:04:24.755Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 10,
+     "reply": "I changed three files. I couldn't run the tests, so none of this has been run.\n\n- `src/pricing/discount.ts`: `applyDiscount()` now returns the subtotal unchanged for a negative percent, so no promotion applies. Checkout and Order Import both use this function, so one change covers both. Percents from 0 to 100 take the same path as before. I left the `RangeError` for percents above 100, because REQ-21 only covers negative values.\n- `tests/checkout.test.ts`: a new test checks that a 200-cent cart at -5% totals 200.\n- `tests/orderImport.test.ts`: a new test checks that the row `A-1,105,-5` totals 105.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "src/pricing/discount.ts",
+       "status": "M",
+       "kind": "code",
+       "added": 6,
+       "removed": 2,
+       "patch": "@@ -3,8 +3,12 @@\n  * Used by Checkout and Order Import.\n  */\n export function applyDiscount(subtotalCents: number, percent: number): number {\n-  if (percent < 0 || percent > 100) {\n-    throw new RangeError(\"percent must be between 0 and 100\");\n+  if (percent > 100) {\n+    throw new RangeError(\"percent must not exceed 100\");\n+  }\n+  // A negative percent (e.g. -5) means \"no promotion\" (REQ-21).\n+  if (percent < 0) {\n+    return subtotalCents;\n   }\n   const discountCents = Math.floor((subtotalCents * percent) / 100);\n   return subtotalCents - discountCents;",
+       "functions": [
+        {
+         "key": "applyDiscount",
+         "name": "applyDiscount",
+         "line": 5,
+         "endLine": 15,
+         "isNew": false,
+         "added": 6,
+         "removed": 2
+        }
+       ],
+       "linesOutsideFunctions": 0
+      },
+      {
+       "file": "tests/checkout.test.ts",
+       "status": "M",
+       "kind": "test",
+       "added": 5,
+       "removed": 0,
+       "patch": "@@ -6,3 +6,8 @@ test(\"checkout: 200 cents at 10% totals 180 cents\", () => {\n   const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: 10 };\n   assert.equal(checkoutTotal(cart), 180);\n });\n+\n+test(\"checkout: a negative promo percent means no discount\", () => {\n+  const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: -5 };\n+  assert.equal(checkoutTotal(cart), 200);\n+});",
+       "functions": [],
+       "linesOutsideFunctions": 5
+      },
+      {
+       "file": "tests/orderImport.test.ts",
+       "status": "M",
+       "kind": "test",
+       "added": 4,
+       "removed": 0,
+       "patch": "@@ -2,6 +2,10 @@ import { test } from \"node:test\";\n import assert from \"node:assert/strict\";\n import { importOrder } from \"../src/import/orderImport.ts\";\n \n+test(\"import: a negative promo percent means no discount\", () => {\n+  assert.equal(importOrder(\"A-1,105,-5\").totalCents, 105);\n+});\n+\n test(\"import: a row with the wrong column count is rejected\", () => {\n   assert.throws(() => importOrder(\"A-1,105\"), /expected 3 columns/);\n });",
+       "functions": [],
+       "linesOutsideFunctions": 4
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "startedAt": "2026-11-15T02:04:01.194Z",
+     "endedAt": "2026-11-15T02:04:18.679Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 5,
+     "reply": "I changed one file, `src/pricing/discount.ts`. I didn't run anything, including the tests, so this comes from reading the code.\n\n- **Change:** `applyDiscount()` now returns the subtotal unchanged when the percent is negative, instead of throwing. That makes a 200-cent cart at -5% total 200 cents, and an imported 105-cent row at -5% total 105 cents.\n- **Why there:** Checkout and Order Import both call this shared function, so one fix covers both workflows.\n- **Unchanged:** Percents from 0 to 100 give the same totals as before. Percents above 100 still throw a `RangeError`, since the requirement only covers negatives. I reworded that error message to \"percent must be at most 100\".\n- **Tests:** I added none, because I couldn't run them.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "src/pricing/discount.ts",
+       "status": "M",
+       "kind": "code",
+       "added": 6,
+       "removed": 2,
+       "patch": "@@ -3,8 +3,12 @@\n  * Used by Checkout and Order Import.\n  */\n export function applyDiscount(subtotalCents: number, percent: number): number {\n-  if (percent < 0 || percent > 100) {\n-    throw new RangeError(\"percent must be between 0 and 100\");\n+  // A negative percent (e.g. -5) means \"no promotion\" (REQ-21).\n+  if (percent < 0) {\n+    return subtotalCents;\n+  }\n+  if (percent > 100) {\n+    throw new RangeError(\"percent must be at most 100\");\n   }\n   const discountCents = Math.floor((subtotalCents * percent) / 100);\n   return subtotalCents - discountCents;",
+       "functions": [
+        {
+         "key": "applyDiscount",
+         "name": "applyDiscount",
+         "line": 5,
+         "endLine": 15,
+         "isNew": false,
+         "added": 6,
+         "removed": 2
+        }
+       ],
+       "linesOutsideFunctions": 0
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "startedAt": "2026-11-15T02:04:02.016Z",
+     "endedAt": "2026-11-15T02:04:25.588Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 10,
+     "reply": "I've finished the edits and am about to send the summary. I couldn't run any tests, so none of this has been run.\n\n**Files changed**\n- `src/pricing/discount.ts`: `applyDiscount()` now returns the subtotal unchanged for a negative percent, so -5% means no discount. Both Checkout and Order Import call this function, so the one change fixes both. Percents from 0 to 100 take the same code path as before. Percents above 100 still throw, since the requirement only covers negatives.\n- `tests/checkout.test.ts`: added a test that a 200-cent cart at -5% totals 200 cents.\n- `tests/orderImport.test.ts`: added a test that the row `A-2,105,-5` imports with a total of 105 cents.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "src/pricing/discount.ts",
+       "status": "M",
+       "kind": "code",
+       "added": 6,
+       "removed": 2,
+       "patch": "@@ -3,8 +3,12 @@\n  * Used by Checkout and Order Import.\n  */\n export function applyDiscount(subtotalCents: number, percent: number): number {\n-  if (percent < 0 || percent > 100) {\n-    throw new RangeError(\"percent must be between 0 and 100\");\n+  if (percent > 100) {\n+    throw new RangeError(\"percent must not exceed 100\");\n+  }\n+  // REQ-21: a negative percent (e.g. -5) means \"no promotion\".\n+  if (percent < 0) {\n+    return subtotalCents;\n   }\n   const discountCents = Math.floor((subtotalCents * percent) / 100);\n   return subtotalCents - discountCents;",
+       "functions": [
+        {
+         "key": "applyDiscount",
+         "name": "applyDiscount",
+         "line": 5,
+         "endLine": 15,
+         "isNew": false,
+         "added": 6,
+         "removed": 2
+        }
+       ],
+       "linesOutsideFunctions": 0
+      },
+      {
+       "file": "tests/checkout.test.ts",
+       "status": "M",
+       "kind": "test",
+       "added": 5,
+       "removed": 0,
+       "patch": "@@ -6,3 +6,8 @@ test(\"checkout: 200 cents at 10% totals 180 cents\", () => {\n   const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: 10 };\n   assert.equal(checkoutTotal(cart), 180);\n });\n+\n+test(\"checkout: a negative promo percent means no discount (REQ-21)\", () => {\n+  const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: -5 };\n+  assert.equal(checkoutTotal(cart), 200);\n+});",
+       "functions": [],
+       "linesOutsideFunctions": 5
+      },
+      {
+       "file": "tests/orderImport.test.ts",
+       "status": "M",
+       "kind": "test",
+       "added": 4,
+       "removed": 0,
+       "patch": "@@ -5,3 +5,7 @@ import { importOrder } from \"../src/import/orderImport.ts\";\n test(\"import: a row with the wrong column count is rejected\", () => {\n   assert.throws(() => importOrder(\"A-1,105\"), /expected 3 columns/);\n });\n+\n+test(\"import: a negative promo percent means no discount (REQ-21)\", () => {\n+  assert.equal(importOrder(\"A-2,105,-5\").totalCents, 105);\n+});",
+       "functions": [],
+       "linesOutsideFunctions": 4
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "startedAt": "2026-11-15T02:04:19.712Z",
+     "endedAt": "2026-11-15T02:04:34.349Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 5,
+     "reply": "I changed one file: `src/pricing/discount.ts`. I couldn't run the tests, so this is untested.\n\n`applyDiscount()` now returns the subtotal unchanged when the percent is negative, instead of throwing. Checkout and Order Import both call this function, so one change fixes both. A 200-cent cart at -5% now totals 200 cents, and an imported 105-cent row at -5% totals 105 cents.\n\nPercents from 0 to 100 take the same code path as before, so their totals are unchanged. Percents above 100 still throw a `RangeError`, because the requirement only covers negative values. I reworded that error message to match.\n\nI added no tests, since I couldn't run them.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "src/pricing/discount.ts",
+       "status": "M",
+       "kind": "code",
+       "added": 6,
+       "removed": 2,
+       "patch": "@@ -3,8 +3,12 @@\n  * Used by Checkout and Order Import.\n  */\n export function applyDiscount(subtotalCents: number, percent: number): number {\n-  if (percent < 0 || percent > 100) {\n-    throw new RangeError(\"percent must be between 0 and 100\");\n+  if (percent < 0) {\n+    // A negative percent (e.g. -5) means \"no promotion\" (REQ-21).\n+    return subtotalCents;\n+  }\n+  if (percent > 100) {\n+    throw new RangeError(\"percent must not be greater than 100\");\n   }\n   const discountCents = Math.floor((subtotalCents * percent) / 100);\n   return subtotalCents - discountCents;",
+       "functions": [
+        {
+         "key": "applyDiscount",
+         "name": "applyDiscount",
+         "line": 5,
+         "endLine": 15,
+         "isNew": false,
+         "added": 6,
+         "removed": 2
+        }
+       ],
+       "linesOutsideFunctions": 0
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "startedAt": "2026-11-15T02:04:25.344Z",
+     "endedAt": "2026-11-15T02:04:51.425Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 11,
+     "reply": "A negative promo percent now means no discount, so a 200-cent cart at -5% totals 200 cents. I couldn't run anything, so none of this, including the new tests, has been run.\n\n- **[src/pricing/discount.ts](src/pricing/discount.ts):** `applyDiscount()` returns the subtotal unchanged when the percent is below 0. Checkout and Order Import both call this function, so one change fixes both. Percents from 0 to 100 take the same code path as before. Percents above 100 still throw `RangeError`, since the requirement only covers negatives.\n- **[tests/checkout.test.ts](tests/checkout.test.ts):** I added a test that a 200-cent cart at -5% totals 200 cents.\n- **[tests/orderImport.test.ts](tests/orderImport.test.ts):** I added a test that the import row `A-2,105,-5` totals 105 cents.\n\nThe PR text says \"a bad promo percent no longer fails checkout\", which could be read as covering values above 100 too. I followed the requirement file and left those throwing.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "src/pricing/discount.ts",
+       "status": "M",
+       "kind": "code",
+       "added": 6,
+       "removed": 2,
+       "patch": "@@ -3,8 +3,12 @@\n  * Used by Checkout and Order Import.\n  */\n export function applyDiscount(subtotalCents: number, percent: number): number {\n-  if (percent < 0 || percent > 100) {\n-    throw new RangeError(\"percent must be between 0 and 100\");\n+  if (percent < 0) {\n+    // REQ-21: a negative percent (e.g. -5) means \"no promotion\".\n+    return subtotalCents;\n+  }\n+  if (percent > 100) {\n+    throw new RangeError(\"percent must be at most 100\");\n   }\n   const discountCents = Math.floor((subtotalCents * percent) / 100);\n   return subtotalCents - discountCents;",
+       "functions": [
+        {
+         "key": "applyDiscount",
+         "name": "applyDiscount",
+         "line": 5,
+         "endLine": 15,
+         "isNew": false,
+         "added": 6,
+         "removed": 2
+        }
+       ],
+       "linesOutsideFunctions": 0
+      },
+      {
+       "file": "tests/checkout.test.ts",
+       "status": "M",
+       "kind": "test",
+       "added": 5,
+       "removed": 0,
+       "patch": "@@ -6,3 +6,8 @@ test(\"checkout: 200 cents at 10% totals 180 cents\", () => {\n   const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: 10 };\n   assert.equal(checkoutTotal(cart), 180);\n });\n+\n+test(\"checkout: a negative promo percent means no discount (REQ-21)\", () => {\n+  const cart = { items: [{ priceCents: 100, quantity: 2 }], discountPercent: -5 };\n+  assert.equal(checkoutTotal(cart), 200);\n+});",
+       "functions": [],
+       "linesOutsideFunctions": 5
+      },
+      {
+       "file": "tests/orderImport.test.ts",
+       "status": "M",
+       "kind": "test",
+       "added": 4,
+       "removed": 0,
+       "patch": "@@ -5,3 +5,7 @@ import { importOrder } from \"../src/import/orderImport.ts\";\n test(\"import: a row with the wrong column count is rejected\", () => {\n   assert.throws(() => importOrder(\"A-1,105\"), /expected 3 columns/);\n });\n+\n+test(\"import: a negative promo percent means no discount (REQ-21)\", () => {\n+  assert.deepEqual(importOrder(\"A-2,105,-5\"), { id: \"A-2\", totalCents: 105 });\n+});",
+       "functions": [],
+       "linesOutsideFunctions": 4
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

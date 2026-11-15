@@ -1,0 +1,27 @@
+{
+  "model": "shop coding agent",
+  "snapshot": "req-21, commit 1",
+  "commit": "977be6ed6999a61ba6da17444181688842068a80",
+  "chat": [
+    {
+      "q": "Explain this change in plain words",
+      "keys": "explain plain words what does change mean summary simple",
+      "a": "Operations type -5 in the promo field to mean no promotion, and checkout showed an error page. Now a negative percent counts as no discount. I changed the shared `applyDiscount()` function."
+    },
+    {
+      "q": "What happens at 150% off?",
+      "keys": "150 above 100 over percent negative total limit range",
+      "a": "It no longer throws. I removed the whole range check, so a 200-cent cart at 150% now totals -100 cents. REQ-21 only asked about negative percents."
+    },
+    {
+      "q": "What else uses the function you changed?",
+      "keys": "else uses callers affected who calls other parts reach shared",
+      "a": "Checkout (`checkoutTotal()`) and Order Import (`importOrder()`). Both now accept any percent."
+    },
+    {
+      "q": "What did you not test?",
+      "keys": "not test tested untested gap missing proof coverage",
+      "a": "The total for a percent above 100. My test only checks that 150% does not throw. Order Import has one REQ-21 test, for -5%, and none for 0 to 100%."
+    }
+  ]
+}
