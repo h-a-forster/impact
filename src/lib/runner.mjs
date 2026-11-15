@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { DATA, DEMO } from "./paths.mjs";
 
 const RUNS = path.join(DATA, "runs");
@@ -43,8 +44,9 @@ export function runIn(snapshotDir, tag = "run") {
     const status = /<failure|<error/.test(body) ? "failed" : /<skipped/.test(body) ? "skipped" : "passed";
     tests.push({ id: `test:${file}#${name}`, file, name, status });
   }
-  // Strip machine paths and timings so the saved record is stable and shareable.
+  // Strip machine paths (plain, and as the file URLs in stack traces) and timings so the saved record is stable and shareable.
   const rawOutput = (result.stdout + (result.stderr ? "\n" + result.stderr : ""))
+    .split(pathToFileURL(snapshotDir).href).join("<snapshot>")
     .split(snapshotDir).join("<snapshot>")
     .replace(/\(\d+(\.\d+)?ms\)/g, "")
     .replace(/duration_ms [\d.]+/g, "duration_ms -");
