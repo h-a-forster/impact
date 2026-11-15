@@ -1,0 +1,23 @@
+{
+  "pr": "req-21",
+  "generatedBy": "AI-written (Claude), saved for this demo",
+  "revisions": {
+    "1": {
+      "tags": [
+        { "label": "Behaviour change", "tone": "warn" },
+        { "label": "Shared code", "tone": "warn" },
+        { "label": "Money maths", "tone": "warn" },
+        { "label": "Range check removed", "tone": "bad" },
+        { "label": "Reaches 2 workflows", "tone": "info" }
+      ],
+      "summary": "A negative promo percent now means no discount instead of an error. To get there the change drops the whole range check, so a percent above 100 now gives a total below zero.",
+      "sections": [
+        { "title": "What changes", "text": "`applyDiscount()` uses `Math.max(0, percent)` and no longer throws. -5% gives no discount. 150% off a 200-cent cart now totals -100 cents." },
+        { "title": "Why", "text": "REQ-21: operations type -5 to mean no promotion, and checkout showed an error page." },
+        { "title": "What it reaches", "text": "`checkoutTotal()` in Checkout and `importOrder()` in Order Import. Both call `applyDiscount()`. Neither is in the diff." },
+        { "title": "What is tested", "text": "Checkout: -5%, and 0, 10 and 100% keep their totals. 150% is only checked not to throw. Order Import: one test at -5%." },
+        { "title": "What stays the same", "text": "Percents from 0 to 100 give the same totals. Percents above 100 do not: they used to be rejected." }
+      ]
+    }
+  }
+}
