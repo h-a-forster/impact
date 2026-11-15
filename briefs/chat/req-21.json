@@ -4,7 +4,7 @@
   "commit": "977be6ed6999a61ba6da17444181688842068a80",
   "chat": [
     {
-      "q": "Explain this change in plain words",
+      "q": "What did you change?",
       "keys": "explain plain words what does change mean summary simple",
       "a": "Operations type -5 in the promo field to mean no promotion, and checkout showed an error page. Now a negative percent counts as no discount. I changed the shared `applyDiscount()` function."
     },
@@ -22,6 +22,36 @@
       "q": "What did you not test?",
       "keys": "not test tested untested gap missing proof coverage",
       "a": "The total for a percent above 100. My test only checks that 150% does not throw. Order Import has one REQ-21 test, for -5%, and none for 0 to 100%."
+    },
+    {
+      "q": "Why did you change the shared function?",
+      "keys": "why approach chose shared function design instead way",
+      "a": "Checkout and Order Import both call `applyDiscount()`, so one change fixes both. I wanted a bad promo value never to fail checkout again."
+    },
+    {
+      "q": "What could break?",
+      "keys": "break wrong fail happen could go bad worst effect negative total",
+      "a": "A percent above 100 now gives a total below zero, in Checkout and in Order Import. Before, the range check threw. Anything that counted on that error no longer gets it."
+    },
+    {
+      "q": "How do I undo it?",
+      "keys": "undo revert back out remove",
+      "a": "Revert the commit. The range check comes back in `applyDiscount()`, and -5 is an error again in both places."
+    },
+    {
+      "q": "Is it safe to merge?",
+      "keys": "safe merge ready ok good should",
+      "a": "The rules send it to a person: Medium risk, Human review required. The AI review asks for action first: a percent above 100 is no longer rejected and gives negative totals."
+    },
+    {
+      "q": "What were you least sure about?",
+      "keys": "unsure least sure worried doubt confident",
+      "a": "Percents above 100. I only checked that 150% does not throw, not what total it gives."
+    },
+    {
+      "q": "What is REQ-21?",
+      "keys": "req 21 requirement task asked ticket spec promo must stay same",
+      "a": "Operations type -5 in the promo field to mean no promotion. That must count as no discount, not an error, in Checkout and in Order Import. Percents from 0 to 100 must give the same totals as before."
     }
   ]
 }

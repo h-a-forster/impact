@@ -4,7 +4,7 @@
   "commit": "a3f1aeb6406e28403d024e3b160da7deb5c8b57e",
   "chat": [
     {
-      "q": "Explain this change in plain words",
+      "q": "What did you change?",
       "keys": "explain plain words what does change mean summary simple",
       "a": "The payments ledger writes a note with each charge. I added a full stop to it: `charge posted.` No amount or check changed."
     },
@@ -17,6 +17,41 @@
       "q": "Could this affect anything else?",
       "keys": "else affect affected reach other parts code reads note",
       "a": "Only if something reads the note text. I did not look for such code. The ledger is a critical path for the team, so a person should decide."
+    },
+    {
+      "q": "Why did you make this edit?",
+      "keys": "why reason task asked purpose requirement way",
+      "a": "To tidy the note the ledger writes: add a full stop. No requirement is linked to it. `postCharge()` is the only place the note is written."
+    },
+    {
+      "q": "What did you not test?",
+      "keys": "not test tested untested gap missing",
+      "a": "The note text itself. No test reads it, so no test asks for this edit. I also did not look for code that reads the note."
+    },
+    {
+      "q": "What could break?",
+      "keys": "break wrong fail happen could go bad worst",
+      "a": "Anything that reads the note and expects exactly `charge posted`, without the full stop. I did not look for such code. The diff changes only that string."
+    },
+    {
+      "q": "Is it safe to merge?",
+      "keys": "safe merge ready ok good should",
+      "a": "A person decides. The payments ledger is on the team's list of critical paths, so the rules ask for a full human review (High risk). The AI review asks for proof: no test checks the note, and who calls `postCharge()` is unknown."
+    },
+    {
+      "q": "How do I undo it?",
+      "keys": "undo revert back out remove",
+      "a": "Revert the commit: one string in `postCharge()` goes back to `charge posted`."
+    },
+    {
+      "q": "What were you least sure about?",
+      "keys": "unsure least sure worried doubt confident",
+      "a": "Whether anything reads the note text. I did not look."
+    },
+    {
+      "q": "Why is this High risk?",
+      "keys": "high risk severity why critical path full review",
+      "a": "Not because of its size. `src/payments/` is on the team's list of critical paths, so any change there is High and gets a full human review."
     }
   ]
 }
