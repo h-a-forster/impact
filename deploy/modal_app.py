@@ -39,6 +39,6 @@ app = modal.App("impact", image=image)
 
 @app.function(min_containers=0, max_containers=1, scaledown_window=600)
 @modal.concurrent(max_inputs=100)
-@modal.web_server(PORT, startup_timeout=60)
+@modal.web_server(PORT, startup_timeout=60, label="map")
 def web():
     subprocess.Popen(["node", "src/server.mjs"], cwd="/app")
