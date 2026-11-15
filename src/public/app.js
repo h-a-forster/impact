@@ -1,5 +1,6 @@
 // Code Review Impact Map - frontend. No framework. One model per (PR, revision).
 import { prComment } from "./lib/comment.mjs";
+import { reachRings } from "./lib/reach.mjs";
 import { cutAtWord, issueList, verdictSentence } from "./lib/verdict.mjs";
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -70,7 +71,7 @@ function selectionMissing(sel) {
   if (sel.type === "node") {
     const anyLevel = g.nodes.find((n) => n.id === sel.id);
     if (!anyLevel) return `"${sel.label ?? sel.id}"`;
-    if (!g.nodes.some((n) => n.id === sel.id && n.level === state.level)) state.level = anyLevel.level;
+    if (state.level !== "reach" && !g.nodes.some((n) => n.id === sel.id && n.level === state.level)) state.level = anyLevel.level;
     return null;
   }
   if (sel.type === "edge") return g.edges.some((e) => e.id === sel.id && e.level === state.level) ? null : "That link";
@@ -243,12 +244,17 @@ function dropDots() {
 /** Picks the drawing for the level: dots (Graphify way) for Functions, boxes (React Flow) for Concepts and Files. */
 function drawGraph(nodes, edges, onNode, onEdge) {
   const dots = state.level === "function";
-  $("graphFlow").hidden = dots;
-  $("graphVis").hidden = !dots;
-  $("graphWrap").parentElement.dataset.draw = dots ? "dots" : "boxes";
+  showDrawing(dots ? "dots" : "boxes");
   if (dots) return drawDots($("graphVis"), nodes, edges, onNode, onEdge);
   dropDots();
   drawBoxes($("graphFlow"), nodes, edges, onNode, onEdge);
+}
+/** Shows one drawing (boxes, dots or reach) and hides the others. */
+function showDrawing(kind) {
+  $("graphFlow").hidden = kind !== "boxes";
+  $("graphVis").hidden = kind !== "dots";
+  $("graphReach").hidden = kind !== "reach";
+  $("graphWrap").parentElement.dataset.draw = kind;
 }
 function drawDots(el, nodes, allEdges, onNode, onEdge) {
   const ids = new Set(nodes.map((n) => n.id));
@@ -473,6 +479,11 @@ function renderGraph() {
     return;
   }
   if (full) return renderFull();
+  if (state.level === "reach") {
+    showDrawing("reach");
+    dropDots();
+    return drawReach($("graphReach"));
+  }
   let edges = m.graph.edges.filter((e) => e.level === state.level), nodes = m.graph.nodes.filter((n) => n.level === state.level);
   if (state.level === "concept") nodes = markEditedAreas(nodes);
   const all = nodes.length;
@@ -510,6 +521,323 @@ function drawBoxes(el, nodes, edges, onNode, onEdge) {
     onNode,
     onEdge,
   });
+}
+
+// ---------- reach: the edit at the centre, what it reaches on rings by call distance ----------
+// Ring k holds the functions k calls away from the edited code (src/lib/reach.mjs). Each code area is a
+// wedge. Inline SVG. A ripple runs out along the call links when the view opens, and on Replay.
+const REACH = {
+  rings: 3, // rings drawn in full; the rest are counted as "further away"
+  gap: 0.5, // radians kept free at the top of every ring, for its title
+  arc: 34, // the least room, in px along a ring, that one node needs
+  height: [480, 680], // fits the screen, within these
+  step: 200, // the most room between two rings, in px
+};
+const isDoc = (n) => n.type === "file" && /\.(md|mdx|txt|rst|adoc)$/i.test(n.file ?? "");
+const reachView = { key: null };
+const RING_TITLE = (k) => (k === 1 ? "Calls the edit" : `${k} calls away`);
+/** The short line under a name: what is known about its tests. Colour class first. */
+function reachNote(n, centre) {
+  if (n.evidence === "contradicted") return ["bad", "unit test fails"];
+  if (centre) return ["", isDoc(n) ? "docs, not code" : n.type === "file" ? "no functions indexed" : (n.file ?? "").split("/").pop()];
+  if (untested(n)) return ["warn", "no test"];
+  if (n.evidence === "supported") return ["", "tested"];
+  return ["", ""];
+}
+/** Long names are cut; the full name is on hover. */
+const reachName = (label) => {
+  const fn = label.endsWith("()"), base = fn ? label.slice(0, -2) : label;
+  return (base.length > 18 ? base.slice(0, 17) + "…" : base) + (fn ? "()" : "");
+};
+const reachTone = (n, centre) => (n.evidence === "contradicted" ? "bad" : centre ? "edited" : untested(n) ? "warn" : n.evidence === "supported" ? "ok" : "plain");
+const polar = (cx, cy, r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+
+/** Where everything goes: rings, wedges (one per code area) and nodes. Nodes past a ring's room are counted, not drawn. */
+function reachLayout(m, W, H) {
+  const r = reachRings(m.graph);
+  const areaName = new Map(m.graph.nodes.filter((n) => n.level === "concept").map((n) => [n.id, n.label]));
+  const cx = W / 2, cy = H / 2 + 6;
+  const outer = r.rings.slice(1);
+  const shownRings = outer.slice(0, REACH.rings), further = outer.slice(REACH.rings).flat().length;
+  const multi = r.rings[0].length > 1;
+  const empty = !outer.length;
+  // The sides keep room for names, so the rings are bounded by width as well as height.
+  const rMax = Math.min(W / 2 - 150, H / 2 - 44);
+  const core = multi ? (shownRings.length ? 0.75 : 1) : 0;
+  const units = core + shownRings.length + (further ? 0.5 : 0) + (empty ? 0.45 : 0);
+  const step = Math.min(REACH.step, rMax / Math.max(units, 1));
+  const rank = (n) => (n.evidence === "contradicted" ? 0 : untested(n) ? 1 : notGiven(n) ? 2 : 3);
+  const rings = [r.rings[0], ...shownRings].map((ids, k) => {
+    const radius = k === 0 ? core * step : (core + k) * step;
+    const all = ids.map((id) => r.byId.get(id)).sort((a, b) => rank(a) - rank(b) || a.label.localeCompare(b.label));
+    const room = radius ? Math.max(3, Math.floor(((2 * Math.PI - REACH.gap) * radius) / REACH.arc)) : 1;
+    return { k, radius, all, nodes: all.slice(0, room) };
+  });
+  const last = rings[rings.length - 1].radius;
+  const pos = new Map();
+  if (!multi && rings[0].nodes[0]) pos.set(rings[0].nodes[0].id, { x: cx, y: cy, a: null, k: 0 });
+  // Wedges: each code area gets room for its busiest ring.
+  const onRings = rings.filter((g) => g.radius > 0);
+  const weight = new Map();
+  for (const g of onRings) {
+    const count = new Map();
+    for (const n of g.nodes) count.set(n.concept, (count.get(n.concept) ?? 0) + 1);
+    for (const [c, v] of count) weight.set(c, Math.max(weight.get(c) ?? 0, v));
+  }
+  const total = [...weight.values()].reduce((a, b) => a + b, 0);
+  let start = -Math.PI / 2 + REACH.gap / 2;
+  const areas = [...weight.keys()].sort((a, b) => (areaName.get(a) ?? a).localeCompare(areaName.get(b) ?? b)).map((id) => {
+    const span = ((2 * Math.PI - REACH.gap) * weight.get(id)) / total;
+    const area = { id, name: areaName.get(id) ?? id.replace(/^concept:/, ""), start, span };
+    start += span;
+    return area;
+  });
+  // Ring by ring, a node sits in its area's wedge, ordered by where its callee sits, so links cross less.
+  const callees = new Map();
+  for (const l of r.links) (callees.get(l.to) ?? callees.set(l.to, []).get(l.to)).push(l.from);
+  for (const g of onRings) {
+    for (const a of areas) {
+      const angleOf = (n) => {
+        const as = (callees.get(n.id) ?? []).map((id) => pos.get(id)?.a).filter((x) => x !== null && x !== undefined);
+        return as.length ? as.reduce((p, q) => p + q, 0) / as.length : null;
+      };
+      const here = g.nodes.filter((n) => n.concept === a.id).sort((p, q) => (angleOf(p) ?? 0) - (angleOf(q) ?? 0) || p.label.localeCompare(q.label));
+      // Called from the centre only: spread evenly over the wedge. Else near what they call.
+      const want = here.map(angleOf);
+      const angles = want.every((w) => w === null) ? here.map((_, i) => a.start + (a.span * (i + 0.5)) / here.length) : spreadAngles(want.map((w) => w ?? a.start + a.span / 2), a, g.radius);
+      angles.forEach((ang, i) => {
+        const [x, y] = polar(cx, cy, g.radius, ang);
+        pos.set(here[i].id, { x, y, a: ang, k: g.k });
+      });
+    }
+  }
+  const links = r.links.filter((l) => pos.has(l.from) && pos.has(l.to));
+  const furtherRadius = further ? last + step * 0.5 : 0;
+  return { cx, cy, W, H, step, rings, areas, pos, links, further, furtherRadius, empty, multi, rOut: Math.max(last, furtherRadius), byId: r.byId };
+}
+
+/** Angles for nodes in one wedge: near the angle each one wants (sorted), kept apart, inside the wedge. */
+function spreadAngles(want, area, radius) {
+  const n = want.length, pad = Math.min(area.span * 0.08, 0.12);
+  const lo = area.start + pad, hi = area.start + area.span - pad;
+  if (n === 1) return [Math.min(hi, Math.max(lo, want[0]))];
+  const sep = Math.min((hi - lo) / (n - 1), Math.max(0.3, (REACH.arc * 2.2) / radius));
+  const x = [];
+  want.forEach((w, i) => x.push(i ? Math.max(w, x[i - 1] + sep) : w));
+  const shift = want.reduce((p, q) => p + q, 0) / n - x.reduce((p, q) => p + q, 0) / n;
+  const back = Math.max(0, x[n - 1] + shift - hi), fwd = Math.max(0, lo - (x[0] + shift - back));
+  return x.map((v) => v + shift - back + fwd);
+}
+/**
+ * Puts each name where it fits: outward first, then right, left, above, below; shorter if needed; else on hover only.
+ * `soft` are points on the links: a name keeps off them where it can.
+ */
+function placeReachLabels(items, taken, soft, W, H) {
+  const over = (b, list) => list.some((t) => b.x1 < t.x2 && b.x2 > t.x1 && b.y1 < t.y2 && b.y2 > t.y1);
+  const hit = (b, strict) => b.x1 < 4 || b.y1 < 4 || b.x2 > W - 4 || b.y2 > H - 4 || over(b, taken) || (strict && over(b, soft));
+  const out = new Map();
+  for (const it of items) {
+    const tiny = it.full.endsWith("()") && it.full.length > 14 ? it.full.slice(0, 11) + "…()" : it.name;
+    const variants = [...(it.note ? [[it.name, it.note]] : []), [it.name, ""], [tiny, ""]];
+    let done = null;
+    for (const [name, note] of variants) {
+      const w = Math.max(name.length * 7.8, note.length * 6.5), h = note ? 31 : 16;
+      const g = it.rn + 6;
+      const side = (dir) => ({ anchor: dir > 0 ? "start" : "end", ax: it.x + dir * g, top: it.y - h / 2 });
+      const cands = [];
+      if (it.a === null) cands.push({ anchor: "middle", ax: it.x, top: it.y + g });
+      else {
+        const c = Math.cos(it.a), s = Math.sin(it.a);
+        if (Math.abs(c) >= 0.42) cands.push({ ...side(Math.sign(c)), top: it.y - h / 2 + s * 5 });
+        else cands.push({ anchor: "middle", ax: it.x + c * g, top: s < 0 ? it.y - g - h : it.y + g });
+      }
+      cands.push(side(1), side(-1), { anchor: "middle", ax: it.x, top: it.y - g - h }, { anchor: "middle", ax: it.x, top: it.y + g });
+      for (const strict of [true, false]) {
+        for (const c of cands) {
+          const x1 = c.anchor === "start" ? c.ax : c.anchor === "end" ? c.ax - w : c.ax - w / 2;
+          const box = { x1: x1 - 2, y1: c.top - 1, x2: x1 + w + 2, y2: c.top + h + 1 };
+          if (!hit(box, strict)) {
+            done = { ...c, name, note, box };
+            break;
+          }
+        }
+        if (done) break;
+      }
+      if (done) break;
+    }
+    if (done) {
+      taken.push(done.box);
+      out.set(it.id, done);
+    }
+  }
+  return out;
+}
+
+function drawReach(el, retried = false) {
+  const m = state.model;
+  // The panel may open in the same frame: measure it once it is on screen.
+  if (!el.parentElement.clientWidth && !retried) return requestAnimationFrame(() => drawReach(el, true));
+  const W = Math.round(el.parentElement.clientWidth || 660);
+  const H = Math.round(Math.min(REACH.height[1], Math.max(REACH.height[0], innerHeight - el.parentElement.getBoundingClientRect().top - 110)));
+  const L = reachLayout(m, W, H);
+  const key = `${state.prId}|${state.sha}`;
+  const animate = reachView.key !== key && !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  reachView.key = key;
+  const { cx, cy, step } = L;
+  const T = Math.min(0.42, 1 / Math.max(1, L.rings.length - 1));
+  const at = (k) => (k === 0 ? 0 : 0.1 + k * T);
+  const f = (v) => v.toFixed(1);
+  const sel = state.sel?.type === "node" ? state.sel.id : null;
+  const centreNode = !L.multi ? L.rings[0].nodes[0] : null;
+  const docsOnly = L.rings[0].all.length > 0 && L.rings[0].all.every(isDoc), nothing = !L.rings[0].all.length;
+
+  // Bands: stacked tints, so the centre is the brightest, like the Blast radius target.
+  const bandRadii = L.rings.filter((g) => g.radius > 0).map((g) => g.radius + Math.min(step * 0.45, 56));
+  if (centreNode) bandRadii.unshift(step * 0.45);
+  if (L.further) bandRadii.push(L.furtherRadius + step * 0.3);
+  const bands = bandRadii.reverse().map((r) => `<circle class="rr-band" cx="${f(cx)}" cy="${f(cy)}" r="${f(Math.min(r, H - cy - 6))}"/>`).join("");
+  const orbit = (r, k, cls = "") => `<circle class="rr-orbit ${cls}" cx="${f(cx)}" cy="${f(cy)}" r="${f(r)}" style="--t:${at(k).toFixed(2)}s"/>`;
+  const emptyRadius = L.empty ? (L.multi ? L.rings[0].radius + step * 0.45 : Math.min(150, H / 2 - 60)) : 0;
+  const orbits = L.rings.filter((g) => g.radius > 0).map((g) => orbit(g.radius, g.k)).join("")
+    + (L.further ? orbit(L.furtherRadius, L.rings.length, "dashed") : "")
+    + (L.empty ? orbit(emptyRadius, 1, "dashed") : "");
+  const spokeIn = L.multi ? Math.max(14, L.rings[0].radius - step * 0.45) : step * 0.45;
+  // Spokes split the areas. The one at the top runs behind the ring titles.
+  const spokes = L.areas.length > 1 ? [-Math.PI / 2, ...L.areas.slice(1).map((a) => a.start)].map((a) => {
+    const [x1, y1] = polar(cx, cy, spokeIn, a), [x2, y2] = polar(cx, cy, L.rOut + step * 0.3, a);
+    return `<line class="rr-spoke" x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}"/>`;
+  }).join("") : "";
+
+  // Links: gentle curves outward, from a node to its caller one ring out. From the centre they swirl a little.
+  const curve = (p, q) => {
+    let c1, c2;
+    if (p.a === null) {
+      const d = Math.hypot(q.x - cx, q.y - cy);
+      c1 = polar(cx, cy, d * 0.4, q.a - 0.22);
+      c2 = polar(cx, cy, d * 0.75, q.a - 0.06);
+    } else {
+      const mid = (Math.hypot(p.x - cx, p.y - cy) + Math.hypot(q.x - cx, q.y - cy)) / 2;
+      c1 = polar(cx, cy, mid, p.a);
+      c2 = polar(cx, cy, mid, q.a);
+    }
+    const pts = [[p.x, p.y], c1, c2, [q.x, q.y]];
+    const at3 = (t) => [0, 1].map((i) => (1 - t) ** 3 * pts[0][i] + 3 * (1 - t) ** 2 * t * pts[1][i] + 3 * (1 - t) * t ** 2 * pts[2][i] + t ** 3 * pts[3][i]);
+    const samples = Array.from({ length: 11 }, (_, i) => at3(0.08 + i * 0.084)).map(([x, y]) => ({ x1: x - 2, y1: y - 2, x2: x + 2, y2: y + 2 }));
+    return { d: `M${pts.map(([x, y], i) => `${i === 1 ? "C" : i ? " " : ""}${f(x)} ${f(y)}`).join("")}`, samples };
+  };
+  const toneOf = (id) => reachTone(L.byId.get(id), L.pos.get(id).k === 0);
+  const linkList = L.links.map((l) => ({ ...l, ...curve(L.pos.get(l.from), L.pos.get(l.to)), k: L.pos.get(l.to).k, tone: toneOf(l.to) }));
+  // A link draws while the ripple travels to its ring; the dot lands as it arrives.
+  const leave = (k) => (k === 1 ? 0.1 : at(k - 1));
+  const links = linkList.map((l) => `<path class="rr-link ${l.tone}" pathLength="1" d="${l.d}" style="--t:${leave(l.k).toFixed(2)}s;--d:${T.toFixed(2)}s"/>`).join("");
+  const pulses = animate ? linkList.map((l) => {
+    const begin = `${leave(l.k).toFixed(2)}s`, dur = `${T.toFixed(2)}s`;
+    return `<circle class="rr-pulse ${l.tone}" r="2.6" opacity="0"><animateMotion path="${l.d}" begin="${begin}" dur="${dur}" fill="freeze"/><animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.15;.75;1" begin="${begin}" dur="${dur}" fill="freeze"/></circle>`;
+  }).join("") : "";
+
+  // Ring titles sit in the gap at the top of each ring, like the zone titles of the Blast radius target.
+  const taken = [];
+  const pill = (y, text, count, cls = "") => {
+    const w = text.length * 6.9 + (count ? String(count).length * 7.3 + 8 : 0) + 20;
+    taken.push({ x1: cx - w / 2, y1: y - 11, x2: cx + w / 2, y2: y + 11 });
+    return `<g class="rr-pill ${cls}" transform="translate(${f(cx)} ${f(y)})"><rect x="${f(-w / 2)}" y="-10.5" width="${f(w)}" height="21" rx="10.5"/><text text-anchor="middle" y="4.5">${esc(text)}${count ? ` <tspan class="rr-count">${esc(count)}</tspan>` : ""}</text></g>`;
+  };
+  let pills = L.rings.filter((g) => g.k > 0).map((g) => pill(cy - g.radius, RING_TITLE(g.k), g.nodes.length < g.all.length ? `${g.nodes.length} of ${g.all.length}` : g.all.length)).join("");
+  if (L.multi && L.empty) taken.push({ x1: cx - 80, y1: cy - 26, x2: cx + 80, y2: cy + 52 });
+  if (L.multi && !L.empty) pills += pill(cy - L.rings[0].radius, "Edited", L.rings[0].nodes.length < L.rings[0].all.length ? `${L.rings[0].nodes.length} of ${L.rings[0].all.length}` : L.rings[0].all.length, "edited");
+  if (L.further) pills += pill(cy - L.furtherRadius, `+${L.further} further away`, "", "further");
+  if (L.empty && !docsOnly && !nothing && !L.multi) pills += pill(cy - emptyRadius, "Nothing else calls it", "", "further");
+
+  // Nodes, then their names where they fit.
+  const drawn = [...L.pos.entries()].map(([id, p]) => ({ id, ...p, n: L.byId.get(id) }));
+  const rn = (d) => (d.n.type === "file" ? 15 : d.k === 0 ? (L.multi ? 7.5 : 10) : 7.5);
+  for (const d of drawn) taken.push({ x1: d.x - rn(d) - 3, y1: d.y - rn(d) - 3, x2: d.x + rn(d) + 3, y2: d.y + rn(d) + 3 });
+  const prio = (d) => (d.k === 0 && !L.multi ? 0 : reachTone(d.n, d.k === 0) === "bad" ? 1 : untested(d.n) ? 2 : 3 + d.k);
+  const items = [...drawn].sort((a, b) => prio(a) - prio(b)).map((d) => {
+    const [, note] = reachNote(d.n, d.k === 0);
+    return { id: d.id, x: d.x, y: d.y, a: d.a, rn: rn(d), name: reachName(d.n.label), full: d.n.label, note };
+  });
+  const labels = placeReachLabels(items, taken, linkList.flatMap((l) => l.samples), L.W, L.H);
+  const nodes = drawn.map((d) => {
+    const n = d.n, centre = d.k === 0, tone = reachTone(n, centre), [noteTone] = reachNote(n, centre), lb = labels.get(d.id);
+    const where = `${n.file ?? ""}${n.line ? `:${n.line}` : ""}`;
+    const status = centre ? "edited" : untested(n) ? "affected, no test" : n.evidence === "supported" ? "affected, tested" : "affected";
+    const tip = [n.label, where, centre ? "Edited in this commit" : `${RING_TITLE(d.k)} · ${status}`, n.evidence === "contradicted" ? "A unit test fails here" : "", notGiven(n) ? NOT_GIVEN : ""].filter(Boolean).join("\n");
+    const t = at(d.k).toFixed(2);
+    const label = lb ? `<text class="rr-name" x="${f(lb.ax - d.x)}" y="${f(lb.top - d.y + 12.5)}" text-anchor="${lb.anchor}">${esc(lb.name)}</text>${lb.note ? `<text class="rr-note ${noteTone}" x="${f(lb.ax - d.x)}" y="${f(lb.top - d.y + 27.5)}" text-anchor="${lb.anchor}">${esc(lb.note)}</text>` : ""}` : "";
+    const glyph = n.type === "file"
+      ? `<path class="rr-dot rr-doc" d="M-11 -15h14l8 8v22h-22z"/><path class="rr-doc-lines" d="M-6 -2h12M-6 3.5h12M-6 9h7"/>`
+      : `${tone === "warn" || (centre && !L.multi) ? `<circle class="rr-halo" r="${f(rn(d) + 9)}"/>` : ""}<circle class="rr-dot" r="${f(rn(d))}"/>`;
+    return `<g class="rr-node rr-${tone}${notGiven(n) ? " rr-unseen" : ""}" data-node="${esc(d.id)}" transform="translate(${f(d.x)} ${f(d.y)})" style="--t:${t}s" tabindex="0" role="button" aria-label="${esc(tip.replace(/\n/g, ", "))}">
+      <title>${esc(tip)}</title>${sel === d.id ? `<circle class="rr-sel" r="${f(rn(d) + 5)}"/>` : ""}${glyph}${label}</g>`;
+  }).join("");
+
+  // Area names: just outside the outer ring in their wedge, where they fit.
+  const areaLabels = L.areas.length ? L.areas.map((a) => {
+    const w = a.name.length * 7 + 4, h = 16;
+    // Nearest the middle of the wedge first; of two as near, the higher one, so names on both sides line up.
+    const spots = [0.5, 0.35, 0.65, 0.2, 0.8].flatMap((frac) => [0.3, 0.5].map((out) => polar(cx, cy, L.rOut + step * out, a.start + a.span * frac).concat(Math.abs(frac - 0.5), out)));
+    spots.sort((p, q) => p[2] - q[2] || p[3] - q[3] || p[1] - q[1]);
+    for (const [x, y] of spots) {
+      const box = { x1: x - w / 2, y1: y - h / 2, x2: x + w / 2, y2: y + h / 2 };
+      if (box.x1 < 4 || box.y1 < 4 || box.x2 > W - 4 || box.y2 > H - 4 || taken.some((t) => box.x1 < t.x2 && box.x2 > t.x1 && box.y1 < t.y2 && box.y2 > t.y1)) continue;
+      taken.push(box);
+      return `<text class="rr-area" x="${f(x)}" y="${f(y + 4)}" text-anchor="middle">${esc(a.name)}</text>`;
+    }
+    return "";
+  }).join("") : "";
+
+  const caption = docsOnly || nothing
+    ? `<text class="rr-empty-title" x="${f(cx)}" y="${f(cy + emptyRadius + 36)}" text-anchor="middle">Reaches no code</text>
+       <text class="rr-empty-sub" x="${f(cx)}" y="${f(cy + emptyRadius + 58)}" text-anchor="middle">${nothing ? "This commit edits no function the map knows." : "This change edits docs only, so nothing can call it."}</text>`
+    : L.multi && L.empty
+      ? `<text class="rr-core-num" x="${f(cx)}" y="${f(cy + 6)}" text-anchor="middle">${L.rings[0].all.length}</text>
+         <text class="rr-core-sub" x="${f(cx)}" y="${f(cy + 28)}" text-anchor="middle">edited</text><text class="rr-core-sub" x="${f(cx)}" y="${f(cy + 46)}" text-anchor="middle">nothing else calls them</text>`
+      : "";
+  const reached = L.rings.slice(1).reduce((s, g) => s + g.all.length, 0) + L.further;
+  const aria = docsOnly ? "Reach: the change edits docs only and reaches no code." : `Reach: ${things(L.rings[0].all.length, "edited function", "edited functions")}, reaching ${things(reached, "function", "functions")}.`;
+  // The wave runs at an even speed and meets the last ring as its dots land.
+  const waveR = (L.empty ? emptyRadius : L.rOut) + step * 0.3, lastR = L.empty ? emptyRadius : L.rings[L.rings.length - 1].radius || waveR;
+  const waveD = (Math.max(at(L.rings.length - 1), 0.5) * waveR) / lastR;
+  el.innerHTML = `<svg class="rr-svg${animate ? " rr-anim" : ""}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(aria)}">
+      <g>${bands}</g><circle class="rr-wave" cx="${f(cx)}" cy="${f(cy)}" r="${f(waveR)}" style="--d:${waveD.toFixed(2)}s"/>
+      <g>${spokes}${orbits}</g><g>${links}</g><g>${pulses}</g><g>${pills}${areaLabels}</g><g>${nodes}</g>${caption}
+    </svg><button type="button" class="rr-replay" title="Play the ripple again">↻ Replay</button>`;
+  el.querySelector(".rr-replay").onclick = () => {
+    reachView.key = null;
+    drawReach(el);
+  };
+  for (const g of el.querySelectorAll("[data-node]")) {
+    const pick = () => select({ type: "node", id: g.dataset.node, label: L.byId.get(g.dataset.node)?.label });
+    g.onclick = pick;
+    g.onkeydown = (ev) => {
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        pick();
+      }
+    };
+  }
+  reachFoot(L, docsOnly);
+}
+// A new panel width draws the rings again, to size (no ripple).
+addEventListener("resize", () => {
+  if (state.model && state.level === "reach" && !$("graphReach").hidden) drawReach($("graphReach"));
+});
+/** Under the rings: a colour key for what is on screen, and one line on how to read it. */
+function reachFoot(L, docsOnly) {
+  const all = [...L.pos.keys()].map((id) => ({ n: L.byId.get(id), k: L.pos.get(id).k }));
+  const has = (tone) => all.some((d) => reachTone(d.n, d.k === 0) === tone);
+  const sw = (cls, text) => `<span><i class="rr-sw ${cls}"></i> ${text}</span>`;
+  const key = [
+    all.some((d) => d.k === 0) ? sw(docsOnly ? "doc" : "edited", docsOnly ? "edited, not code" : "edited") : "",
+    has("ok") ? sw("ok", "reached, tested") : "",
+    has("plain") ? sw("plain", "reached") : "",
+    has("warn") ? sw("warn", "reached, no test") : "",
+    has("bad") ? sw("bad", "a unit test fails") : "",
+    all.some((d) => notGiven(d.n)) ? sw("unseen", "not given to the AI reviewer") : "",
+  ].join("");
+  $("mapFoot").innerHTML = `<div class="legend rr-key">${key}</div>
+    ${docsOnly ? "" : `<p class="muted rr-how">Ring 1 calls the edited code, ring 2 calls ring 1, and so on. Each wedge is a code area. Click a dot to see its code.</p>`}`;
 }
 
 // ---------- full map: the whole repo, with commits from every PR laid over it ----------
@@ -2030,7 +2358,7 @@ async function init() {
   }
   if (!h.rev && linkedPr && q.get("sha")) h.rev = q.get("sha");
   const pr = state.revisions.prs.find((p) => p.id === h.pr) ?? linkedPr ?? state.revisions.prs[0];
-  if (["concept", "file", "function"].includes(h.level)) state.level = h.level;
+  if (["concept", "file", "function", "reach"].includes(h.level)) state.level = h.level;
   const sha = pr.commits.some((c) => c.sha === h.rev) ? h.rev : pr.commits[0].sha;
   if (h.sel) state.sel = { type: "node", id: h.sel, label: h.sel.split("#").pop() };
   await load(pr.id, sha, { keepSelection: Boolean(h.sel) });

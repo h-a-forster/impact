@@ -12,6 +12,7 @@ import { findPr, prSummary } from "../src/lib/github.mjs";
 import { buildSwarm } from "../src/lib/swarm.mjs";
 import { buildLedgerModel, ledgerPrs } from "../src/lib/ledger.mjs";
 import { prComment } from "../src/lib/comment.mjs";
+import { reachRings } from "../src/lib/reach.mjs";
 import { loadReview } from "../src/lib/reviewer.mjs";
 import { SENTENCE_MAX, cutAtWord, issueList, verdictSentence } from "../src/lib/verdict.mjs";
 import { DATA } from "../src/lib/paths.mjs";
@@ -58,6 +59,8 @@ group = "Walkthrough";
   check("commit 1: final severity", m1.classifier2.severity, w1.finalSeverity);
   check("commit 1: route", m1.classifier2.route, w1.route);
   check("commit 1: blocker names a targeted check", Boolean(m1.classifier2.blockers.find((b) => b.ref === IMPORT)?.suggestedCheck), true);
+  const reach = reachRings(m1.graph);
+  check("commit 1: Reach rings put the edit at the centre, both callers on ring 1, Import untested", [APPLY, CHECKOUT, IMPORT].map((id) => reach.ring.get(id)).concat(reach.byId.get(IMPORT).evidence), [0, 1, 1, "unverified"]);
   check("commit 1: AI review is a real recorded response for these inputs", [m1.review.mode, m1.review.available], ["recorded-llm", true]);
   check("commit 1: AI review flags a gap with a valid citation into the import file", m1.review.findings.some((f) => f.category === "Needs evidence" && f.citationsValid && f.citations.some((c) => c.file === "src/import/orderImport.ts")), true);
 
