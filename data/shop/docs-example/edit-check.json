@@ -1,0 +1,12 @@
+{
+  "about": "Too much, too little: each edit taken out again with the tests re-run, and the untouched code searched for the old form of each edited line. Per commit, the PR's change up to that commit against the base. Written by npm run setup (src/lib/edit-check.mjs).",
+  "commits": {
+    "9f5f23307b28f0057e6b9bb3c8d9646f4b6e31d0": {
+      "commit": 1,
+      "testsPass": true,
+      "failedOnChange": [],
+      "edits": [],
+      "leftBehind": []
+    }
+  }
+}

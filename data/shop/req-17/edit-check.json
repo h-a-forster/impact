@@ -1,0 +1,36 @@
+{
+  "about": "Too much, too little: each edit taken out again with the tests re-run, and the untouched code searched for the old form of each edited line. Per commit, the PR's change up to that commit against the base. Written by npm run setup (src/lib/edit-check.mjs).",
+  "commits": {
+    "ae08cfbd40d82d45ac1dd7668a7e126acc194830": {
+      "commit": 1,
+      "testsPass": true,
+      "failedOnChange": [],
+      "edits": [
+        {
+          "where": "src/pricing/discount.ts:9-10",
+          "verdict": "needed",
+          "neededBy": [
+            "REQ-17 checkout: 105 cents at 10% totals 94 cents"
+          ]
+        }
+      ],
+      "leftBehind": []
+    },
+    "3d67ab623a3ef3bd20051a4a4817cf3475aee914": {
+      "commit": 2,
+      "testsPass": true,
+      "failedOnChange": [],
+      "edits": [
+        {
+          "where": "src/pricing/discount.ts:9-10",
+          "verdict": "needed",
+          "neededBy": [
+            "REQ-17 checkout: 105 cents at 10% totals 94 cents",
+            "REQ-17 import: 105 cents at 10% totals 94 cents"
+          ]
+        }
+      ],
+      "leftBehind": []
+    }
+  }
+}

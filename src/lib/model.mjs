@@ -9,6 +9,7 @@ import { buildLedgerModel, ledgerPrs } from "./ledger.mjs";
 import { classifier1, classifier2, loadApprovedPolicy } from "./classifier.mjs";
 import { CLAIM_VERIFIER_LABEL, contestClaims, verifyClaims } from "./claims.mjs";
 import { buildReviewInput, finalizeReview, loadReview } from "./reviewer.mjs";
+import { loadEditCheck } from "./edit-check.mjs";
 import { BRIEFS, DATA, REVISIONS_FILE, ROOT } from "./paths.mjs";
 
 const short = (sha) => (sha ?? "").slice(0, 7);
@@ -651,5 +652,6 @@ export function buildModel(revisions, prId, sha, opts = {}) {
     classifier2: c2,
     labels: { claimVerifier: CLAIM_VERIFIER_LABEL },
     agent: loadChat(prId, sha),
+    editCheck: loadEditCheck(prId, sha),
   };
 }

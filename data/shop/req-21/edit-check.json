@@ -1,0 +1,22 @@
+{
+  "about": "Too much, too little: each edit taken out again with the tests re-run, and the untouched code searched for the old form of each edited line. Per commit, the PR's change up to that commit against the base. Written by npm run setup (src/lib/edit-check.mjs).",
+  "commits": {
+    "977be6ed6999a61ba6da17444181688842068a80": {
+      "commit": 1,
+      "testsPass": true,
+      "failedOnChange": [],
+      "edits": [
+        {
+          "where": "src/pricing/discount.ts:6-8",
+          "verdict": "needed",
+          "neededBy": [
+            "REQ-21 checkout: a negative promo percent counts as no discount",
+            "REQ-21 checkout: a bad promo percent no longer fails checkout",
+            "REQ-21 import: a row with a negative percent imports at full price"
+          ]
+        }
+      ],
+      "leftBehind": []
+    }
+  }
+}

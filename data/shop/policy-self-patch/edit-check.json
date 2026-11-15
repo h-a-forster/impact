@@ -1,0 +1,25 @@
+{
+  "about": "Too much, too little: each edit taken out again with the tests re-run, and the untouched code searched for the old form of each edited line. Per commit, the PR's change up to that commit against the base. Written by npm run setup (src/lib/edit-check.mjs).",
+  "commits": {
+    "522c41b9a79d4b90f25c295b969e0d17277f918e": {
+      "commit": 1,
+      "testsPass": true,
+      "failedOnChange": [],
+      "edits": [
+        {
+          "where": "src/payments/ledger.ts:12",
+          "verdict": "passenger",
+          "difference": {
+            "status": "found",
+            "call": "postCharge(\"\", 200)",
+            "without": "{\"orderId\":\"\",\"amountCents\":200,\"note\":\"charge posted\"}",
+            "with": "{\"orderId\":\"\",\"amountCents\":200,\"note\":\"charge was posted\"}",
+            "differing": 322,
+            "tries": 336
+          }
+        }
+      ],
+      "leftBehind": []
+    }
+  }
+}

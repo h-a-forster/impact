@@ -1,6 +1,6 @@
 // One-time setup. Safe to re-run.
 //   node scripts/setup.mjs                rebuild the sample repo; reuse saved evidence where it matches
-//   node scripts/setup.mjs --fresh        re-run tests and Graphify for every commit
+//   node scripts/setup.mjs --fresh        re-run tests, Graphify and the edit check for every commit
 //   node scripts/setup.mjs --live-review  re-run the AI review for every PR commit
 import fs from "node:fs";
 import path from "node:path";
@@ -10,13 +10,14 @@ import { loadBaseRun, loadRun, runHeadTestsOnBase, runTests } from "../src/lib/r
 import { buildModel } from "../src/lib/model.mjs";
 import { loadReview, runLiveReview } from "../src/lib/reviewer.mjs";
 import { DATA, REVISIONS_FILE } from "../src/lib/paths.mjs";
+import { raisesQuestion, recordEditCheck } from "../src/lib/edit-check.mjs";
 
 const fresh = process.argv.includes("--fresh");
 const liveReview = process.argv.includes("--live-review");
 const noReview = process.argv.includes("--no-review");
 const short = (s) => s.slice(0, 7);
 
-console.log("1/4 Building the sample Git repo (.demo/shop-sample)");
+console.log("1/5 Building the sample Git repo (.demo/shop-sample)");
 const revisions = buildSampleRepo();
 fs.mkdirSync(DATA, { recursive: true });
 if (fs.existsSync(REVISIONS_FILE)) {
@@ -27,7 +28,7 @@ if (fs.existsSync(REVISIONS_FILE)) {
 fs.writeFileSync(REVISIONS_FILE, JSON.stringify(revisions, null, 2) + "\n");
 console.log(`    base ${short(revisions.base.sha)}; ` + revisions.prs.map((p) => `${p.id}: ${p.commits.map((c) => short(c.sha)).join(", ")}`).join("; "));
 
-console.log("2/4 Running tests on a clean snapshot of each commit");
+console.log("2/5 Running tests on a clean snapshot of each commit");
 const graphifyVersion = graphifyAvailable();
 const snapshots = new Map();
 const snap = (sha) => {
@@ -57,7 +58,7 @@ for (const pr of revisions.prs) {
   }
 }
 
-console.log(`3/4 Code index (Graphify: ${graphifyVersion ?? "not installed - using saved exports"})`);
+console.log(`3/5 Code index (Graphify: ${graphifyVersion ?? "not installed - using saved exports"})`);
 for (const rev of allRevisions(revisions)) {
   const saved = loadExport(rev.sha);
   if (saved && (!fresh || !graphifyVersion)) {
@@ -71,7 +72,7 @@ for (const rev of allRevisions(revisions)) {
   }
 }
 
-console.log("4/4 Independent AI review per PR commit");
+console.log("4/5 Independent AI review per PR commit");
 for (const pr of revisions.prs) {
   for (const c of pr.commits) {
     const model = buildModel(revisions, pr.id, c.sha);
@@ -93,6 +94,12 @@ for (const pr of revisions.prs) {
       console.log(`FAILED: ${err.message}\n      The app will show the labelled rule-based fallback for this commit.`);
     }
   }
+}
+
+console.log("5/5 Too much, too little: each edit taken out again, tests re-run (no model)");
+for (const { pr, sha, reused, review } of await recordEditCheck(revisions, { fresh })) {
+  const found = !review.testsPass ? "tests fail on the change" : raisesQuestion(review) ? "raises a question" : "nothing found";
+  console.log(`    ${pr} ${short(sha)} ${reused ? "saved result reused" : "checked now"}: ${found}`);
 }
 
 console.log("\nRoutes now:");
