@@ -1956,7 +1956,7 @@ function scoreRows() {
   const m = state.model, sc = ui.scores[state.prId] ?? {}, rows = [];
   const files = things(m.diff.files.length, "file", "files") + " edited", red = m.graph.nodes.some((x) => x.evidence === "contradicted");
   const reached = reachedNames();
-  rows.push({ scope: "pr", name: "Impact Map", tone: red ? "bad" : "info", score: red ? "Unit test fails" : files, why: red ? files : reached ? `Also reaches ${reached}` : m.classifier1.reason });
+  rows.push({ scope: "pr", name: "Impact Map", tone: red ? "bad" : "info", score: red ? "Unit test fails" : files, why: red ? files : reached ? `Also reaches ${reached}` : m.classifier1.reason, html: reachLine(m) });
   const b = sc.blast, extra = b?.tests?.onlyReal?.length ?? 0;
   const neutral = (tone) => toolTone(tone, b);
   if (!b) rows.push({ scope: "blast", name: "Blast radius", wait: true });
@@ -2012,6 +2012,19 @@ function advice(m = state.model, sc = ui.scores[state.prId] ?? {}) {
     : m.review.findings.length ? { act: "issues", name: "The issues", why: important ? "Read the important ones, with their fix." : "Only small points are left." }
     : null;
   return { score, verdict, parts, blocked, look, waiting: !sc.blast || !sc.swarm };
+}
+/** The Reach fact in plain words: how many functions use the edited code, and how many of those no test checks. */
+function reachLine(m) {
+  const r = reachRings(m.graph), reached = r.rings.slice(1).flat().map((id) => r.byId.get(id));
+  if (!reached.length) return "";
+  const failing = reached.filter((n) => n.evidence === "contradicted").length;
+  const bare = reached.filter((n) => n.evidence !== "contradicted" && untested(n)).length;
+  const have = (n) => (n === 1 ? "has" : "have");
+  return [
+    `${things(reached.length, "function uses", "functions use")} the edit`,
+    failing ? `<span class="bad">${failing} ${have(failing)} a failing unit test</span>` : "",
+    bare ? `<span class="warn">${bare} ${have(bare)} no test</span>` : "",
+  ].filter(Boolean).join(" · ");
 }
 /**
  * Code the change reaches but never edits, named at the broadest map level that has any: areas, else files.
@@ -2074,7 +2087,7 @@ const TOOL_SCOPE = {
 };
 function scoresHtml() {
   return `<div class="scores">${scoreRows().map((r) => `<button type="button" class="score" data-act="tool" data-scope="${r.scope}" title="${esc(TOOL_SCOPE[r.scope])} Click to open.">
-    <b>${esc(r.name)}</b>${r.wait ? `<span class="muted">working it out…</span><span></span>` : `<span class="tag ${esc(r.tone)}">${esc(r.score)}</span><span class="score-why">${esc(r.why)}${r.madeUp ? ` <span class="tag warn">made up</span>` : ""}</span>`}<i aria-hidden="true">›</i></button>`).join("")}</div>`;
+    <b>${esc(r.name)}</b>${r.wait ? `<span class="muted">working it out…</span><span></span>` : `<span class="tag ${esc(r.tone)}">${esc(r.score)}</span><span class="score-why">${r.html || esc(r.why)}${r.madeUp ? ` <span class="tag warn">made up</span>` : ""}</span>`}<i aria-hidden="true">›</i></button>`).join("")}</div>`;
 }
 /**
  * Merge is the main choice when the advice says it is fine, and lights up once every point is acknowledged.
