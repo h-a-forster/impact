@@ -2073,6 +2073,7 @@ function adviceHtml() {
     ${merged ? "" : pointLinesHtml(points, s.lead)}
     ${!merged && points.some((x) => !x.done) ? `<button type="button" class="verdict-go" data-act="issues">Go through them</button>` : ""}
     ${fixed.length ? `<p class="verdict-note">${things(fixed.length, "point was", "points were")} fixed since commit 1${m.selected.madeUp ? " (made up)" : ""}.</p>` : ""}
+    ${a.blocked && !merged ? `<p class="verdict-look"><b>Why 0?</b> Missing proof always means 0, whatever the other checks say. Blast radius and the swarm check how far the change reaches, not whether it is tested.</p>` : ""}
     ${look}
     <div class="verdict-how"${howOpen ? "" : " hidden"}><p><b>How the trust score is worked out.</b> It starts at 100. A fixed rule takes points off. No AI is used.${a.blocked ? " Proof is missing, so the score is 0." : ""}</p>
       <ul class="advice-parts">${a.parts.map(([n, why]) => `<li><b>−${n}</b> ${esc(why)}</li>`).join("") || "<li>Nothing was taken off.</li>"}</ul>
