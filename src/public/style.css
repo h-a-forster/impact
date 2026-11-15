@@ -586,6 +586,7 @@ body { overflow: hidden; }
 .trust.ok { border-left-color: var(--ok); } .trust.ok .trust-num b, .trust.ok strong { color: var(--ok); }
 .trust.warn { border-left-color: var(--warn); } .trust.warn .trust-num b, .trust.warn strong { color: var(--warn); }
 .trust.bad { border-left-color: var(--bad); } .trust.bad .trust-num b, .trust.bad strong { color: var(--bad); }
+.trust.info { border-left-color: var(--down); } .trust.info .trust-num b, .trust.info strong { color: var(--down); }
 .why { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14.5px; }
 .why li { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 8px; align-items: start; }
 .why i { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font-style: normal; font-size: 11px; font-weight: 800; background: var(--warn-bg); color: var(--warn); }

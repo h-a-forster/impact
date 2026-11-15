@@ -718,6 +718,11 @@ const SWARM_WHAT = `Many agents did the same task. We count how many make the sa
 /** Blast radius says it does not check tests, unless this PR's unit tests were run both ways (blastTestsHtml). */
 const blastCaveat = (b) => (b.tests ? "" : ` ${NO_TESTS}`);
 /**
+ * Blast radius and the swarm do not look at tests: next to missing proof or a failing unit test, a good score
+ * is shown blue, not green. Used by the tool rows and the panels, so both show the same colour.
+ */
+const toolTone = (tone, blast) => (tone === "ok" && ((blast?.tests?.onlyReal?.length ?? 0) || advice().blocked) ? "info" : tone);
+/**
  * Blast radius trust score. Each code file the real change edits (as the server's label counts them) gets points
  * for where it sits: 100 if the careful agent edited it too, 85 the normal agent, 60 only the agent that
  * changes too much, 20 no agent. The score is the average, minus 20 for each of the real change's
@@ -808,6 +813,7 @@ function renderBlast() {
   const realCol = cols.find((c) => c.id === "real");
   // The simple view: the trust score, why, and how many files each one changed. The rest sits in one fold.
   const trust = blastScore(b), most = Math.max(1, ...cols.map((c) => c.files));
+  trust.tone = toolTone(trust.tone, b);
   if (state.sel?.type === "blast") blastRun.details = true; // a picked file lives in the fold: keep it open
   // The bars count files, split by kind, so they match the "code files" in the lines above.
   const split = (c) => {
@@ -1058,6 +1064,7 @@ function playSwarm({ animate = true } = {}) {
     const { near, pairs, sum, topMiss, topExtra, avg, tone, byModel } = swarmVerdict(runs);
     // The simple view: the trust score and why. The scale, the numbers and the matrix sit in the fold.
     const trust = swarmScore(runs), res = $("swarmResult");
+    trust.tone = toolTone(trust.tone, state.blast[state.prId]);
     res.hidden = false;
     res.innerHTML = `${trustHtml(trust, SWARM_WHAT, "Agreement")}${whyHtml(trust)}<p class="muted">Click an agent below to see its change.</p>`;
     $("swarmDetails").hidden = false;
@@ -1591,9 +1598,8 @@ function scoreRows() {
   const files = things(m.diff.files.length, "file", "files") + " edited", red = m.graph.nodes.some((x) => x.evidence === "contradicted");
   const reached = reachedNames();
   rows.push({ scope: "pr", name: "Impact Map", tone: red ? "bad" : "info", score: red ? "Unit test fails" : files, why: red ? files : reached ? `Also reaches ${reached}` : m.classifier1.reason });
-  // Blast radius and the swarm do not look at tests: next to missing proof or a failing test, they are not shown green.
   const b = sc.blast, extra = b?.tests?.onlyReal?.length ?? 0;
-  const neutral = (tone) => (tone === "ok" && (extra || advice().blocked) ? "info" : tone);
+  const neutral = (tone) => toolTone(tone, b);
   if (!b) rows.push({ scope: "blast", name: "Blast radius", wait: true });
   else if (!b.recorded) rows.push({ scope: "blast", name: "Blast radius", tone: "plain", score: "No runs yet", why: "No agent runs are saved for this PR." });
   else {
@@ -1629,13 +1635,13 @@ function advice() {
   const off = (score) => Math.min(20, Math.round((100 - score) / 10) * 5);
   const b = sc.blast?.recorded ? blastScore(sc.blast) : null;
   const blastFlag = Boolean(b && b.score < 100);
-  if (blastFlag && off(b.score)) take(off(b.score), `Blast radius trust score is ${b.score} of 100.`);
+  if (blastFlag && off(b.score)) take(off(b.score), `Blast radius scope is ${b.score} of 100.`);
   const s = sc.swarm?.recorded ? sc.swarm : null;
   let swarmLow = false;
   if (s) {
     const t = swarmScore(s.sets.find((x) => x.id === s.defaultSet).runs.map((k) => s.runs.find((r) => r.key === k)));
     swarmLow = t.score < 70;
-    if (off(t.score)) take(off(t.score), `Monte Carlo swarm trust score is ${t.score} of 100.`);
+    if (off(t.score)) take(off(t.score), `Monte Carlo swarm agreement is ${t.score} of 100.`);
   }
   const score = blocked ? 0 : Math.max(0, 100 - parts.reduce((a, p) => a + p[0], 0));
   const verdict = blocked ? ["Cannot merge yet", "bad"] : score >= 75 ? ["Fine to merge", "ok"] : score >= 45 ? ["Look closer first", "warn"] : ["Do not merge yet", "bad"];
