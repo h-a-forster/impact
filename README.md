@@ -86,6 +86,23 @@ It serves the saved evidence and never calls a model. In public demo mode (`PUBL
 can click through everything; a sign-off is checked by the server as usual but kept in the visitor's
 own browser, and each address gets 600 requests a minute.
 
+## A first timed pilot
+
+Four people from our team, not blind, each reviewed the REQ-17 trap (every test passes, Order Import
+has no test) and the clean docs change: one in a plain diff, the other in Impact, swapped between
+people. Times are from page load to decision; confidence is 1 to 5.
+
+| | Plain diff | Impact |
+|---|---|---|
+| Trap approved | **2 of 2** (confidence 4 and 5, 91 s and 12 s) | **0 of 2** (one "need more evidence", one "request changes", 63 s and 37 s) |
+| Order Import named | 2 of 2 | 2 of 2 |
+| Clean change approved | 2 of 2 (118 s and 40 s) | 2 of 2 (47 s and 20 s) |
+
+Both people who saw the trap as a plain diff named Order Import and approved anyway, with high
+confidence: they saw the risk and trusted the passing tests. In Impact, "Cannot merge yet: Order
+Import has no test" stopped both. Impact did not slow the clean change down. This is a pilot (n = 4,
+team members who know the project), not a measured result.
+
 ## Tests
 
 ```
