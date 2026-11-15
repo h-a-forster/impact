@@ -28,7 +28,9 @@ and four real AI-written pull requests from Tieto's C# sample repository (Messag
 
 ![The review: a verdict, then what each tool found](docs/img/review.png)
 
-![Impact Map: the edited function, who calls it, and which caller has no test](docs/img/impact-map.png)
+![Impact Map: the edited function, the code around it, and which caller has no test](docs/img/impact-map.png)
+
+![Reach: the code that uses the edit, in rings by how many calls away, untested in amber](docs/img/reach.png)
 
 ![Blast radius: the real change laid over where three agents worked](docs/img/blast-radius.png)
 
