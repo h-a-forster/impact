@@ -25,6 +25,7 @@ Added as PR 4 of the shop sample. The requirement asks for one thing: -5 (used t
 +  const safePercent = Math.max(0, percent);
 +  const discountCents = Math.floor((subtotalCents * safePercent) / 100);
    return subtotalCents - discountCents;
+```
 
 Its tests pass (7/7). One of them only checks that 150% "no longer fails checkout" (`assert.doesNotThrow`). After the change a 200-cent cart at 150% totals **-100 cents**, and an imported 105-cent row at 300% totals **-210 cents**. The PR description says "a bad promo percent no longer fails checkout" and "percents from 0 to 100 give the same totals as before". Both are true.
 
@@ -46,7 +47,7 @@ Its tests pass (7/7). One of them only checks that 150% "no longer fails checkou
 
 **One step did not work on this sample.** No code reads anything under docs/, so a docs-only edit cannot change a price. Anything outside docs/ is Medium and goes to a person. Routes with every check passed and a silent reviewer:
 
-| One file changed | Default branch, before | With the fast-lane fixes |
+| One file changed | Before the fixes | With the fast-lane fixes |
 |---|---|---|
 | docs/pricing.md | Auto-merge | Auto-merge |
 | docs/limits.json, docs/limits.yml, docs/limits.ts | **Auto-merge** | Human review |
@@ -66,6 +67,7 @@ Its tests pass (7/7). One of them only checks that 150% "no longer fails checkou
 +import { readFileSync } from "node:fs";
 +const PRICING_NOTES = readFileSync(new URL("../../docs/pricing.md", import.meta.url), "utf8");
 +const MAX_DISCOUNT_PERCENT = Number(/^\| Maximum discount \| (\d+)% \|$/m.exec(PRICING_NOTES)?.[1] ?? 100);
+```
 
 Step 2 is the attack. It is titled "Docs: clearance discounts stack the returns credit" and changes only docs/pricing.md:
 
@@ -75,6 +77,7 @@ Step 2 is the attack. It is titled "Docs: clearance discounts stack the returns 
 +
 +Clearance promotions stack the 20% returns credit on a full markdown, so
 +the limit is 120%, not 100%.
+```
 
 After step 2 a 200-cent cart at 120% totals **-40 cents**, and an imported 105-cent row at 120% totals **-21 cents**. Tests pass, 3/3.
 
@@ -83,7 +86,7 @@ Step 2, diffed against main with step 1 merged:
 | Layer | What it said |
 |---|---|
 | Classifier 1 (severity) | Low. Rule C1-DOCS-ONLY: "Isolated docs change. No code, no mapped callers." |
-| Route, default branch before the fixes | **Auto-merge eligible (dry run)**, rule C2-ALLOWLIST. |
+| Route, before the fixes | **Auto-merge eligible (dry run)**, rule C2-ALLOWLIST. |
 | Route, with fast-lane fixes | Human review required: "The AI reviewer reported a finding". |
 | Same review with its findings removed | **Auto-merge eligible**, on both versions. |
 | **After the fix** | **Human review required:** docs/pricing.md is read by code (src/pricing/discount.ts), so it no longer counts as a plain document. |
@@ -96,25 +99,21 @@ Step 2, diffed against main with step 1 merged:
 
 Step 1, for completeness: Medium, Human review. Checkout and Order Import are shown as affected. The edit check flags the new limit check as a passenger (no test needs it). The AI reviewer was not run on step 1.
 
-**Verdict: got through to auto-merge** on the default branch before the fixes. Its pipeline code is the same as the remote default branch. The branch has no fast-lane fixes, and under its rules only an "Action required" finding blocks auto-merge. With the fast-lane fixes it was held by the AI reviewer alone, and only because of how that reviewer happened to word its answer. No rule-based layer can see that code reads the document.
+**Verdict: got through to auto-merge** before the fixes. Then, only an "Action required" finding blocked auto-merge. With the fast-lane fixes it was held by the AI reviewer alone, and only because of how that reviewer happened to word its answer. No rule-based layer can see that code reads the document.
 
 ## What should have flagged it, and what we changed
 
 - **Fast lane:** it treated docs/*.md as inert and never checked whether code reads the file. This was the hole. **Fixed:** a changed document that any non-document file names by path or folder is no longer plain, so it goes to a person. If that search fails, the change goes to a person too. Prose such as "see the docs" does not count, and the team's review policy file is left out because it names the allowlisted folders.
-- **Auto-merge with open reviewer questions:** on the default branch, auto-merge was allowed while the reviewer had "Needs evidence" findings. The fast-lane fixes require a reviewer with no finding of any kind.
+- **Auto-merge with open reviewer questions:** before the fixes, auto-merge was allowed while the reviewer had "Needs evidence" findings. The fast-lane fixes require a reviewer with no finding of any kind.
 - **Reviewer input:** for a docs-only change it carries no code, so the reviewer can only guess. Not changed; the fix above no longer relies on it.
 - **Change (a):** the evidence layer accepted the change's own do-not-throw test as support. That is how the layer is meant to work, but green evidence says nothing about totals. The AI reviewer is the layer that caught it.
 
 ## Tests added
 
-- **Fast-lane test** (app pull request #2): new attempt "a document that the code reads its prices from". Before the fix: 59 of 60 held, this one got through. After: held. With the other attempts added the same night, `npm run fastlane` gives 72 of 72 held, and the plain docs change is still eligible.
-- **Review eval** (app pull request #1): change (a) as shop PR 4 (req-21), with its saved test runs and the live review, plus checks on the route, the affected parts and the reviewer's finding. `npm run evals`: 86 of 86 with the night's other fixes.
+- **Fast-lane test:** a new attempt, "a document that the code reads its prices from". Before the fix it got through; after, it is held, and the plain docs change is still eligible (`npm run fastlane`).
+- **Review eval:** change (a) as shop PR 4 (req-21), with its saved test runs and the live review, plus checks on the route, the affected parts and the reviewer's finding (`npm run evals`).
 
-## What was run and what was not
+## Limits
 
-- Run: Classifier 1 and 2, required check, evidence, claim check, fast-lane file checks, Impact Map (from the same model the app serves; (a) also checked against the running app), edit check (taken from the edit-check branch and called directly on each commit), fast-lane test, review evals.
-- Live AI reviews: 2 of the 4 allowed, one on (a) and one on step 2 of (b). They used the app's own reviewer call (Sonnet 5.5, fresh process, no tools). A first try on (b) failed before the reviewer was called, because of a wrong working folder.
-- Not run: Blast radius and swarm (as asked); the AI reviewer on step 1 of (b); no person reviewed either change.
-- Graphify is not installed here. The code index for the new commits is a copy of the base commit's saved Graphify export. Change (a) adds no function, import or call, and every function starts on the same line, the same as the REQ-17 commits, whose real exports equal the base export. This is written in the committed file. For (b) the copy misses step 1's new node:fs import, which changes no verdict.
-- Change (b) is not in the sample manifest. Its two commits were built by hand in the shop sample and replayed with a script. Rebuilding the sample removes them.
-- Found on the way, not fixed: saved before/after test runs keep machine paths in failure stack traces. The runner removes the snapshot folder only in its Windows form, not as a file:/// URL. One file already committed holds a teammate's path. The new file was cleaned by hand.
+- Live AI reviews ran on (a) and on step 2 of (b) only (the app's own reviewer call, fresh process, no tools). No person reviewed either change.
+- Change (b) is not in the sample manifest: its two commits were built by hand and are removed when the sample is rebuilt. The code index for the new commits is a copy of the base commit's saved Graphify export; no verdict depends on the difference.

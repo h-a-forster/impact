@@ -39,7 +39,7 @@ We plant known bugs into a copy of each PR commit and run the same suite (`npm r
 [measurement.md](measurement.md)). On REQ-17 commit 1 the suite is green and 4 of 8 planted faults get
 past it. Two of them sit in Order Import, exactly where the map said **Unverified**. On commit 2 the
 new test catches both. One fault escapes where the map said Supported: a real miss, kept on record.
-The method, and the before/after idea, come from the teammate project Impact Ledger.
+The method, and the before/after idea, come from Impact Ledger, a companion tool built by the same team.
 
 ## Trade-offs
 

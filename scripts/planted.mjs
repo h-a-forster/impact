@@ -64,7 +64,7 @@ const md = [
   "Green tests say the code passed the tests that exist. They do not say the tests would notice a bug.",
   "So we plant known bugs into a copy of each PR commit, run the same suite, and compare the result",
   "with what the Impact Map said about that function **before** the bug was planted.",
-  "The method comes from the teammate project Impact Ledger. No model is called.",
+  "The method comes from Impact Ledger, a companion tool built by the same team. No model is called.",
   "",
   ...results.commits.flatMap((c) => [
     `## PR commit ${c.index} (\`${short(c.sha)}\`) · route: ${c.route}`,
@@ -86,7 +86,7 @@ const md = [
   "- On commit 2 the new Order Import test catches the same faults. The targeted check closed the gap.",
   "- A fault that escapes where the map said Supported is a real miss: \"Supported for the tested case\" covers the tested case only. Each such miss should become a review eval.",
   "- This is one small synthetic repo and a handful of hand-written faults. It is a sample observation, not an accuracy figure.",
-  "- For the real Tieto PRs, the Impact Ledger project ran its own planted-fault study. Its result is shown in the app under Track record and is not re-run here.",
+  "- For the real Tieto PRs, Impact Ledger ran its own planted-fault study. It is not re-run here.",
   "",
 ].join("\n");
 fs.writeFileSync(path.join(ROOT, "docs", "measurement.md"), md);
