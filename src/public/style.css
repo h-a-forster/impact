@@ -453,10 +453,10 @@ button.danger { background: var(--bad); color: var(--card); border-color: var(--
 .swarm-flow { display: grid; grid-template-columns: 170px 1fr; gap: 18px; align-items: center; }
 .swarm-req { display: flex; flex-direction: column; gap: 2px; border: 2px solid var(--req); background: var(--req-bg); border-radius: 10px; padding: 12px; text-align: center; }
 .swarm-req span { font-size: 12px; color: var(--muted); }
-.swarm-req.sending { animation: sreq 1.2s ease-in-out 3; }
+.swarm-req.sending { animation: sreq calc(1.2s * var(--pace, 1)) ease-in-out 3; }
 @keyframes sreq { 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--req) 25%, transparent); } }
 .swarm-agents { display: flex; flex-direction: column; gap: 6px; }
-.swarm-agent { display: grid; grid-template-columns: 70px 160px 1fr; gap: 10px; align-items: center; text-align: left; padding: 6px 10px; border-radius: 8px; opacity: .35; transition: opacity .4s, border-color .4s; }
+.swarm-agent { display: grid; grid-template-columns: 70px 160px 1fr; gap: 10px; align-items: center; text-align: left; padding: 6px 10px; border-radius: 8px; opacity: .35; transition: opacity calc(.4s * var(--pace, 1)), border-color calc(.4s * var(--pace, 1)); }
 .swarm-agent.working, .swarm-agent.done { opacity: 1; }
 .swarm-agent.done.near { border-color: var(--ok); }
 .swarm-agent.done.far { border-color: var(--bad); }
@@ -515,11 +515,11 @@ button.danger { background: var(--bad); color: var(--card); border-color: var(--
 .blast-top { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
 .blast-top button { flex: none; font-size: 12.5px; }
 .blast-step { margin-top: 12px; font-size: 13px; }
-#blastView.reveal > * { animation: gfade .6s ease both; }
-#blastView.reveal > :nth-child(2) { animation-delay: .15s; }
-#blastView.reveal > :nth-child(3) { animation-delay: .35s; }
-#blastView.reveal > :nth-child(n+4) { animation-delay: .7s; }
-#blastView.reveal .bbox { animation: gform .45s cubic-bezier(.2, .8, .2, 1) both; animation-delay: .5s; }
+#blastView.reveal > * { animation: gfade calc(.6s * var(--pace, 1)) ease both; }
+#blastView.reveal > :nth-child(2) { animation-delay: calc(.15s * var(--pace, 1)); }
+#blastView.reveal > :nth-child(3) { animation-delay: calc(.35s * var(--pace, 1)); }
+#blastView.reveal > :nth-child(n+4) { animation-delay: calc(.7s * var(--pace, 1)); }
+#blastView.reveal .bbox { animation: gform calc(.45s * var(--pace, 1)) cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(.5s * var(--pace, 1)); }
 @media (prefers-reduced-motion: reduce) { #blastView.reveal > *, #blastView.reveal .bbox { animation: none; } }
 
 /* ============ Chat-first layout ============
