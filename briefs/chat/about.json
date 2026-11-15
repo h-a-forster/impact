@@ -1,0 +1,65 @@
+{
+  "about": "Saved answers about the app itself, offered on every PR. The app answers these, not the coding agent.",
+  "chat": [
+    {
+      "q": "What is the Trust score?",
+      "keys": "trust score number out of 100 points rating grade worked out calculated",
+      "a": "The number out of 100 on the first screen. It starts at 100 and a fixed rule takes points off: 25 if a unit test passes on the old code and fails on the new code, 10 for each important AI finding, 3 for each smaller one, 10 for High risk or 5 for Medium, and up to 20 each when Blast radius or the swarm score low. Missing proof makes it 0. 75 or more: fine to merge. 45 to 74: look closer first. Under 45: do not merge yet. No AI sets it."
+    },
+    {
+      "q": "What is Reach?",
+      "keys": "reach rings ring call distance steps away ripple lens view",
+      "a": "A view of the Impact Map. The edited code sits in the centre. Each ring around it holds the functions one more call away: ring 1 calls the edit, ring 2 calls those. Amber means affected, and no test checks it. Reach is static: a call path exists, which is not proof the line ran."
+    },
+    {
+      "q": "What is Blast radius?",
+      "keys": "blast radius zone three agents careful normal wide expected touches more than needed",
+      "a": "Three agents got the same task: one careful, one normal, one that changes too much. What they touched is the zone a fix can reasonably reach. The real change is laid over it: Inside the expected zone, Touches more than needed, or Touches code no agent touched. The runs are recorded and replayed. It checks where the change lands, not whether it works."
+    },
+    {
+      "q": "What is the Monte Carlo swarm?",
+      "keys": "monte carlo swarm many agents agree agreement similar similarity same",
+      "a": "Many agents get the same requirements, and each writes a fix. The swarm counts how many made a change like the real one: 50% or more of the same code files and functions. The runs are recorded and replayed; no agent runs in the demo, and a set marked made up is for the demo only. It does not check tests."
+    },
+    {
+      "q": "What is too much, too little?",
+      "keys": "too much little passenger extra edit needed missed left behind old form",
+      "a": "A check on the shop PRs, with no AI. Too much: each edit is taken out again and the tests re-run, so an edit that no test needs is named. Too little: the code the change did not touch is searched for the old form of each edited line, which the change may have missed. It shows in the review steps."
+    },
+    {
+      "q": "Can the AI merge a PR by itself?",
+      "keys": "ai merge itself own automatically auto decide let through allow block stop advice",
+      "a": "No. The AI review only advises. A finding can raise the risk or send a change to a person, never let one through. Only the team's own fixed rules can let a change merge by itself: Low risk, docs only, every required check passed and an AI review that found nothing. In this demo that is a dry-run label; nothing is ever merged."
+    },
+    {
+      "q": "What did the AI see?",
+      "keys": "ai saw see given input prompt files reviewer read dimmed",
+      "a": "The AI reviewer got the diff, the PR brief, the requirement, REVIEW.md, the call links, the check results and some files in full. The review steps list those files and the exact prompt. Code it was not given is dimmed on the map. On the C# PRs its input is not recorded here, so nothing is dimmed."
+    },
+    {
+      "q": "Is this PR safe to merge?",
+      "keys": "safe merge ready ok good should verdict decide",
+      "a": "The first screen says it in one line: the verdict and the Trust score, and what to look at first when something needs a closer look. Fixed rules set the risk and the route, and a named person signs off. The AI review only advises."
+    },
+    {
+      "q": "How do I sign off?",
+      "keys": "sign off signoff name record decision approve accept",
+      "a": "Press Merge this PR. If issues are open, acknowledge each one, or all at once, then type your name. The sign-off counts for that one commit only. If proof is missing, the rules refuse a sign-off until the author adds it. In the hosted demo it is kept in your browser, and nothing is pushed to GitHub."
+    },
+    {
+      "q": "What is the fast lane?",
+      "keys": "fast lane auto merge automatic dry run allowlist quick skip review trusted authors paused",
+      "a": "The route where a change may merge with no person reviewing it: Low risk, only paths on the team's list (here `docs/`), every required check passed, and an AI review that found nothing. The team can pause it in an area after an escape, or keep it to trusted authors. Those rules come from the base commit, so a PR cannot loosen them for itself. In this demo it is a dry-run label only."
+    },
+    {
+      "q": "Is this a live model?",
+      "keys": "live model real ai chat answering bot talking typing saved demo answers",
+      "a": "No. In this demo the chat matches what you type to the closest saved answer. Answers about a PR come from its coding agent's saved notes (context.md); answers about the app come from the app. No model runs while you use it."
+    },
+    {
+      "q": "What is the Impact Map?",
+      "keys": "impact map graph boxes colours colors orange blue amber red legend",
+      "a": "The map of what the change touches. Orange boxes are edited. Blue boxes are affected, not edited: code that uses the edited code. An amber ring means no test checks it; red means a unit test fails there. Click a box to see its code."
+    }
+  ]
+}

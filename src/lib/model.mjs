@@ -292,6 +292,11 @@ function loadChat(prId, sha) {
   return chat.commit === sha ? chat : null;
 }
 
+/** The app's saved answers about itself, offered in the chat on every PR. */
+export function loadAbout() {
+  return JSON.parse(fs.readFileSync(path.join(BRIEFS, "chat", "about.json"), "utf8")).chat;
+}
+
 /** Concept mapper (rule-based): folder group, with a behaviour label when the team config has one. */
 function conceptOf(file) {
   const match = Object.keys(concepts)
