@@ -1173,7 +1173,7 @@ function swarmSideHtml(sel) {
 // ---------- AI review (advice only) ----------
 /** One grey line: what the reviewer was given in full, folding out to the files and the exact prompt. */
 function sawHtml(m) {
-  if (!m.review.sawFiles) return `<div class="saw">Input not recorded here.</div>`;
+  if (!m.review.sawFiles) return "";
   const input = m.reviewInput, tests = new Set(input.testFiles), source = input.files.filter((f) => !tests.has(f));
   const list = (files) => `<ul class="saw-files">${files.map((f) => `<li class="mono">${esc(f)}</li>`).join("")}</ul>`;
   const results = input.testResultsFor ? `test results for ${short(input.testResultsFor)}` : "no test results for this commit";
