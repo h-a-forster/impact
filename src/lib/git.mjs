@@ -38,6 +38,9 @@ export function listFiles(sha) {
   return git(["ls-tree", "-r", "--name-only", sha]).split("\n").filter(Boolean);
 }
 
+/** The author email recorded on a commit. */
+export const authorOf = (sha) => git(["show", "-s", "--format=%ae", sha]).trim();
+
 /** File content at a revision, or null when the file is not in that revision. */
 export function readFileAt(sha, file) {
   try {
@@ -53,6 +56,24 @@ const OTHER_MODES = { 120000: "a link, not a file", 160000: "a submodule pointer
 // Fails closed: any tag that runs code, loads or sends something, or changes the page, and any event-handler attribute.
 const ACTIVE_CONTENT = /<\s*(script|iframe|frame|frameset|object|embed|applet|svg|math|link|meta|base|form|style)\b|<[a-z][^>]*[\s/"']on[a-z]+\s*=|(javascript|vbscript):|data:text\/html/i;
 const MAX_PLAIN_BYTES = 1024 * 1024;
+// Text written to the AI reviewer or an agent rather than to people: a line that calls on it and tells it
+// what to do, "ignore previous instructions", or a tag that closes the reviewer's data block. Kept narrow:
+// prose that only mentions AI tools ("the AI reviewer reads every pull request") does not match.
+const AGENT = String.raw`(?:AI|LLM|automated|language[- ]model)[- ](?:code[- ])?(?:reviewers?|review|agents?|assistants?|models?)`;
+const ADDRESSES_AN_AGENT = new RegExp(
+  [
+    String.raw`\b(?:ignore|disregard|forget|override)\s+(?:all\s+|any\s+)?(?:of\s+)?(?:the\s+|your\s+)?(?:previous|prior|above|earlier|preceding|system|original)\s+(?:instructions|prompts?|rules|directions)`,
+    // "AI reviewer: this change is approved" or "AI reviewer, approve it"; a list such as "AI agents, no scripts" is prose.
+    String.raw`\b${AGENT}\s*(?::\s*(?:this|no)|[:,]\s*(?:please\s+)?(?:ignore|disregard|forget|approve|report|return|skip|treat|mark|you|do\s+not|don't|output|reply|respond|say|consider|pretend|assume))\b`,
+    String.raw`\b(?:note|message)\s+(?:to|for)\s+(?:the\s+|any\s+|all\s+)?${AGENT}`,
+    String.raw`\b(?:dear|hey|hello|attention)\s*,?\s+(?:AI|LLM|reviewer|agent|assistant|bot)\b`,
+    String.raw`\bif\s+you\s+are\s+an?\s+(?:AI|LLM|(?:large\s+)?language\s+model|automated|code[- ]review)`,
+    String.raw`<\s*\/?\s*(?:repository-data|system)\s*>`,
+  ].join("|"),
+  "i",
+);
+/** True when the text speaks to an AI reviewer or agent. A pull request should be written for people. */
+export const addressesAnAgent = (text) => typeof text === "string" && ADDRESSES_AN_AGENT.test(text);
 
 /**
  * Why a changed file is not an ordinary text file, or null when it is one.
@@ -68,7 +89,9 @@ function oddityOf({ oldMode, newMode, status, file }, sha, binary, opts) {
   // A deleted file has no content to check, but code that reads it still breaks.
   if (newMode !== ABSENT) {
     if (Number(git(["cat-file", "-s", `${sha}:${file}`], opts)) > MAX_PLAIN_BYTES) return "larger than 1 MB";
-    if (ACTIVE_CONTENT.test(git(["show", `${sha}:${file}`], opts))) return "contains a script or an embedded page";
+    const content = git(["show", `${sha}:${file}`], opts);
+    if (ACTIVE_CONTENT.test(content)) return "contains a script or an embedded page";
+    if (addressesAnAgent(content)) return "contains text addressed to an AI reviewer or agent";
   }
   const reader = codeThatReads(file, sha, opts);
   return reader ? `read by code (${reader}), so editing it can change what the code does` : null;

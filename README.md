@@ -39,14 +39,14 @@ and no Graphify install.
 | `npm run review:live` | Re-run the independent AI review for every PR commit. Needs the `claude` CLI, signed in. |
 | `npm start` | Start the app only. |
 | `npm run build:graph` | Rebuild the map graph (React Flow + Dagre) from `src/graph/main.jsx` into `src/public/graph.bundle.js`. Only needed after editing that file; the built bundle is committed. |
-| `npm run evals` | Run the 86 review evals. |
+| `npm run evals` | Run the 100 review evals. |
 | `npm run planted` | Plant known bugs into each REQ-17 commit and measure what the tests and the map catch. Writes `docs/measurement.md`. |
 | `npm run editcheck` | Take each edit of a change out again and see whether any test notices. Finds edits nobody asked for, and old code the change left behind. |
 | `npm run gate -- <pr id or number> [owner/name]` | Merge gate. Exit 0 only when the latest step is signed off by a named person. |
 | `npm run import:ledger -- <path to a clone of junction26-earned-trust>` | Refresh the recorded Tieto packs in `data/tieto/`. |
 | `npm run reset` | Clear recorded human decisions. |
 | `npm run export:replica` | Write the shop-sample repo and PRs into the GitHub replica's data folder. |
-| `npm run fastlane` | Try 82 ways to get the wrong change onto the auto-merge route: altered changes, a missing or broken AI reviewer, files that only look like documents (links, executables, binaries), tests dropped from the build, and changes that only delete lines, built through git itself. Every one must be held. |
+| `npm run fastlane` | Try 92 ways to get the wrong change onto the auto-merge route: altered changes, a missing or broken AI reviewer, files that only look like documents (links, executables, binaries), tests dropped from the build, changes that only delete lines, built through git itself, and instructions to the AI reviewer hidden in the description, a comment or a document ([docs/hidden-instructions.md](docs/hidden-instructions.md)). Every one must be held. |
 
 ## Run it inside the GitHub replica
 
@@ -197,6 +197,14 @@ PLAN.md            plan and decision log
 
 The team's `REVIEW.md` and `review-policy.yml` live in the sample repo
 (`sample/base/`). The app always reads them from the **base** commit.
+
+Two optional fields under `auto_merge_dry_run` narrow the fast lane. `trusted_authors`
+lists who may use it: when present, a change qualifies only if every commit in it is by
+someone on the list. `paused` lists areas (path globs) where an escape or revert happened,
+each with `escape_on` and the `owner` who lifts it; a change touching one goes to a person.
+Both come from the base commit, so a pull request cannot add its own author or lift its
+own pause. The lane exists to save human time, and reverts and escapes are its guardrail:
+it widens only with evidence, and tightens at once after an escape.
 
 ## Known limits
 

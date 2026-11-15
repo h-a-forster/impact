@@ -144,6 +144,13 @@ group = "Policy integrity";
   check("clean docs change: dry run only", docs.classifier2.autoMergeDryRun, true);
   const docsNoReview = buildModel(revisions, "docs-example", sha("docs-example"), { reviewRecord: null });
   check("docs change with the AI review unavailable: cannot qualify", docsNoReview.classifier2.route, "Human review required");
+  // The team's own limits on the fast lane, read with the author recorded on the commit.
+  const lane = (extra) => buildModel(revisions, "docs-example", sha("docs-example"), { policy: { ...docs.policy.rules, auto_merge_dry_run: { ...docs.policy.rules.auto_merge_dry_run, ...extra } } }).classifier2;
+  const routeAndRule = (c) => [c.route, c.rule];
+  check("docs change by an author on the trusted list: still qualifies", routeAndRule(lane({ trusted_authors: [revisions.author.email] })), ["Auto-merge eligible (dry run)", "C2-ALLOWLIST"]);
+  check("docs change by an author not on the trusted list: a person decides", routeAndRule(lane({ trusted_authors: ["someone-else@example.invalid"] })), ["Human review required", "C2-UNTRUSTED-AUTHOR"]);
+  const paused = lane({ paused: [{ paths: ["docs/**"], escape_on: "2026-11-14", owner: "Docs lead" }] });
+  check("docs change in an area paused after an escape: a person decides, and the reason names the date and owner", [...routeAndRule(paused), paused.reason.includes("2026-11-14; Docs lead lifts it")], ["Human review required", "C2-PAUSED", true]);
 
   const ledger = buildModel(revisions, "ledger-note", sha("ledger-note"));
   check("trivial edit to a sensitive module: severity and route", [ledger.classifier2.severity, ledger.classifier2.route], [p["ledger-note"].finalSeverity, p["ledger-note"].route]);

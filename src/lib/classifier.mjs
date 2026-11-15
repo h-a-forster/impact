@@ -1,5 +1,5 @@
 import YAML from "yaml";
-import { readFileAt } from "./git.mjs";
+import { addressesAnAgent, readFileAt } from "./git.mjs";
 
 export const ROUTES = {
   WAITING: "Waiting for checks or evidence",
@@ -37,6 +37,31 @@ const isPlainPath = (file) => {
 };
 // The fast lane fails closed: a file counts as ordinary only when the diff says so.
 const isOrdinaryFile = (changed) => changed.oddity === null;
+
+/**
+ * Why the team's own limits on the fast lane hold this change back, or null.
+ * Both come from the base commit's policy, so a pull request can neither lift a pause nor add its author.
+ *   paused: areas where an escape or revert happened; only a person edits the list.
+ *   trusted_authors: when present, every commit in the change must be by someone on it.
+ */
+function fastLaneHold(rules, files, authors) {
+  const pause = (rules.paused ?? []).find((p) => files.some((f) => matchesAny(f, p?.paths)));
+  if (pause) return { rule: "C2-PAUSED", text: `Auto-merge is paused here after an escape on ${pause.escape_on}; ${pause.owner} lifts it.` };
+  const trusted = rules.trusted_authors;
+  if (trusted == null) return null;
+  const onList = (a) => Array.isArray(trusted) && trusted.includes(a);
+  if (!authors?.length || !authors.every(onList)) return { rule: "C2-UNTRUSTED-AUTHOR", text: "The author is not on the team's trusted list for the fast lane." };
+  return null;
+}
+
+/**
+ * A description that speaks to the AI reviewer is trying to steer it. If the reviewer obeyed,
+ * its silence proves nothing, so the fast lane does not count on it.
+ */
+function descriptionHold(description) {
+  if (!addressesAnAgent(description)) return null;
+  return { rule: "C2-ADDRESSES-REVIEWER", text: "The PR description contains text addressed to the AI reviewer or an agent, so a silent review does not count." };
+}
 
 /**
  * The approved policy always comes from the base commit.
@@ -131,7 +156,7 @@ export function classifier1(policy, facts) {
  * review and checks. Keeps or raises severity. Picks exactly one route.
  */
 export function classifier2(policy, input) {
-  const { initial, checks, evidence, review, changedFiles } = input;
+  const { initial, checks, evidence, review, changedFiles, authors, description } = input;
   const files = changedFiles.map((f) => f.file);
   let severity = initial.severity;
   const notes = [];
@@ -183,7 +208,13 @@ export function classifier2(policy, input) {
     // The fast lane fails closed: every required check passed under its own name, and the reviewer reported no finding of any kind.
     const requiredPassed = checks.length > 0 && (policy.required_checks ?? []).every((name) => checks.some((c) => c.name === name && c.status === "passed"));
     const reviewerSilent = reviewAvailable && Array.isArray(review.findings) && review.findings.length === 0;
-    if (severity === "Low" && allow && requiredPassed && reviewerSilent) {
+    const qualifies = severity === "Low" && allow && requiredPassed && reviewerSilent;
+    const hold = qualifies ? (descriptionHold(description) ?? fastLaneHold(policy.auto_merge_dry_run, files, authors)) : null;
+    if (hold) {
+      route = ROUTES.HUMAN;
+      rule = hold.rule;
+      reason = `${hold.text} A named engineer decides.`;
+    } else if (qualifies) {
       route = ROUTES.AUTO;
       rule = "C2-ALLOWLIST";
       reason = `Low severity, required checks passed, AI review available with no action required, and every changed file is on the dry-run allowlist (${allow.paths.join(", ")}). Dry run only. Nothing is merged.`;

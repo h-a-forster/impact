@@ -30,6 +30,14 @@ auto_merge:
     - README.md
     - doc/**
     - "**/*.md"
+  # Optional. When listed, only changes whose every commit is by one of these authors can take this route.
+  # trusted_authors:
+  #   - agent@example.invalid
+  # Optional. Areas where an escape or revert happened. A person adds and removes entries.
+  # paused:
+  #   - paths: ["src/pricing/**"]
+  #     escape_on: 2026-11-14
+  #     owner: the pricing owner
 
 # Classifier 1: severity. The highest matching rule wins.
 severity_rules:
@@ -66,6 +74,12 @@ route_rules:
   - id: T-contradicted
     route: Human review required
     when: a targeted unit test contradicts the change; a named person accepts or rejects that
+  - id: T-paused
+    route: Human review required
+    when: a changed file is in an area where auto-merge is paused after an escape
+  - id: T-untrusted-author
+    route: Human review required
+    when: the policy lists trusted authors and a commit in the change is by someone not on it
   - id: T-auto-merge
     route: Auto-merge eligible (dry run)
     when: severity is Low, every changed file is on the allow list, and every required check passed
