@@ -270,6 +270,7 @@ export function buildLedgerModel(pr, key) {
     available: true, mode: "recorded-llm",
     modeLabel: `Recorded AI review from the Impact Ledger pack (${rv.model ?? "model not stated"}${rv.recorded_at ? ", " + String(rv.recorded_at).slice(0, 10) : ""}). ${pack.validation.items_kept} of ${pack.validation.items_total} items and ${pack.validation.refs_valid} of ${pack.validation.refs_total} references passed validation.`,
     model: rv.model ?? null, runner: rv.context ?? null, ranAt: rv.recorded_at ?? null, inputsMatch: true, inputHash: pack.pack_sha256,
+    sawFiles: null, // the pack does not record which files the reviewer was given
     summary: "The reviewer can find, link and refuse. It cannot approve. The labels Important and Minor are the reviewer's own.",
     findings: pack.findings.map((f) => ({
       id: f.id, category: f.severity === "important" ? "Important" : "Minor", title: f.title, detail: f.detail, suggestedCheck: null,

@@ -205,6 +205,9 @@ const cardToggle = () => "";
 const clip = (s, n) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
 /** Affected by the PR, not edited, and no test checks it: the trap a reviewer must see without reading. */
 const untested = (n) => n.state === "downstream" && n.evidence === "unverified";
+/** Code whose file the AI reviewer was never given. Marked only where its input is recorded, so nothing is guessed. */
+const notGiven = (n) => n.givenToReviewer === false;
+const NOT_GIVEN = "Not given to the AI reviewer";
 function badgeFor(n) {
   if (n.badge !== undefined) return n.badge;
   if (n.type === "test") return n.testStatus === "passed" ? ["PASSED", "ok"] : n.testStatus === "failed" ? ["FAILED", "bad"] : ["NO RESULT", "warn"];
@@ -254,7 +257,7 @@ function drawDots(el, nodes, allEdges, onNode, onEdge) {
   gfy.onEdge = onEdge;
   // key = what is on the map (a change rebuilds it). look = how it is coloured (a change only repaints, so dots stay put).
   const key = JSON.stringify([document.documentElement.dataset.theme, state.mapScope, state.fullRun, nodes.map((n) => n.id), edges.map((e) => [e.id, e.resolution])]);
-  const look = JSON.stringify(nodes.map((n) => [n.state, n.evidence, n.badge, n.now]));
+  const look = JSON.stringify(nodes.map((n) => [n.state, n.evidence, n.badge, n.now, n.givenToReviewer]));
 
   const C = Object.fromEntries(["ink", "muted", "line", "card", "bg", "soft", "edited", "down", "bad", "warn", "req", "test"].map((k) => [k, cssVar(`--${k}`)]));
   const byId = new Map(nodes.map((n) => [n.id, n]));
@@ -276,13 +279,15 @@ function drawDots(el, nodes, allEdges, onNode, onEdge) {
     return {
       id: n.id,
       label: n.type === "test" && n.file ? testLabel(n, allNodes) : clip(n.type === "pr" ? n.label.split(":")[0] : n.label, 30),
-      title: [n.label, n.sub, badge?.[0]].filter(Boolean).join("\n"),
+      title: [n.label, n.sub, badge?.[0], notGiven(n) ? NOT_GIVEN : ""].filter(Boolean).join("\n"),
       shape: anchor ? "diamond" : "dot",
       // Graphify's rule: a dot grows with the number of links it has. A dot edited in this step is bigger and glows.
       size: (anchor ? 13 : 9 + 19 * (deg / maxDeg)) * (n.now ? 1.35 : 1),
       color: { background: fill, border, highlight: { background: fill, border: C.ink }, hover: { background: fill, border: C.ink } },
       borderWidth: n.now || untested(n) ? 3.5 : lit(n) ? 1.5 : 1.2,
       borderWidthSelected: 4,
+      opacity: notGiven(n) ? 0.4 : 1,
+      shapeProperties: { borderDashes: notGiven(n) ? [3, 3] : false },
       shadow: n.now ? { enabled: true, color: fill, size: 26, x: 0, y: 0 } : { enabled: false },
       // On a crowded map, Graphify only names the busy dots. The rest show their name on hover.
       font: { size: crowded && !lit(n) && deg < maxDeg * 0.15 ? 0 : lit(n) ? 15 : 13, color: lit(n) ? C.ink : C.muted, face: "system-ui, Segoe UI, sans-serif", strokeWidth: 3, strokeColor: C.bg },
@@ -387,6 +392,7 @@ function renderMapFoot(nodes, edges, hidden = 0) {
     nodes.some((n) => n.state === "downstream") ? sw("sw-downstream", "affected, not edited") : "",
     nodes.some(untested) ? sw("sw-untested", "affected, no test") : "",
     nodes.some((n) => n.evidence === "contradicted") ? sw("sw-failing", "a unit test fails") : "",
+    nodes.some(notGiven) ? sw("sw-unseen", "not given to the AI reviewer") : "",
   ].join("");
   // Functions level: only what the PR edits or affects, and their tests. One click shows the rest.
   const filter = !full && dots && (hidden || state.allFunctions)
@@ -491,7 +497,7 @@ function drawBoxes(el, nodes, edges, onNode, onEdge) {
     viewKey: full ? `full|${state.level}|${state.fullRun}` : `pr|${state.prId}|${state.sha}|${state.level}`,
     nodes: nodes.map((n) => ({
       id: n.id, type: n.type, state: n.state ?? "none", label: n.label, sub: n.sub ?? "",
-      badge: badgeFor(n), isNew: n.change === "added", failing: n.evidence === "contradicted", dim: !full && !lit(n), now: Boolean(n.now),
+      badge: badgeFor(n), isNew: n.change === "added", failing: n.evidence === "contradicted", dim: !full && !lit(n), unseen: notGiven(n), now: Boolean(n.now),
       selected: ["node", "fullnode"].includes(state.sel?.type) && state.sel.id === n.id,
     })),
     edges: edges.map((e) => ({
@@ -1165,6 +1171,17 @@ function swarmSideHtml(sel) {
 }
 
 // ---------- AI review (advice only) ----------
+/** One grey line: what the reviewer was given in full, folding out to the files and the exact prompt. */
+function sawHtml(m) {
+  if (!m.review.sawFiles) return `<div class="saw">Input not recorded here.</div>`;
+  const input = m.reviewInput, tests = new Set(input.testFiles), source = input.files.filter((f) => !tests.has(f));
+  const list = (files) => `<ul class="saw-files">${files.map((f) => `<li class="mono">${esc(f)}</li>`).join("")}</ul>`;
+  const results = input.testResultsFor ? `test results for ${short(input.testResultsFor)}` : "no test results for this commit";
+  return `<details class="saw"><summary>Saw ${things(source.length, "source file", "source files")}, ${things(input.testFiles.length, "test file", "test files")}, ${results}.</summary>
+    <div>Given in full:</div>${list(source)}${list(input.testFiles)}
+    <div>Also given: the diff, the PR brief, the requirement, REVIEW.md, the call links and the check results. Code not listed here is dimmed on the map.</div>
+    <details><summary>The exact prompt</summary><div class="mono">Input hash ${esc(input.inputHash)}</div><pre class="raw doc">${esc(`${input.system}\n\n${input.prompt}`)}</pre></details></details>`;
+}
 function renderReview() {
   const m = state.model, el = $("reviewCard"), r = m.review;
   const cite = (c) => (c.valid ? `<button type="button" class="link mono" data-src="${esc(c.file)}" data-line="${esc(c.line)}" title="${esc(c.file)}">${esc(c.file.split("/").pop())}:${esc(c.line)}</button>` : `<span class="mono bad-text" title="${esc(c.problem)}">${esc(c.file)}:${esc(c.line)} (invalid)</span>`);
@@ -1181,6 +1198,7 @@ function renderReview() {
         ${f.suggestedCheck ? `<div><strong>Check to add:</strong> ${esc(f.suggestedCheck)}</div>` : ""}
         ${f.citations.length ? `<div class="muted">Code: ${f.citations.map(cite).join(", ")}</div>` : ""}</details>`).join("")}
     ${r.couldNotDecide.length ? `<details class="finding plain"><summary><strong>${r.couldNotDecide.length} question${r.couldNotDecide.length === 1 ? "" : "s"} the AI could not answer</strong></summary>${r.couldNotDecide.map((q) => `<div>${esc(q.question)}<div class="muted">Would help: ${esc(q.checkThatWouldHelp)}</div></div>`).join("")}</details>` : ""}
+    ${sawHtml(m)}
     <div class="byline">${esc(r.modeLabel)}</div></div>
     <div class="step"><div class="step-head"><span class="step-n">3</span><strong>Classifier 2</strong> ${sev(c2.severity)} <span class="tag">${esc(c2.route)}</span> <span class="muted">fixed rules · ${esc(c2.rule)}</span></div>
       ${c2.blockers.length ? `<div>${esc(c2.reason)}</div>` : ""}</div>`;

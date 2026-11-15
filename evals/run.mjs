@@ -12,6 +12,7 @@ import { findPr, prSummary } from "../src/lib/github.mjs";
 import { buildSwarm } from "../src/lib/swarm.mjs";
 import { buildLedgerModel, ledgerPrs } from "../src/lib/ledger.mjs";
 import { prComment } from "../src/lib/comment.mjs";
+import { loadReview } from "../src/lib/reviewer.mjs";
 import { SENTENCE_MAX, cutAtWord, issueList, verdictSentence } from "../src/lib/verdict.mjs";
 import { DATA } from "../src/lib/paths.mjs";
 import { ROOT } from "../src/lib/paths.mjs";
@@ -321,6 +322,29 @@ group = "Verdict sentence";
     if (s.text.length > SENTENCE_MAX || /undefined|null|: .*: |\.\.$/.test(s.text)) bad.push(`${p.id}@${c.index} ${s.text}`);
   }
   check("every PR and commit: one plain sentence that fits one line", bad, []);
+}
+
+// ---- 13. What the AI saw ------------------------------------------------------
+group = "What the AI saw";
+{
+  // Read back from the prompt saved with the review: the files it was given in full.
+  const givenIn = (record) => [...new Set([...record.input.prompt.matchAll(/^## (?:Test s|S)ource at reviewed commit: (.+)$/gm)].map((x) => x[1]))].sort();
+  const markedOnMap = (m, given) => [...new Set(m.graph.nodes.filter((n) => n.givenToReviewer === given).map((n) => n.file))].sort();
+  const docsSha = revisions.prs.find((p) => p.id === "docs-example").commits[0].sha;
+  for (const [label, prId, sha] of [["req-17 commit 1", "req-17", c1], ["docs-example", "docs-example", docsSha]]) {
+    const m = buildModel(revisions, prId, sha);
+    const record = loadReview(sha);
+    check(`${label}: the saved review was made from exactly these inputs`, record.inputHash, m.reviewInput.inputHash);
+    check(`${label}: files marked as seen are the files in the saved input`, [m.review.sawFiles, markedOnMap(m, true)], [givenIn(record), givenIn(record)]);
+  }
+  const m1 = buildModel(revisions, "req-17", c1);
+  const ledgerNodes = m1.graph.nodes.filter((n) => n.file === "src/payments/ledger.ts" && ["file", "function"].includes(n.type));
+  check("req-17 commit 1: a file outside the input is marked unseen, with its functions", [ledgerNodes.length > 1, ledgerNodes.every((n) => n.givenToReviewer === false)], [true, true]);
+  const unmarked = (m) => m.review.sawFiles === null && m.graph.nodes.every((n) => n.givenToReviewer === undefined);
+  check("no review for these inputs: nothing is marked", unmarked(buildModel(revisions, "req-17", c1, { reviewRecord: null })), true);
+  check("a review made for other inputs: nothing is marked", unmarked(buildModel(revisions, "req-17", c1, { reviewRecord: { ...loadReview(c1), inputHash: "0".repeat(64) } })), true);
+  const demo = demoRevisions();
+  check("Tieto PRs: input not recorded here, nothing is marked", demo.prs.filter((p) => p.source === "tieto").map((p) => unmarked(buildModel(demo, p.id, p.commits[0].sha))), demo.prs.filter((p) => p.source === "tieto").map(() => true));
 }
 
 // ---- Report ---------------------------------------------------------------

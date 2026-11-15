@@ -87,7 +87,8 @@ ${(briefRev.claims ?? []).map((c) => `- ${c.text}`).join("\n")}`);
   parts.push(`</repository-data>`);
   const prompt = parts.join("\n\n");
   const inputHash = crypto.createHash("sha256").update(SYSTEM_PROMPT + "\n" + prompt).digest("hex");
-  return { system: SYSTEM_PROMPT, prompt, inputHash };
+  // What the prompt holds in full, so the app can show what the reviewer was never given.
+  return { system: SYSTEM_PROMPT, prompt, inputHash, files, testFiles, testResultsFor: run && run.revision === sha ? sha : null };
 }
 
 function parseJsonLoose(text) {
@@ -223,6 +224,8 @@ export function finalizeReview(record, ctx, input) {
       ranAt: record.ranAt,
       inputsMatch,
       inputHash: record.inputHash,
+      // The hash ties the record to this exact input, so these are the files the reviewer read in full.
+      sawFiles: inputsMatch ? [...new Set([...input.files, ...input.testFiles])].sort() : null,
       summary: record.parsed.summary ?? "",
       findings: validateFindings(record.parsed.findings, ctx),
       couldNotDecide: record.parsed.couldNotDecide ?? [],
@@ -234,6 +237,7 @@ export function finalizeReview(record, ctx, input) {
     modeLabel: "Rule-based fallback. Live AI review is UNVERIFIED for this commit.",
     model: null,
     inputsMatch: false,
+    sawFiles: null,
     summary: `${record ? "The saved AI review is incomplete or was not made by a model, so it is not used." : "No AI review is saved for this commit."} These findings come from rules over the mapped evidence.`,
     findings: validateFindings(fallbackFindings(ctx), ctx),
     couldNotDecide: [],

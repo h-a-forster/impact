@@ -66,6 +66,10 @@ button.primary { background: var(--accent); color: var(--card); border-color: va
 .bad-text { color: var(--bad); }
 .link { color: var(--accent); cursor: pointer; text-decoration: underline; background: none; border: 0; padding: 0; text-align: left; }
 .byline { color: var(--muted); font-size: 12px; margin-top: 10px; }
+.saw { color: var(--muted); font-size: 12px; margin-top: 10px; }
+.saw > summary { cursor: pointer; }
+.saw-files { margin: 4px 0; padding-left: 18px; }
+.saw + .byline { margin-top: 2px; }
 
 /* Commit pills (chat header) */
 .pills { display: flex; gap: 6px; margin-left: auto; }
@@ -173,6 +177,9 @@ div.vis-tooltip { position: absolute; white-space: pre-line; max-width: 420px; p
 .gnode-badge.ok { color: var(--ok); } .gnode-badge.bad { color: var(--bad); } .gnode-badge.warn { color: var(--warn); }
 .gnode-badge.info { color: var(--down); } .gnode-badge.edited { color: var(--edited); }
 .gnode.dim { opacity: .4; }
+/* Code the AI reviewer was never given: faded, dashed and hatched, so it never reads like a dashed test box. */
+.gnode.unseen, .sw.sw-unseen { border-style: dashed; border-color: var(--muted); background: repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in srgb, var(--muted) 22%, transparent) 5px 6px); }
+.gnode.unseen { opacity: .45; }
 .gnode.edited { background: var(--edited-bg); border: 2px solid var(--edited); }
 .gnode.downstream { background: var(--down-bg); border: 1.6px solid var(--down); }
 .gnode.failing { background: var(--bad-bg); border: 2.4px solid var(--bad); }
