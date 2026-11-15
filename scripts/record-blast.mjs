@@ -114,7 +114,7 @@ const out = {
     command: `claude -p --model ${model} --permission-mode acceptEdits --disallowedTools Bash PowerShell WebFetch WebSearch Agent Skill --strict-mcp-config --output-format stream-json --verbose < blast-prompts/<run>.txt`,
     folders: "3 folders, each with only the base commit fetched (git fetch --depth 1 <repo> <base sha>). The branch with the real fix was never fetched.",
     same: "Same model and same requirements for all three. Only the 'How to work' lines differ.",
-    settings: "The agents ran with this machine's own Claude Code user settings (a global CLAUDE.md and a plain-words output style). They could read, search and edit files in their folder. They had no shell, no git and no web.",
+    settings: "The agents ran with the operator's user settings only (no project settings). They could read, search and edit files in their folder. They had no shell, no git and no web.",
     functions: "Functions are found by a simple reader of the C# text (scanFunctions in src/lib/blast.mjs), the same way for all 4 changes. A function counts as edited when a changed line sits inside it.",
   },
   notBuilt: "This machine has no .NET SDK. Nobody built the code or ran the unit tests. We do not know if any agent's fix works.",
