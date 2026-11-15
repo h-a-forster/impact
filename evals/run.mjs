@@ -418,7 +418,7 @@ group = "Chat";
   const savedQuestions = new Set(savedFiles.flatMap((j) => (j.chat ?? j.agent?.chat ?? []).map((c) => c.q)));
 
   check("every PR offers saved answers, the app's own included", [...pools].filter(([, all]) => !all.some((c) => c.from === "about")).map(([id]) => id), []);
-  check("each shop PR has 8 to 10 saved answers from its agent", demo.prs.filter((p) => p.source === "shop").map((p) => pools.get(p.id).filter((c) => c.from === "agent").length).every((n) => n >= 8 && n <= 10), true);
+  check("each shop PR has at least 8 saved answers from its agent", demo.prs.filter((p) => p.source === "shop").map((p) => pools.get(p.id).filter((c) => c.from === "agent").length).every((n) => n >= 8), true);
   check("every saved question gets its own answer back", [...pools].flatMap(([id, all]) => all.filter((c) => match(c.q, all).entry !== c).map((c) => `${id}: ${c.q}`)), []);
   check("light stemming: tests, tested, testing and untested are one word", [...words("tests tested testing untested")], ["test"]);
 

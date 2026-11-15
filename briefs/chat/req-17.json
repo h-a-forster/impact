@@ -5,13 +5,13 @@
   "chat": [
     {
       "q": "What did you change?",
-      "keys": "explain plain words what does change mean summary simple rounding round cent",
+      "keys": "explain plain words what does change mean summary simple rounding round cent example does do",
       "a": "Discounts used to round down to the whole cent. Now half a cent or more rounds up. Example: 10% off 1.05 is 10.5 cents; before it gave 10 cents off, now 11. I changed one line, in the shared `applyDiscount()` function."
     },
     {
       "q": "What else uses the function you changed?",
-      "keys": "else uses callers affected who calls other parts reach shared applydiscount",
-      "a": "Two parts of the shop call `applyDiscount()`: Checkout (`checkoutTotal()`) and Order Import (`importOrder()`). Both totals change with this edit."
+      "keys": "else uses callers affected who calls other parts reach shared applydiscount affected affect customers users ledger payments",
+      "a": "Two parts of the shop call `applyDiscount()`: Checkout (`checkoutTotal()`) and Order Import (`importOrder()`). Both totals change with this edit. The payments ledger does not call it."
     },
     {
       "q": "Why did you change the shared function?",
@@ -20,8 +20,8 @@
     },
     {
       "q": "What did you not test?",
-      "keys": "not test tested untested gap missing proof coverage order import importorder",
-      "a": "I added a Checkout test for the new rounding (94 cents at 10% off 1.05). I did not add a test for Order Import. I relied on it calling the same function."
+      "keys": "not test tested untested gap missing proof coverage order import importorder didnt",
+      "a": "I added Checkout tests for the new rounding (94 cents at 10% off 1.05, and 105 cents at zero discount). I did not add a test for Order Import. Its only test sends a row with too few columns, which is rejected before the discount is worked out. I relied on it calling the same function."
     },
     {
       "q": "What were you least sure about?",
@@ -30,8 +30,8 @@
     },
     {
       "q": "How did you test it?",
-      "keys": "how test tested proof check evidence ran pass checkout",
-      "a": "One Checkout test: an order of 105 cents at 10% off totals 94 cents. All tests pass. No test runs a REQ-17 case through Order Import yet."
+      "keys": "how test tested proof check evidence ran pass checkout correct right",
+      "a": "Two Checkout tests: an order of 105 cents at 10% off totals 94 cents, and at zero discount it stays 105 cents. All tests pass. No test runs a REQ-17 case through Order Import yet."
     },
     {
       "q": "What could break?",
@@ -40,18 +40,53 @@
     },
     {
       "q": "How do I undo it?",
-      "keys": "undo revert back out remove",
-      "a": "Revert the commit. It changes one line in `applyDiscount()` and adds one Checkout test. Nothing else to clean up."
+      "keys": "undo revert back out remove rollback roll",
+      "a": "Revert the commit. It changes one line in `applyDiscount()` and adds two Checkout tests. No data migration, nothing else to clean up."
     },
     {
       "q": "Is it safe to merge?",
       "keys": "safe merge ready ok good should",
-      "a": "Not yet. Order Import has no REQ-17 test, so the review rules hold this commit: Waiting for checks or evidence. A REQ-17 test through `importOrder()` would lift that hold."
+      "a": "Not yet, do not merge it. Order Import has no REQ-17 test, so the review rules hold this commit: Waiting for checks or evidence. A REQ-17 test through `importOrder()` would lift that hold."
     },
     {
       "q": "What is REQ-17?",
       "keys": "req 17 requirement task asked ticket spec must stay same",
       "a": "Discounts round to the nearest cent, with half a cent rounded up, in Checkout and in Order Import alike. At zero discount, a 105-cent order must still total 105 cents."
+    },
+    {
+      "q": "Why is the Trust score 0?",
+      "keys": "why 0 zero score trust low number blocked drop",
+      "a": "Proof is missing: Order Import is affected by this change and no test runs a REQ-17 case through it. Missing proof always makes the score 0, so the rules hold the commit: Waiting for checks or evidence."
+    },
+    {
+      "q": "Why was this change needed?",
+      "keys": "why need needed make made reason before after old",
+      "a": "REQ-17 asks for discounts rounded to the nearest cent, half-cents up. The shared pricing function rounded them down. Before: 105 cents at 10% off got 10 cents off, total 95. After: 11 cents off, total 94."
+    },
+    {
+      "q": "Why is the risk Medium?",
+      "keys": "why risk medium severity level rated rating high low",
+      "a": "The rules rate it Medium because it changes shared logic: `applyDiscount()` is called from Checkout and Order Import. It touches no critical path (here that is only the payments code) and no review rules, so it is not High."
+    },
+    {
+      "q": "What about edge cases?",
+      "keys": "edge case cases corner boundary zero 0 percent negative over 100 exactly half happen discount",
+      "a": "At 0% nothing changes: 105 cents stays 105 (a Checkout test checks it). At 100% the total is 0. Percents below 0 or over 100 are still rejected with an error, as before. Exactly half a cent rounds up: 10% of 105 is 10.5, so 11 cents off."
+    },
+    {
+      "q": "Why add 50 before dividing?",
+      "keys": "why math round floor add plus 50 formula alternative another way instead other",
+      "a": "Adding 50 before dividing by 100 rounds half-cents up and keeps the maths in whole cents. My notes record no other approach that I weighed."
+    },
+    {
+      "q": "What would make it safe to merge?",
+      "keys": "next step steps fix mergeable unblock lift hold need needed author do missing",
+      "a": "REQ-17 tests through `importOrder()`: a 105-cent row at 10% totals 94 cents, and at 0% stays 105. Once they pass on a new commit, the hold lifts, and a person still reviews and signs off."
+    },
+    {
+      "q": "Which files changed?",
+      "keys": "files file lines where diff changed discount ts test",
+      "a": "Two: `src/pricing/discount.ts` (one line, plus a comment) and `tests/checkout.test.ts` (two new tests)."
     }
   ]
 }

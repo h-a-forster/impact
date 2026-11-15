@@ -10,12 +10,12 @@
     },
     {
       "q": "Could this affect anything else?",
-      "keys": "else affect affected reach other parts code",
+      "keys": "else affect affected reach other parts code touch touches change use uses who file",
       "a": "No. Only `docs/pricing.md` changed. It is a note for people; no code reads it."
     },
     {
       "q": "Is the example right?",
-      "keys": "right correct true example check verified test",
+      "keys": "right correct true example check verified test numbers math sum",
       "a": "Yes. It matches the passing test at `tests/checkout.test.ts` line 5: 200 cents at 10% totals 180."
     },
     {
@@ -25,7 +25,7 @@
     },
     {
       "q": "What did you not test?",
-      "keys": "not test tested untested gap missing run",
+      "keys": "not test tested untested gap missing run anything left",
       "a": "There is nothing to run: it is one sentence in a note. Its numbers match the passing test at `tests/checkout.test.ts` line 5."
     },
     {
@@ -35,7 +35,7 @@
     },
     {
       "q": "Why did you add it?",
-      "keys": "why reason task asked purpose way requirement",
+      "keys": "why reason task asked purpose way requirement only sentence small short",
       "a": "The task asked for one worked example in the pricing notes. I used numbers that a passing test already checks."
     },
     {
@@ -45,8 +45,68 @@
     },
     {
       "q": "What were you least sure about?",
-      "keys": "unsure least sure worried doubt confident",
+      "keys": "unsure least sure worried doubt confident doubts",
       "a": "Nothing in particular. It is one sentence, and its numbers match a passing test."
+    },
+    {
+      "q": "What does this PR do?",
+      "keys": "do does",
+      "a": "I added one worked example to the pricing notes: an order of 200 cents with 10% off totals 180 cents. No code changed."
+    },
+    {
+      "q": "What did you test?",
+      "keys": "test tests tested run ran suite npm",
+      "a": "I ran the full test suite (`npm test`) before pushing, and it passed. The numbers in the note match the test at `tests/checkout.test.ts` line 5."
+    },
+    {
+      "q": "Why is the score 100?",
+      "keys": "why 100 hundred score trust full perfect high nothing off",
+      "a": "The rules found nothing to take points off: Low risk, no AI findings, Blast radius 100 (no code file changed) and all 5 swarm agents made a like change."
+    },
+    {
+      "q": "Why is it Low risk?",
+      "keys": "low risk severity level rated why",
+      "a": "Every changed file is under `docs/`, the team's docs paths: the rule C1-DOCS-ONLY sets Low. Only `docs/pricing.md` changed."
+    },
+    {
+      "q": "Why is it on the fast lane?",
+      "keys": "fast lane auto merge automatic eligible dry run route why",
+      "a": "It meets every fast-lane rule: Low risk, the only file is under `docs/`, which is on the team's list, the unit tests pass and the AI review found nothing. In this demo that is a dry-run label; nothing merges by itself."
+    },
+    {
+      "q": "Which requirement is this for?",
+      "keys": "requirement id linked none not why ticket issue close closes",
+      "a": "None. The task was a docs request with no requirement ID. The AI reviewer raised this as its one open question: the team's REVIEW.md asks every change to name one."
+    },
+    {
+      "q": "What did the AI review say?",
+      "keys": "ai review reviewer find found findings anything say said result think",
+      "a": "No findings. It confirmed that only `docs/pricing.md` changed and that the example matches the test at line 5. It left one open question: which requirement ID this ties to."
+    },
+    {
+      "q": "Why not add a test for the example?",
+      "keys": "why not add new test too also write",
+      "a": "The test at `tests/checkout.test.ts` line 5 already checks those exact numbers. The note is not code, so it has nothing new to test."
+    },
+    {
+      "q": "Does the example cover rounding?",
+      "keys": "edge case cases rounding round fraction part cent odd limits",
+      "a": "No. It uses round numbers: 10% of 200 is exactly 20 cents. The note does not say how a part cent rounds; the code rounds the discount down (`src/pricing/discount.ts`)."
+    },
+    {
+      "q": "Could the note go out of date?",
+      "keys": "later future stale out date drift test changes change",
+      "a": "Nothing checks the note against the code, so it could go stale. The test at line 5 uses the same numbers, so a change to that result fails there first."
+    },
+    {
+      "q": "Did the other agents agree?",
+      "keys": "other agents agree same swarm blast compare",
+      "a": "Yes. All 5 swarm agents agree: each changed only `docs/pricing.md`, and Blast radius says Inside the expected zone. Their notes were longer: 7 to 10 added lines against my 2."
+    },
+    {
+      "q": "Who wrote this?",
+      "keys": "who wrote author written ai human made generated",
+      "a": "I did: the shop's coding agent. My notes are in context.md."
     }
   ]
 }
