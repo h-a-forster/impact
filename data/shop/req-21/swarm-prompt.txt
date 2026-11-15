@@ -1,0 +1,33 @@
+You are working in a copy of the shop-sample repository (TypeScript), at the commit just before the change. Solve the problem described below by editing files in this folder.
+
+Rules for this run:
+- You cannot run commands, so you cannot run the unit tests. Do not try. Reason from the code.
+- Work only inside this folder. Do not use the web. Do not use git.
+- When you are done, reply with a short list of the files you changed and why.
+
+How to work:
+Solve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.
+
+## Requirements (from the pull request description)
+
+Requirement: REQ-21 in the shop sample (requirements/REQ-21.md).
+
+Why: REQ-21: operations enter -5 in the promo field to mean no promotion. applyDiscount() threw a RangeError on it, so checkout showed an error page and Order Import rejected the row.
+
+Before and after: Before: a 200-cent cart at -5% throws RangeError. Checkout fails. After: a 200-cent cart at -5% totals 200 cents. A bad promo percent no longer fails checkout.
+
+Must preserve: Percents from 0 to 100 give the same totals as before.
+
+## The requirement the Requirement row points to (requirements/REQ-21.md, word for word)
+
+# REQ-21 A negative promo percent means no discount
+
+Operations sometimes enter -5 in the promo field to mean "no promotion".
+Today applyDiscount() throws on it: the customer sees an error page at
+checkout, and Order Import rejects the row.
+
+- A negative percent counts as no discount: a 200-cent cart at -5% totals
+  200 cents, and an imported 105-cent row at -5% totals 105 cents.
+- Behaviour to preserve: percents from 0 to 100 give the same totals as before.
+
+Affected workflows: Checkout, Order Import.
