@@ -5,7 +5,7 @@
 // shop sample in data/shop/<pr>/blast.json by scripts/record-shop-blast.mjs.
 // This file only does the maths on that record. It never calls a model and never adds a link.
 //
-// THE TRUST LABEL RULE (keep it this simple; the README says the same):
+// THE TRUST LABEL RULE (keep it this simple):
 //   The tab works at file level, so the label does too.
 //   Look only at product code: code files that are not unit tests and not docs.
 //   Look at each such file the real change touches.

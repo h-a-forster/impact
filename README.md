@@ -1,227 +1,105 @@
-# Code Review Impact Map
+# Impact
 
-Reference implementation for Junction · Tieto, *Earned Trust in AI Code*.
+**See what an AI-written pull request really touches, and sign off only on what was checked.**
 
-A normal PR shows the edits. This app shows what else depends on the edited
-code, what the tests actually establish, and lets a named engineer record a
-decision on one specific commit.
+[![Watch the pitch video](docs/img/video-thumb.png)](VIDEO_URL)
 
-One map, two kinds of pull request:
+[Live demo](https://impact--map.modal.run) · [Explainer (PDF)](docs/explainer.pdf) · [Pitch video](VIDEO_URL)
 
-| Repo | What it is | Where the evidence comes from |
-|---|---|---|
-| `junction-demo/shop-sample` | Synthetic TypeScript repo. Six agent-written PRs, plainest first: the two-commit REQ-17 story that ends in a sign-off, a docs change that could merge by itself, a clean REQ-22 fix, a judge's attack (REQ-21, [docs/negative-price-attack.md](docs/negative-price-attack.md)), an edit no test needs, and a change that loosens its own review policy. | Built, indexed, tested and reviewed **by this project**. |
-| `te-industry-tech-office/junction26-messagepack-csharp` | The **real Tieto sample**. Four agent-written C# PRs. | **Recorded packs** from the teammate project [Impact Ledger](https://github.com/h-a-forster/junction26-earned-trust), in `data/tieto/`. Shown here, not recomputed. |
+Built for Junction 2026, Tieto challenge *Earned Trust in AI Code*.
 
-On the real PR #1 (issue 2283) the suite is green (170/170), the route is *Waiting for checks or
-evidence*, and the check the AI reviewer asked for then **fails on the change**: severity goes to High
-and the route to *Human review required*.
+## What it does
 
-**The AI can stop a merge, never start one.** The AI review advises; fixed rules set severity and
-route. A finding can raise severity or keep a change off the auto-merge route, but no reviewer
-output can put severity below Classifier 1's or the route on a lighter one (auto-merge is lighter
-than human review, which is lighter than waiting for checks). A silent review is one condition for
-auto-merge, never enough alone. `npm run brake` checks this on every demo commit against every kind
-of reviewer output: silent, each finding category, made-up citations, broken, empty or missing
-answers, and reviews made for other inputs.
+A normal pull request shows the lines that changed. Impact shows what those lines reach, and what
+the tests really prove.
+
+- **A verdict first.** One plain sentence: can this merge, and if not, why. Here: Order Import uses
+  the edited pricing code and has no test for the new case.
+- **Impact Map.** Which functions call the edited code, which of them a test reaches, and which do
+  not. Code outside the diff is shown, not hidden.
+- **Blast radius and Monte Carlo swarm.** The same task was given to several AI agents. If the real
+  change edits code none of them touched, or does more than they did, it gets a question.
+- **Too much, too little.** Each edit is taken out again to see if any test notices. Edits nobody
+  needs, and old code the change left behind, get a question.
+- **A named sign-off.** A person signs off on one exact commit. A new commit needs a new sign-off.
+
+It runs on two sets of pull requests: six in a small TypeScript shop sample built by this project,
+and four real AI-written pull requests from Tieto's C# sample repository (MessagePack-CSharp).
+
+![The review: a verdict, then what each tool found](docs/img/review.png)
+
+![Impact Map: the edited function, who calls it, and which caller has no test](docs/img/impact-map.png)
+
+![Blast radius: the real change laid over where three agents worked](docs/img/blast-radius.png)
+
+## Why you can trust it
+
+- **Rules decide.** Severity and route (merge, human review, or wait for checks) come from fixed
+  rules and the team's policy file, read from the base commit. A pull request cannot change the
+  rules it is judged by.
+- **The AI can only send a change to a person.** The AI reviewer's findings can raise severity or
+  keep a change away from auto-merge. They can never lower either. `npm run brake` feeds every kind
+  of reviewer answer (silent, wrong, broken, made up, for another change) into every demo commit to
+  check this.
+- **Attacks become tests.** Every way we found to sneak a change onto the auto-merge route is a
+  permanent test, from a docs edit that code reads its prices from
+  ([docs/negative-price-attack.md](docs/negative-price-attack.md)) to instructions to the AI hidden
+  in a comment ([docs/hidden-instructions.md](docs/hidden-instructions.md)).
+- **A person signs one exact commit.** A sign-off names the person and the commit, and is never
+  edited. `npm run gate` passes only when the latest commit is signed off. Nothing is merged for real.
 
 ## Run it
 
-Needs Node 22.6+ (built with Node 26) and Git.
+Needs Node 22.6 or newer and Git. No model access or API key needed.
 
 ```
-npm run demo
+npm ci
+npm run setup
+npm start
 ```
 
-Then open <http://localhost:4317/#pr=req-17>.
+Then open <http://localhost:4317>. `npm run setup` rebuilds the sample Git repository and reuses the
+saved evidence in `data/` (test runs, code index, AI reviews, agent runs).
 
-`npm run demo` installs one dependency, rebuilds the sample Git repo, reuses
-the saved evidence in `data/`, and starts the app. It needs no model access
-and no Graphify install.
+To record fresh evidence instead: `npm run setup:fresh` re-runs the tests, Graphify and the edit check
+on every commit (needs Graphify: `uv tool install graphifyy --python 3.12`), and `npm run review:live`
+re-runs the AI review (needs the `claude` CLI, signed in).
 
-| Command | What it does |
-|---|---|
-| `npm run demo` | Install, set up, start the app. |
-| `npm run setup` | Rebuild the sample repo. Reuse saved evidence when the commit SHAs and inputs match. |
-| `npm run setup:fresh` | Also re-run the tests, Graphify and the edit check on every commit. Needs Graphify: `uv tool install graphifyy --python 3.12` |
-| `npm run review:live` | Re-run the independent AI review for every PR commit. Needs the `claude` CLI, signed in. |
-| `npm start` | Start the app only. |
-| `npm run build:graph` | Rebuild the map graph (React Flow + Dagre) from `src/graph/main.jsx` into `src/public/graph.bundle.js`. Only needed after editing that file; the built bundle is committed. |
-| `npm run evals` | Run the 129 review evals. |
-| `npm run planted` | Plant known bugs into each REQ-17 commit and measure what the tests and the map catch. Writes `docs/measurement.md`. |
-| `npm run editcheck` | Take each edit of a change out again and see whether any test notices. Finds edits nobody asked for, and old code the change left behind. Setup records the result for each shop PR commit in `data/shop/<pr>/edit-check.json`; the review steps show it as "Too much, too little". |
-| `npm run gate -- <pr id or number> [owner/name]` | Merge gate. Exit 0 only when the latest step is signed off by a named person. |
-| `npm run import:ledger -- <path to a clone of junction26-earned-trust>` | Refresh the recorded Tieto packs in `data/tieto/`. |
-| `npm run reset` | Clear recorded human decisions. |
-| `npm run export:replica` | Write the shop-sample repo and PRs into the GitHub replica's data folder. |
-| `npm run fastlane` | Try 92 ways to get the wrong change onto the auto-merge route: altered changes, a missing or broken AI reviewer, files that only look like documents (links, executables, binaries), tests dropped from the build, changes that only delete lines, built through git itself, and instructions to the AI reviewer hidden in the description, a comment or a document ([docs/hidden-instructions.md](docs/hidden-instructions.md)). Every one must be held. |
-| `npm run brake` | Feed every kind of AI reviewer output into every demo commit. The route must never get lighter and severity never drop below Classifier 1's. |
-
-## Run it inside the GitHub replica
-
-The sibling worktree `../REA/github-replica` is a local copy of GitHub's PR pages.
-This app plugs into it like a GitHub App.
+## Tests
 
 ```
-# terminal 1 (this folder)
-npm run demo
-
-# terminal 2 (../REA/github-replica)
-npm install
-npm run dev
+node evals/run.mjs          # review evals
+node evals/fast-lane.mjs    # attempts to reach auto-merge that must be held
+npm run -s brake            # AI reviewer answers that must never lighten the route
+node evals/edit-check.mjs   # the "too much, too little" check on known cases
 ```
 
-Open <http://localhost:3000/junction-demo/shop-sample/pull/1>.
+At the time of writing: 129 of 129 evals pass, 92 of 92 attempts are held, 7,217 of 7,217 brake
+checks pass, and all 24 edit-check cases come out as expected.
 
-- The PR page shows one **Impact Map bot comment per commit**, the **Impact review**
-  check, and the unit-test row. All of it is read live from this app
-  (`GET /api/summary?repo=<owner/name>&pr=<number>`).
-- **Open Impact Map** and the **Impact Map** tab open this app at
-  `/?repo=<owner/name>&pr=<number>&sha=<sha>`.
-- Sign off here, refresh the PR page: the check turns green and the sign-off is on the timeline.
-- The real Tieto PRs in the replica are **not analysed**. They show "queued", and this
-  app says so instead of showing another repo's map.
-- `npm run export:replica` rewrites the replica's shop-sample data after the sample changes.
+## How it's built
 
-## The 90-second walkthrough
+- [src/server.mjs](src/server.mjs): a small Node server with no framework. [src/public/](src/public/)
+  is the web app (plain JavaScript; the map graph is a prebuilt React Flow bundle from
+  [src/graph/main.jsx](src/graph/main.jsx)).
+- [src/lib/model.mjs](src/lib/model.mjs) builds one review from the diff, the code index
+  (Graphify for TypeScript, Roslyn for C#), recorded test runs on base and head, and the AI review.
+- [src/lib/classifier.mjs](src/lib/classifier.mjs) and [src/lib/claims.mjs](src/lib/claims.mjs):
+  the fixed rules for severity, route and claims. [src/lib/verdict.mjs](src/lib/verdict.mjs): the
+  one-sentence verdict.
+- [src/lib/reviewer.mjs](src/lib/reviewer.mjs): the independent AI reviewer, Claude Sonnet 5.5 in a
+  fresh process with no tools. Its answers are saved in `data/reviews/` and replayed.
+- [src/lib/blast.mjs](src/lib/blast.mjs), [src/lib/swarm.mjs](src/lib/swarm.mjs),
+  [src/lib/edit-check.mjs](src/lib/edit-check.mjs), [src/lib/reach.mjs](src/lib/reach.mjs): the
+  tools. The agent runs were recorded once by the scripts in [scripts/](scripts/); the demo replays them.
+- [docs/](docs/): [concept card](docs/concept-card.md), [decisions](docs/decisions.md),
+  [lessons log](docs/lessons-log.md), [planted-fault measurement](docs/measurement.md),
+  [reviewer agreement](docs/reviewer-agreement.md).
 
-See [docs/demo-script.md](docs/demo-script.md).
+## Data and licence
 
-1. **PR commit 1.** Checks are green (5/5). The route is still
-   **Medium · Waiting for checks or evidence**.
-2. Click the red **importOrder()** node. It is not in the diff. It calls the
-   edited `applyDiscount()` at line 28. No REQ-17 test exercises it.
-3. Press **Next**. PR commit 2 adds the Order Import test. The route becomes
-   **Medium · Human review required**.
-4. Open the test and its run result. Sign off with your name.
-5. Press **Previous**. The gap is still shown on commit 1, and your sign-off
-   does not apply there.
-
-## Blast radius tab (PR #1 only)
-
-Open: `http://localhost:4317/?map=blast#pr=ju26-issue-2283` (tab "Blast radius" in the Impact map card).
-The tab opens on a **Run blast radius** button. Pressing it replays the 3 recorded runs (sped up), then
-shows the result. `&run=1` plays it from a link; `&done=1` (or `&box=<id>`) shows the result straight away.
-
-We gave the same task to 3 agents: one careful ("minimal"), one normal, one that changes too
-much ("wide"). What they touched is the zone a fix can reasonably reach. The real change
-(Tieto's AI-written branch, shown as a PR) is laid over that zone.
-
-- **Real runs, recorded.** 2026-11-14, model `claude-fable-5-2`, `claude -p` once per agent, each in
-  its own copy of the Tieto repo at the base commit `32258fd` (the branch with the real fix was
-  never fetched). No shell, no git, no web. The result is saved in
-  `data/tieto/ju26-issue-2283/blast.json`; the tab replays it offline.
-- **What the agents got:** `data/tieto/ju26-issue-2283/blast-prompts/requirements.md` = the
-  Requirement, Why, Before/after (first part) and Must preserve rows of the AI PR, plus the bug
-  report #2283 word for word. Left out: Summary, Approach, Alternatives, Checks run, Open gaps,
-  Rollback (they describe the real fix). The 3 prompts differ only in the "How to work" lines.
-- **Unit tests, run both ways** (recorded afterwards on a machine with a .NET SDK, by
-  `node scripts/blast-tests.mjs <clone of the sample repository>`; saved in
-  `data/tieto/ju26-issue-2283/blast-tests.json`). The agents themselves could not build the code.
-  - The wide agent's own unit tests: 2 of 5 pass on the old code, 5 of 5 on the real change.
-    A test written without seeing the real change notices the bug, and the real change passes it.
-  - The real change's unit tests (19): 16 pass on the old code, 18 on each of the three agents' fixes.
-    The one that fails on all three, `ClosedGenericStruct_FromMetadataReference_UnkeyedMember`,
-    expects no MsgPack004 diagnostic for a type from a referenced assembly. No agent's fix silences
-    that diagnostic; only the real change does. The tab shows it as a question for a named person.
-- **Rebuild the record:** put the 3 agent folders under `.demo/blast/{minimal,normal,wide}`
-  (git-ignored), run the agents, then `node scripts/record-blast.mjs`.
-- **Maths:** `src/lib/blast.mjs`, served by `GET /api/blast?pr=<id>`. Functions are found by a
-  simple reader of the C# text, the same way for all 4 changes. Callers come from the saved
-  Graphify run and the recorded compiler data; code they do not cover shows "not known".
-- **File level.** The picture and the main table show files: one box and one row per file, with
-  lines added and removed per change. Function numbers, reach and overlap sit in a fold.
-- **Trust label rule.** Look at the product code files the real change touches (not docs, not
-  unit tests).
-  1. No agent touched one of them: "Touches code no agent touched".
-  2. Else, only the wide agent touched one of them: "Touches more than needed".
-  3. Else: "Inside the expected zone".
-  Docs, unit test files and functions are not scored. They are named in the line under the
-  label. The other 3 PRs have no runs and say so.
-
-### Monte Carlo swarm (its own tab, next to Blast radius)
-
-Press **Run Monte Carlo swarm** to watch N agents get the same requirements, each write a fix,
-and land on a 0 to 100% similarity scale next to the real change. It replays real runs, recorded
-2026-11-14, each agent alone in a clean copy of the base commit, all with the normal agent's prompt
-(`blast-prompts/normal.txt`). No agent runs in the demo.
-
-- **Demo default: "Demo mix, made up"** (tagged "made up for the demo" on screen). The real runs all
-  made the same change, so this set shows variation: each agent is a REAL recorded change (Tieto's
-  branch, a Blast radius run, or a swarm run; see `demo` in `swarm.json`) with a made-up model name.
-  Real sets: "Mix, real runs" (1 Opus 5.5, 2 Sonnet 5.5, 2 Haiku 5.5) and 5 Sonnet 5.5 agents. The menus offer more (Fable 5.2, up to 10 agents); a pick that is not
-  recorded plays the demo mix and says so on screen.
-- Record: `data/tieto/ju26-issue-2283/swarm.json`. Rebuild with
-  `node scripts/record-swarm.mjs --setup`, then `--run`, then `--record` (`--model`, `--count`).
-- Maths: `src/lib/swarm.mjs`, served by `GET /api/swarm?pr=<id>`.
-- **Similarity rule.** Each change is a set: the product code files it touches, plus the functions in
-  them it edits that already existed (no docs, no unit tests). Similarity = shared / all (Jaccard).
-  "Similar" = 50% or more. "Agents agree with each other" = the average over every pair of agents.
-- **Two scores per agent:** like the real change, and like the other agents (average). The
-  "Who is like whom" matrix compares every pair (real change + each agent), by files and functions
-  or by **changed lines** (the exact code lines added or removed in product code; Jaccard again).
-- Deep link: `?map=swarm` opens the tab and plays it (the old `?map=blast&swarm=1` still works); `&model=<id|mix>&n=<count>` picks first; `&agent=<n>` opens one agent; `&measure=lines` sets the matrix.
-
-### Page layout
-
-- The description card shows only the AI PR (the author's commit message is no longer shown).
-- The AI PR, Impact map and Review steps cards each have a Hide / Show button and **start hidden**. A link with `?map=` shows the Impact map card; the "AI review" stamp opens Review steps. `?show=intentCard,mapCard,reviewCard` opens them, `?hide=` closes them.
-
-## What is real, what is recorded, what is rule-based
-
-| Part | Status |
-|---|---|
-| Sample repo, commits, diffs | Real Git commits, rebuilt from `sample/` with fixed dates so SHAs are stable. |
-| Test results | Real `node --test` runs on a clean snapshot of each commit. Saved in `data/runs/<sha>.json`. Labelled **local run**. There is no CI. |
-| Code index | Real Graphify 0.9.108 code-only exports, one per commit, in `data/graphify/<sha>.json`. |
-| Independent AI review | Real model responses (`claude` CLI, fresh process, no tools). Prompt and response saved in `data/reviews/<sha>.json`. The app replays them and says so. |
-| Concept, dependency and test mappers | Rule-based, labelled in the app. |
-| Claim verifier, Classifier 1, Classifier 2 | Deterministic rules. |
-| Before/after evidence | Real: each PR commit's tests are also run against the base code (`data/runs/<sha>.base.json`). "Fails on base, passes here" shows the change caused it. "Held" means it passed before too. |
-| Planted faults | Real, rule-based: 8 hand-written bugs planted into copies of each REQ-17 commit, same suite run. `data/planted/`, `docs/measurement.md`. |
-| Real Tieto PRs | Recorded by the Impact Ledger project: Roslyn links, `dotnet test` on base and head, one AI review per change, severity and route. Imported unchanged into `data/tieto/`. This project does not re-run them (no .NET SDK here). |
-| Auto-merge | Dry-run label only. Nothing is ever merged. |
-| GitHub | Not connected to real GitHub. Connected to the local GitHub replica (`../REA/github-replica`): links in, live status out. |
-
-## Layout
-
-```
-sample/            fixtures for the sample repo (base + commit overlays)
-briefs/            saved PR briefs (one template for human and agent authors)
-config/            trusted demo config for the concept mapper
-data/              saved evidence, keyed by commit SHA (runs, graphify, reviews, planted)
-data/tieto/        recorded packs for the real Tieto PRs (from Impact Ledger; MIT; not edited)
-planted/           the planted faults, written before the run
-src/lib/           pipeline: git, graphify adapter, test mapper, claims,
-                   classifiers, reviewer, model, decisions,
-                   github (summary API + export for the GitHub replica)
-src/public/        the web app
-src/server.mjs     local server
-scripts/setup.mjs  one-time setup
-evals/             review evals and expected outcomes
-docs/              concept card, lessons log, demo script
-PLAN.md            plan and decision log
-.demo/             generated (ignored): sample repo, snapshots, decisions
-```
-
-The team's `REVIEW.md` and `review-policy.yml` live in the sample repo
-(`sample/base/`). The app always reads them from the **base** commit.
-
-Two optional fields under `auto_merge_dry_run` narrow the fast lane. `trusted_authors`
-lists who may use it: when present, a change qualifies only if every commit in it is by
-someone on the list. `paused` lists areas (path globs) where an escape or revert happened,
-each with `escape_on` and the `owner` who lifts it; a change touching one goes to a person.
-Both come from the base commit, so a pull request cannot add its own author or lift its
-own pause. The lane exists to save human time, and reverts and escapes are its guardrail:
-it widens only with evidence, and tightens at once after an escape.
-
-## Known limits
-
-- Two sources with different depth: the shop repo is analysed here (TypeScript, Graphify); the Tieto repo is shown from recorded packs (C#, Roslyn). Their severity and route come from that project's rules, named on screen.
-- For the Tieto PRs there is no Base view and no test list: the packs carry changed files at the head commit and run totals only.
-- Graphify gave no symbols for test files and no function end lines. The app
-  fills those with a labelled rule-based parser and brace matching.
-- "Reach" is static: a call path exists. It is not proof the line ran.
-- Dynamic calls and consumers outside the repo are not indexed.
-- No live GitHub, CI, merges, background scans or PR chat.
-- The comparison "map vs diff alone" with real people was not run.
+- The shop sample is made up for this demo and built from [sample/](sample/).
+- [data/tieto/](data/tieto/) holds recorded review data for the real Tieto pull requests, including
+  excerpts of MessagePack-CSharp (MIT). See [data/tieto/NOTICE.upstream.md](data/tieto/NOTICE.upstream.md).
+- [vis-network](src/public/vendor/vis-network/) is included under its own licence.
+- Everything else: [MIT](LICENSE).
