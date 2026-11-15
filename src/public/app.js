@@ -628,7 +628,7 @@ function reachSentence(L, docsOnly) {
   const far = L.reached.length, failsN = reached.filter((n) => n.evidence === "contradicted").length;
   const untestedN = reached.filter((n) => n.evidence !== "contradicted" && untested(n)).length;
   const risk = [failsN ? `<b class="bad">${failsN} with a failing unit test</b>` : "", untestedN ? `<b class="warn">${untestedN} with no test</b>` : ""].filter(Boolean).join(", ");
-  return `Reaches <b>${things(reached.length, "function", "functions")}</b>, ${far > 1 ? "up to " : ""}${things(far, "call", "calls")} away${risk ? `: ${risk}` : ""}.${fails}`;
+  return `This change affects <b>${things(reached.length, "function", "functions")}</b> that use the edited code${far > 1 ? `, up to ${things(far, "step", "steps")} away` : ""}${risk ? `: ${risk}` : ""}.${fails}`;
 }
 
 /** Angles for nodes in one wedge: near the angle each one wants (sorted), kept apart, inside the wedge. */
