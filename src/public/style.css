@@ -697,6 +697,9 @@ details.minor { margin-top: 10px; }
 .name-form input { flex: 1 1 200px; min-width: 0; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; background: var(--card); }
 .name-form button { border-radius: 10px; padding: 8px 14px; }
 .name-form .error { flex-basis: 100%; margin: 0; }
+.override-tick { flex-basis: 100%; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.name-form .override-tick input { flex: none; margin: 0; padding: 0; }
+.override-form input[name="reason"] { flex-basis: 100%; }
 .thread .tldr { margin: 8px 0; }
 
 /* Composer */

@@ -29,4 +29,4 @@ See [evals/expected.json](../evals/expected.json).
 
 - Base: graph shows `checkoutTotal` and `importOrder` both calling `applyDiscount`. No route.
 - PR commit 1: `importOrder` shown as unchanged downstream caller. Checkout supported. Import **Unverified**. **Medium + Waiting for checks or evidence**.
-- PR commit 2: Import supported by the new test run on that commit. **Medium + Human review required**. Sign-off allowed here only.
+- PR commit 2: Import supported by the new test run on that commit. **Medium + Human review required**. A normal sign-off is allowed here only; on commit 1 a person can only merge against the rules (an override, with a reason).

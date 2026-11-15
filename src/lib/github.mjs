@@ -11,8 +11,8 @@ export function findPr(revisions, repo, number) {
 
 /**
  * Review state for every commit of one PR, in the words a GitHub check uses.
- * Check status: "success" only when a named engineer signed off on that commit,
- * or the dry-run allowlist applies. Everything else stays "pending".
+ * Check status: "success" only when a named engineer signed off on that commit (an override
+ * included, and its summary says so), or the dry-run allowlist applies. Everything else stays "pending".
  */
 export function prSummary(revisions, pr, decisionsFile) {
   const commits = pr.commits.map((c) => {
@@ -24,7 +24,9 @@ export function prSummary(revisions, pr, decisionsFile) {
     const status = signOff || c2.route === ROUTES.AUTO ? "success" : "pending";
     const realSha = c.commitSha ?? c.sha; // recorded PRs: several evidence steps share one commit
     const recorded = model.source === "ledger";
-    const summary = signOff
+    const summary = signOff?.override
+      ? `Merged against the rules by ${signOff.name} on commit ${short(realSha)}: ${signOff.override.reason}. Not proven: ${signOff.override.open.join(" ")}`
+      : signOff
       ? `Signed off by ${signOff.name} on commit ${short(realSha)}. Residual risk accepted: ${signOff.residualRisk}.`
       : waiting
         ? c2.blockers.map((b) => b.text).join(" ")
@@ -41,7 +43,7 @@ export function prSummary(revisions, pr, decisionsFile) {
       message: c.message,
       status,
       severity: c2.severity,
-      route: signOff ? `${c2.route} · signed off` : c2.route,
+      route: signOff ? `${c2.route} · ${signOff.override ? "overridden" : "signed off"}` : c2.route,
       rule: c2.rule,
       summary,
       blockers: c2.blockers.map((b) => ({ text: b.text, suggestedCheck: b.suggestedCheck ?? null })),
@@ -54,7 +56,7 @@ export function prSummary(revisions, pr, decisionsFile) {
         contested: model.claims.filter((x) => x.label === "Contested").length,
       },
       aiReview: { available: model.review.available, label: model.review.modeLabel, findings: model.review.findings.length },
-      signedOff: signOff ? { name: signOff.name, at: signOff.at, residualRisk: signOff.residualRisk } : null,
+      signedOff: signOff ? { name: signOff.name, at: signOff.at, residualRisk: signOff.residualRisk, override: signOff.override } : null,
       humanActions: decisions.forThisCommit.map((d) => ({ action: d.action, name: d.name, at: d.at, requestedCheck: d.requestedCheck })),
       // CI-style rows for this commit. These are local runs, and say so.
       checks: model.checks.map((k) => ({

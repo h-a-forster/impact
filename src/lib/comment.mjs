@@ -37,8 +37,9 @@ export function uncheckedOf(model) {
  * - points: the open points, each { level: "block" | "major" | "minor", title }.
  * - notRun: names of tools with no saved runs for this PR.
  * - url: the link back to this review.
+ * - signOff: the commit's sign-off, if any. An override (a merge against the rules) is said under the heading.
  */
-export function prComment({ model, verdict, score, points, notRun = [], url }) {
+export function prComment({ model, verdict, score, points, notRun = [], url, signOff = null }) {
   const c2 = model.classifier2;
   const order = ["block", "major", "minor"];
   const open = [...points].sort((a, b) => order.indexOf(a.level) - order.indexOf(b.level)).map((p) => LEVEL[p.level] + oneLine(p.title));
@@ -48,6 +49,7 @@ export function prComment({ model, verdict, score, points, notRun = [], url }) {
     head,
     `**Route:** ${c2.route} · **Risk:** ${c2.severity} · commit \`${model.selected.short}\``,
     "",
+    ...(signOff?.override ? [`**Merged against the rules by ${signOff.name}:** ${oneLine(signOff.override.reason)}`, ""] : []),
     open.length ? `**Open points (${open.length})**` : "**Open points:** none",
     ...bullets(open, MAX_POINTS),
   ];
