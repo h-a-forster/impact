@@ -1,6 +1,6 @@
 # Impact
 
-**See what an AI-written pull request really touches, and sign off only on what was checked.**
+**Trust you can check: every AI-written pull request comes with evidence, and a person makes the call.**
 
 [![Watch the pitch video](docs/img/video-thumb.png)](https://www.youtube.com/watch?v=FfixPU019qI)
 
@@ -8,20 +8,22 @@
 
 Built for Junction 2026, Tieto challenge *Earned Trust in AI Code*.
 
-## What it does
+## How it earns trust
 
-A normal pull request shows the lines that changed. Impact shows what those lines reach, and what
-the tests really prove.
+A normal pull request shows the lines that changed. Impact shows the evidence a reviewer needs to
+trust them, and says plainly what is not proven.
 
-- **A verdict first.** One plain sentence: can this merge, and if not, why. Here: Order Import uses
-  the edited pricing code and has no test for the new case.
-- **Impact Map.** Which functions call the edited code, which of them a test reaches, and which do
-  not. Code outside the diff is shown, not hidden.
-- **Blast radius and Monte Carlo swarm.** The same task was given to several AI agents. If the real
-  change edits code none of them touched, or does more than they did, it gets a question.
-- **Too much, too little.** Each edit is taken out again to see if any test notices. Edits nobody
-  needs, and old code the change left behind, get a question.
-- **A named sign-off.** A person signs off on one exact commit. A new commit needs a new sign-off.
+- **One sentence and a Trust score.** Can this merge, and if not, why: "Cannot merge yet: Order
+  Import has no test for the REQ-17 case. Trust 0/100." The score comes from fixed rules, never from
+  the AI, and missing proof always means 0.
+- **Impact Map and Reach.** Which code the change reaches beyond the diff, and which of it no test
+  covers. Nothing outside the diff is hidden.
+- **Blast radius and Monte Carlo swarm.** Other AI agents get the same task blind. A change that
+  reaches further than they did, or that they would not make, gets a question.
+- **Too much, too little.** Each edit is taken out again to see whether any test notices. Edits
+  nobody needs, and old code the change left behind, get a question.
+- **Ask the agent why.** Answers come from the coding agent's own notes, saved with the pull request.
+- **A person signs one exact commit.** A new commit needs a new sign-off.
 
 It runs on two sets of pull requests: six in a small TypeScript shop sample built by this project,
 and four real AI-written pull requests from Tieto's C# sample repository (MessagePack-CSharp).
@@ -34,7 +36,7 @@ and four real AI-written pull requests from Tieto's C# sample repository (Messag
 
 ![Blast radius: the real change laid over where three agents worked](docs/img/blast-radius.png)
 
-## Why you can trust it
+## Why you can trust the reviewer itself
 
 - **Rules decide.** Severity and route (merge, human review, or wait for checks) come from fixed
   rules and the team's policy file, read from the base commit. A pull request cannot change the
@@ -49,6 +51,13 @@ and four real AI-written pull requests from Tieto's C# sample repository (Messag
   in a comment ([docs/hidden-instructions.md](docs/hidden-instructions.md)).
 - **A person signs one exact commit.** A sign-off names the person and the commit, and is never
   edited. `npm run gate` passes only when the latest commit is signed off. Nothing is merged for real.
+- **It shows its blind spots.** What the AI reviewer saw is listed, and code it never saw is faded
+  on the map. A claim a passing test backs is marked "Contested" if the AI disputes it.
+- **The team stays in control.** The automatic lane can be limited to trusted authors, and after a
+  bad change gets through, that area pauses until its owner lifts it.
+- **We test the tools too.** Bugs planted into the shop sample are caught by the tests or flagged by
+  the edit check, none silently. Rerun on the same change, the AI reviewer chose the same route
+  every time.
 - **A person can merge anyway, on the record.** When proof is missing, they tick "I know this is not
   proven", give a reason and sign. It is shown everywhere as a merge against the rules (the gate says
   MERGE ALLOWED BY OVERRIDE), the trust score does not move, and no rule or AI path can make one.
