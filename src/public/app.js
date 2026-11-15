@@ -1,5 +1,6 @@
 // Code Review Impact Map - frontend. No framework. One model per (PR, revision).
 import { prComment } from "./lib/comment.mjs";
+import { cutAtWord, issueList, verdictSentence } from "./lib/verdict.mjs";
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const short = (sha) => (sha ?? "").slice(0, 7);
@@ -1476,39 +1477,6 @@ function setAck(ids, on) {
   refreshIssues();
 }
 
-/**
- * The issues of one commit, each as one line of problem and one line of fix.
- * - "block": proof is missing. The rules refuse a sign-off, so it cannot be acknowledged.
- * - "major": the rule that raised the risk, and the AI review's important findings.
- * - "minor": the AI review's small findings. Shown folded.
- * An AI finding about the same code as a missing proof is folded into it, so one problem is one line.
- */
-function issueList(m) {
-  const c2 = m.classifier2, out = [], folded = new Set();
-  c2.blockers.forEach((b, i) => {
-    const f = m.review.findings.find((x) => !folded.has(x) && sameCode(m, b, x));
-    if (f) folded.add(f);
-    out.push(f
-      ? { id: `proof-${i}`, level: "block", title: f.title, fix: "Ask the author for a unit test that proves it.", detail: [b.text, f.detail].filter(Boolean).join(" "), citations: f.citations }
-      : { id: `proof-${i}`, level: "block", title: b.text, fix: "Ask the author for a unit test that proves it." });
-  });
-  if (!c2.blockers.length && c2.rule === "T-contradicted") {
-    out.push({ id: "rule", level: "major", title: c2.reason.split(". ")[0].replace(/\.$/, ""), fix: "Accept the change on purpose, or ask for a smaller fix.", detail: [c2.reason, ...c2.notes.map((n) => n.text)].join(" "), run: Boolean(m.run) });
-  }
-  for (const f of m.review.findings) if (!folded.has(f)) out.push({ id: f.id, level: f.category === "Minor" ? "minor" : "major", title: f.title, fix: f.fix ?? f.suggestedCheck, detail: f.detail, citations: f.citations });
-  return out;
-}
-/**
- * A blocker and an AI finding point at the same code when the finding cites the blocker's file,
- * or names the area (concept) that file sits in. Blocker refs look like "fn:path#name".
- */
-function sameCode(m, blocker, finding) {
-  const file = blocker.ref?.replace(/^[a-z]+:/, "").split("#")[0];
-  if (!file) return false;
-  if ((finding.citations ?? []).some((c) => c.valid && c.file === file)) return true;
-  const area = m.graph.nodes.find((n) => n.level === "concept" && file.startsWith(n.id.replace(/^concept:/, "") + "/"));
-  return Boolean(area && finding.title.toLowerCase().includes(area.label.toLowerCase()));
-}
 /** Issues of the PR's first commit that are gone at the selected commit. */
 function fixedList() {
   const m = state.model, first = ui.first[state.prId];
@@ -1547,25 +1515,8 @@ function issuesHtml() {
     : "";
   const fixedHtml = fixed.map((x) => `<div class="issue fixed"><div class="issue-main"><span class="issue-mark" aria-hidden="true">✓</span>
       <div class="issue-text"><strong>${esc(x.title)}</strong><div class="issue-state">Fixed in commit ${m.selected.index}${m.selected.madeUp ? ` <span class="tag warn">made up</span>` : ""}</div></div></div></div>`).join("");
-  const foot = merged ? `<div class="okbox"><b>Merged.</b> ${esc(m.decisions.signOff.name)} signed off ${esc(stepText(m))}.</div>`
-    : !open.length ? `<div class="issue-foot"><button type="button" class="primary" data-act="merge">Merge this PR</button></div>` : "";
+  const foot = merged ? `<div class="okbox"><b>Merged.</b> ${esc(m.decisions.signOff.name)} signed off ${esc(stepText(m))}.</div>` : "";
   return `${head}${meter}${main.map(issueHtml).join("")}${minorHtml}${fixedHtml}${foot}`;
-}
-/**
- * The short form, for the first screen: a count, and one line per important issue. No fixes, no buttons.
- * The full list (fix, "More", Acknowledge) only comes when the person asks for it.
- */
-function briefHtml() {
-  const m = state.model, all = issueList(m), fixed = fixedList(), open = all.filter((x) => !acked(x.id));
-  if (!all.length) return `<p><b>Nothing is open.</b>${fixed.length ? ` ${things(fixed.length, "issue was", "issues were")} fixed since commit 1${m.selected.madeUp ? " (made up)" : ""}.` : ""}</p>`;
-  const main = all.filter((x) => x.level !== "minor"), minor = all.length - main.length, done = all.length - open.length;
-  const head = open.length ? `${things(all.length, "thing needs", "things need")} your OK before this can merge.` : `All ${things(all.length, "issue is", "issues are")} acknowledged.`;
-  const foot = m.decisions.signedOff ? `<div class="okbox"><b>Merged.</b> ${esc(m.decisions.signOff.name)} signed off ${esc(stepText(m))}.</div>`
-    : open.length ? `<div class="choices"><button type="button" class="choice main" data-act="issues"><b>Go through them</b><span>One line each, with the fix.</span></button></div>`
-    : `<div class="choices"><button type="button" class="choice main" data-act="merge"><b>Merge this PR</b><span>Sign off with your name.</span></button></div>`;
-  return `<p><b>${head}</b>${done ? ` <span class="muted">${done} of ${all.length} done.</span>` : ""}</p>
-    <ul class="brief">${main.map((x) => `<li class="${x.level}${acked(x.id) ? " done" : ""}">${esc(x.title)}</li>`).join("")}${minor ? `<li class="minor">${main.length ? "and " : ""}${things(minor, "smaller point", "smaller points")}</li>` : ""}</ul>
-    ${fixed.length ? `<p class="muted">${things(fixed.length, "issue was", "issues were")} fixed since commit 1${m.selected.madeUp ? " (made up)" : ""}.</p>` : ""}${foot}`;
 }
 /** Every issue list in the chat shows the same live state. */
 function refreshIssues() {
@@ -1574,18 +1525,18 @@ function refreshIssues() {
   for (const el of $("thread").querySelectorAll(".advice-live")) el.innerHTML = adviceHtml();
   for (const el of $("thread").querySelectorAll(".scores-live")) el.innerHTML = scoresHtml();
   for (const el of $("thread").querySelectorAll(".next-live")) el.innerHTML = choicesHtml();
-  for (const el of $("thread").querySelectorAll(".issues-brief")) el.innerHTML = briefHtml();
   for (const el of $("thread").querySelectorAll(".issues-live")) el.innerHTML = issuesHtml();
 }
 
-// ----- the first message: the PR title and what it does in one line, then the advice -----
+// ----- the first message: the PR title, the advice in one sentence, then what the PR does in one paragraph -----
 function introHtml() {
   const m = state.model, d = m.description;
   const prShort = d.ai?.tldr?.text ?? d.ai?.summary ?? d.author.text;
   return `<h1 class="pr-title">${esc(m.pr.title)}</h1>
-    <p class="pr-sub muted">${rich(prShort)} <button type="button" class="link" data-act="page" data-page="pr">Full description</button></p>
-    ${m.since ? `<details class="since-line"><summary><span class="tag warn">made up</span> What changed since commit ${m.since.from}</summary><p>${m.since.items.map(rich).join(" · ")} · <button type="button" class="link" data-act="since">Show the code change</button></p></details>` : ""}
-    <div class="advice-live"></div>`;
+    <div class="advice-live"></div>
+    <p class="pr-sub">${rich(prShort)}</p>
+    <p class="pr-links"><button type="button" class="link" data-act="page" data-page="pr">Full description</button> · <button type="button" class="link" data-act="page" data-page="review">Review steps</button></p>
+    ${m.since ? `<details class="since-line"><summary><span class="tag warn">made up</span> What changed since commit ${m.since.from}</summary><p>${m.since.items.map(rich).join(" · ")} · <button type="button" class="link" data-act="since">Show the code change</button></p></details>` : ""}`;
 }
 // ----- tool scores: worked out up front, so the person can merge straight away or drill down -----
 // One row per tool: its name, its score, one line of why. A click opens the tool in the right panel.
@@ -1655,12 +1606,8 @@ function advice(m = state.model, sc = ui.scores[state.prId] ?? {}) {
   }
   const score = blocked ? 0 : Math.max(0, 100 - parts.reduce((a, p) => a + p[0], 0));
   const verdict = blocked ? ["Cannot merge yet", "bad"] : score >= 75 ? ["Fine to merge", "ok"] : score >= 45 ? ["Look closer first", "warn"] : ["Do not merge yet", "bad"];
-  // Blocked: name the areas that lack proof, at concept level when the graph has one.
-  const untested = [...new Set(c2.blockers.filter((x) => x.type === "evidence").map((x) => {
-    const concept = m.graph.nodes.find((n) => n.id === x.ref)?.concept;
-    return concept && m.graph.nodes.some((n) => n.id === concept) ? labelOf(concept) : labelOf(x.ref);
-  }))];
-  const look = blocked ? (untested.length ? { act: "tool", scope: "pr", name: "Impact Map", why: `${untested.join(" and ")} ${untested.length > 1 ? "have" : "has"} no passing test for this change.` } : { act: "issues", name: "The open points", why: "Proof is missing. The author must add it." })
+  // Blocked: the sentence names what lacks proof, so this only says where to see it.
+  const look = blocked ? (c2.blockers.some((x) => x.type === "evidence") ? { act: "tool", scope: "pr", name: "Impact Map", why: "It shows which code has no passing test." } : { act: "issues", name: "The open points", why: "Proof is missing. The author must add it." })
     : red ? { act: "tool", scope: "pr", name: "Impact Map", why: "It shows where the unit test fails, and what else uses that code." }
     : blastFlag ? { act: "tool", scope: "blast", name: "Blast radius", why: "It shows what only this change does." }
     : swarmLow ? { act: "tool", scope: "swarm", name: "Monte Carlo swarm", why: "It shows where the other agents did it differently." }
@@ -1679,26 +1626,47 @@ function reachedNames() {
   const names = reached.filter((n) => n.level === level).map((n) => n.label);
   return names.slice(0, 2).join(", ") + (names.length > 2 ? ` and ${names.length - 2} more` : "");
 }
-/** Who decides, and how risky, after the verdict word. Both come from the fixed rules. */
-function routeHtml() {
-  const m = state.model, c1 = m.classifier1, c2 = m.classifier2;
-  const route = (text) => `<span title="Set by fixed rules after the AI review (Classifier 2, rule ${esc(c2.rule)})">${text}</span>`;
-  if (c2.route.startsWith("Waiting")) return ` · ${route("proof missing")}`;
-  if (c2.route.startsWith("Auto")) return ` · ${route("could merge by itself")}`;
-  return ` · <span title="Set by fixed rules (Classifier 1, rule ${esc(c1.rule)})">risk ${esc(c2.severity)}</span> · ${route("you sign off")}`;
+const DOCS = /\.(md|mdx|markdown|rst|adoc|txt)$/i;
+/** This commit's open points, each marked done once acknowledged. */
+const pointsNow = () => issueList(state.model).map((x) => ({ ...x, done: acked(x.id) }));
+/** The advice as one sentence, from this commit's points, checks and files (see lib/verdict.mjs). */
+function sentenceOf(a, points) {
+  const m = state.model, so = m.decisions.signedOff ? m.decisions.signOff : null;
+  return verdictSentence({
+    verdict: a.verdict[0],
+    tone: a.verdict[1],
+    auto: m.classifier2.route.startsWith("Auto"),
+    points,
+    checksPassed: m.checks.length > 0 && m.checks.every((c) => c.status === "passed"),
+    docsOnly: m.diff.files.length > 0 && m.diff.files.every((f) => DOCS.test(f.file)),
+    signedOff: so && { name: so.name, step: stepText(m) },
+    because: [...a.parts].sort((x, y) => y[0] - x[0])[0]?.[1] ?? "",
+  });
+}
+/** The points the sentence does not name, one short line each to tick off. The smaller ones share one line. */
+function pointLinesHtml(points, lead) {
+  const rest = points.filter((x) => x.id !== lead), main = rest.filter((x) => x.level !== "minor"), minor = rest.filter((x) => x.level === "minor");
+  const line = (cls, text, full = text) => `<li><button type="button" class="verdict-point ${cls}" data-act="issues" title="${esc(full !== text ? full : "Go through them, with the fix")}">${esc(text)}</button></li>`;
+  const lines = main.map((x) => line(`${x.level}${x.done ? " done" : ""}`, cutAtWord(x.title, 90), x.title));
+  if (minor.length) lines.push(line(`minor${minor.every((x) => x.done) ? " done" : ""}`, things(minor.length, "smaller point", "smaller points")));
+  return lines.length ? `<ul class="verdict-points">${lines.join("")}</ul>` : "";
 }
 function adviceHtml() {
-  const a = advice();
-  const look = a.look
-    ? `<p><b>Look at this first:</b> <button type="button" class="link" data-act="${a.look.act}" data-scope="${a.look.scope ?? ""}" data-sha="${a.look.sha ?? ""}">${esc(a.look.name)}</button>. ${esc(a.look.why)}</p>`
+  const a = advice(), m = state.model, points = pointsNow(), s = sentenceOf(a, points), fixed = fixedList();
+  const merged = m.decisions.signedOff, howOpen = ui.openMore.has("advice");
+  const look = a.look && a.look.act !== "issues" && s.tone !== "ok"
+    ? `<p class="verdict-look">Look at this first: <button type="button" class="link" data-act="${a.look.act}" data-scope="${a.look.scope ?? ""}">${esc(a.look.name)}</button>. ${esc(a.look.why)}</p>`
     : "";
-  return `<div class="short advice ${a.verdict[1]}" style="--score: ${a.waiting ? 0 : a.score}"><span class="short-label">My advice · fixed rules, no AI</span>
-    <div class="advice-main"><span><strong>${a.verdict[0]}</strong><span class="advice-route">${routeHtml()}</span></span><span class="advice-score" title="Merge score. 100 = nothing found.">${a.waiting ? "…" : a.score}<small> / 100</small></span></div>
+  return `<div class="short advice ${s.tone}">
+    <p class="verdict-say"><span class="verdict-word">${esc(s.verdict)}:</span> <span${s.cut ? ` title="${esc(s.full)}"` : ""}>${esc(s.reason)}${s.reason.endsWith("…") ? "" : "."}</span>
+      <button type="button" class="verdict-score" data-act="score" aria-expanded="${howOpen}" title="Trust score. 100 = nothing found. Click to see how it is worked out.">Trust ${a.waiting ? "…" : a.score}/100</button></p>
+    ${merged ? "" : pointLinesHtml(points, s.lead)}
+    ${!merged && points.some((x) => !x.done) ? `<button type="button" class="verdict-go" data-act="issues">Go through them</button>` : ""}
+    ${fixed.length ? `<p class="verdict-note">${things(fixed.length, "point was", "points were")} fixed since commit 1${m.selected.madeUp ? " (made up)" : ""}.</p>` : ""}
     ${look}
-    <details class="since-line" data-more="advice" ${ui.openMore.has("advice") ? "open" : ""}><summary>How the score is worked out <button type="button" class="link advice-steps" data-act="page" data-page="review">Review steps</button></summary>
-      <p>It starts at 100. A fixed rule takes points off. No AI is used.${a.blocked ? " Proof is missing, so the score is 0." : ""}</p>
+    <div class="verdict-how"${howOpen ? "" : " hidden"}><p><b>How the trust score is worked out.</b> It starts at 100. A fixed rule takes points off. No AI is used.${a.blocked ? " Proof is missing, so the score is 0." : ""}</p>
       <ul class="advice-parts">${a.parts.map(([n, why]) => `<li><b>−${n}</b> ${esc(why)}</li>`).join("") || "<li>Nothing was taken off.</li>"}</ul>
-      <p>75 or more: fine to merge. 45 to 74: look closer first. Under 45: do not merge yet.</p></details></div>`;
+      <p>75 or more: fine to merge. 45 to 74: look closer first. Under 45: do not merge yet.</p></div></div>`;
 }
 /** What each tool checks, and what it does not. Shown on hover, so the row itself is only the result. */
 const TOOL_SCOPE = {
@@ -1710,10 +1678,14 @@ function scoresHtml() {
   return `<div class="scores">${scoreRows().map((r) => `<button type="button" class="score" data-act="tool" data-scope="${r.scope}" title="${esc(TOOL_SCOPE[r.scope])} Click to open.">
     <b>${esc(r.name)}</b>${r.wait ? `<span class="muted">working it out…</span><span></span>` : `<span class="tag ${esc(r.tone)}">${esc(r.score)}</span><span class="score-why">${esc(r.why)}${r.madeUp ? ` <span class="tag warn">made up</span>` : ""}</span>`}<i aria-hidden="true">›</i></button>`).join("")}</div>`;
 }
-/** Merge is the main choice only when the advice says it is fine. The verdict moves as tool scores come in, so this is drawn live. */
+/**
+ * Merge is the main choice when the advice says it is fine, and lights up once every point is acknowledged.
+ * It is the only merge control. The verdict moves as tool scores come in, so this is drawn live.
+ */
 function choicesHtml() {
-  const fine = advice().verdict[0] === "Fine to merge";
-  return `<div class="choices"><button type="button" class="choice${fine ? " main" : ""}" data-act="merge"><b>Merge this PR</b><span>Sign off with your name.</span></button>
+  const points = pointsNow(), ready = points.length > 0 && points.every((x) => x.done) && !state.model.decisions.signedOff;
+  const fine = ready || advice().verdict[0] === "Fine to merge";
+  return `<div class="choices"><button type="button" class="choice${fine ? " main" : ""}${ready ? " ready" : ""}" data-act="merge"><b>Merge this PR</b><span>Sign off with your name.</span></button>
     <button type="button" class="choice map" data-act="tool" data-scope="pr"><b>Impact Map</b><span>What this change touches.</span></button>
     <button type="button" class="choice" data-act="ask"><b>Ask the agent</b><span>Why it was written this way.</span></button></div>`;
 }
@@ -1761,7 +1733,7 @@ function bot(html, wait = 450) {
 }
 function startThread() {
   const m = state.model, t = threadOf();
-  if (!t.length) t.push({ who: "bot", html: introHtml() }, { who: "bot", html: `<div class="issues-brief"></div>` }, { who: "bot", html: nextHtml() });
+  if (!t.length) t.push({ who: "bot", html: introHtml() }, { who: "bot", html: nextHtml() });
   loadScores();
   paintThread();
   $("thread").scrollTop = 0;
@@ -1898,6 +1870,10 @@ async function act(b) {
   const a = b.dataset.act, m = state.model;
   if (!m) return;
   if (a === "merge") return startMerge();
+  if (a === "score") {
+    if (!ui.openMore.delete("advice")) ui.openMore.add("advice");
+    return refreshIssues();
+  }
   if (a === "tool") return useTool(b.dataset.scope);
   if (a === "page") return showPage(b.dataset.page);
   if (a === "ask") return agentIntro();

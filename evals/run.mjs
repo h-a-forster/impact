@@ -12,6 +12,7 @@ import { findPr, prSummary } from "../src/lib/github.mjs";
 import { buildSwarm } from "../src/lib/swarm.mjs";
 import { buildLedgerModel, ledgerPrs } from "../src/lib/ledger.mjs";
 import { prComment } from "../src/lib/comment.mjs";
+import { SENTENCE_MAX, cutAtWord, issueList, verdictSentence } from "../src/lib/verdict.mjs";
 import { DATA } from "../src/lib/paths.mjs";
 import { ROOT } from "../src/lib/paths.mjs";
 
@@ -286,6 +287,40 @@ group = "PR comment";
   check("req-17 commit 1: ends with the link back", lines.at(-1), `[Open in Impact Map](${url})`);
   const many = prComment({ model: m, verdict: "Look closer first", score: 50, points: Array.from({ length: 7 }, (_, i) => ({ level: "minor", title: `Point ${i}` })), url }).split("\n");
   check("open points stop at 5, then one line for the rest", [many.filter((l) => /^- Minor: Point/.test(l)).length, many.includes("- …and 2 more in the Impact Map")], [5, true]);
+}
+
+// ---- 12. Verdict sentence ------------------------------------------------------
+group = "Verdict sentence";
+{
+  // The first screen's one sentence, from each commit's own open points (the verdict and tone come from the score).
+  const demo = demoRevisions();
+  const at = (rev, id, index = 1) => buildModel(rev, id, rev.prs.find((p) => p.id === id).commits[index - 1].sha);
+  const say = (m, verdict, tone, extra = {}) => verdictSentence({ verdict, tone, auto: m.classifier2.route.startsWith("Auto"), points: issueList(m), checksPassed: m.checks.every((c) => c.status === "passed"), docsOnly: m.diff.files.every((f) => f.file.endsWith(".md")), ...extra });
+  check("red with a blocker: the missing proof is the reason", say(at(revisions, "req-17"), "Cannot merge yet", "bad").text, "Cannot merge yet: Order Import has no test for the REQ-17 case.");
+  check("amber: the first important finding is the reason", say(at(demo, "ju26-issue-2297"), "Look closer first", "warn").text, "Look closer first: the mark can break a user's build.");
+  check("green and auto: says it could merge by itself, and why", say(at(revisions, "docs-example"), "Fine to merge", "ok").text, "Could merge by itself: docs only, every check passed.");
+  check("no open points: says nothing is open", say(at(revisions, "req-17", 2), "Fine to merge", "ok").text, "Fine to merge: nothing is open, every check passed.");
+  const m2297 = at(demo, "ju26-issue-2297");
+  check("every point acknowledged: ready for a sign-off", verdictSentence({ verdict: "Look closer first", tone: "warn", points: issueList(m2297).map((x) => ({ ...x, done: true })) }).text, "Ready for your sign-off: you acknowledged all 4 points.");
+  // The failing-test point is too long for one line, so the next important point that fits whole is named.
+  check("signed off: says who, on which commit", verdictSentence({ verdict: "Cannot merge yet", tone: "bad", points: issueList(m2297), signedOff: { name: "Ana", step: "commit 1 · a0aa5ab" } }).text, "Merged: Ana signed off commit 1 · a0aa5ab.");
+  check("a reason too long for one line gives way to one that fits", say(at(demo, "ju26-issue-2283"), "Do not merge yet", "bad").text, "Do not merge yet: the fix hides more warnings than it needs to.");
+  const long = "One extra unit test passes on the old code and fails on the new code, and it also reaches the importer";
+  const cut = verdictSentence({ verdict: "Do not merge yet", tone: "bad", points: [{ id: "x", level: "major", title: long }] });
+  const words = cut.reason.replace(/…$/, "").split(" ");
+  check("a long reason is cut to one line at a whole word", [cut.text.length <= SENTENCE_MAX, cut.text.endsWith("…"), cut.cut, words.every((w, i) => w === long.split(" ")[i] || (i === 0 && w === "one"))], [true, true, true, true]);
+  check("too long, but its first clause fits: the sentence stops at the clause", say(at(revisions, "req-21"), "Look closer first", "warn").text, "Look closer first: percent above 100 no longer rejected.");
+  check("a clause the next one turns around is not cut off", verdictSentence({ verdict: "Look closer first", tone: "warn", points: [{ id: "x", level: "major", title: "Validation is said to be preserved, but no test covers it on the import path at all" }] }).text.includes("preserved."), false);
+  check("a cut never ends on a dangling small word", /\b(the|and|of|on|to|a)…$/.test(cut.text), false);
+  check("one word longer than the line stays whole", cutAtWord("Supercalifragilistic expialidocious", 8), "Supercalifragilistic…");
+  // Every commit of every PR gets one sentence that fits one line, in every verdict.
+  const all = [...revisions.prs.map((p) => [revisions, p]), ...demo.prs.filter((p) => !revisions.prs.some((q) => q.id === p.id)).map((p) => [demo, p])];
+  const bad = [];
+  for (const [rev, p] of all) for (const c of p.commits) for (const [v, t] of [["Cannot merge yet", "bad"], ["Do not merge yet", "bad"], ["Look closer first", "warn"], ["Fine to merge", "ok"]]) {
+    const s = say(buildModel(rev, p.id, c.sha), v, t);
+    if (s.text.length > SENTENCE_MAX || /undefined|null|: .*: |\.\.$/.test(s.text)) bad.push(`${p.id}@${c.index} ${s.text}`);
+  }
+  check("every PR and commit: one plain sentence that fits one line", bad, []);
 }
 
 // ---- Report ---------------------------------------------------------------
