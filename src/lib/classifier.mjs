@@ -161,7 +161,7 @@ export function classifier2(policy, input) {
   let severity = initial.severity;
   const notes = [];
 
-  const actionRequired = (review?.findings ?? []).filter((f) => f.category === "Action required" && f.citationsValid);
+  const actionRequired = (Array.isArray(review?.findings) ? review.findings : []).filter((f) => f.category === "Action required" && f.citationsValid);
   if (actionRequired.length && severity === "Low") {
     severity = "Medium";
     notes.push({ rule: "C2-RAISE-ON-ACTION", text: "Raised from Low: the reviewer reported a supported problem." });
