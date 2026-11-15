@@ -1828,6 +1828,8 @@ function applyCanvas() {
   $("pagePr").hidden = ui.canvas !== "pr";
   $("pageReview").hidden = ui.canvas !== "review";
   $("mapCard").hidden = ui.canvas !== "map";
+  // Reach plays its ripple each time it comes on screen (lens, tab or panel), like the other drawings form.
+  if (!$("graphReach").checkVisibility()) reachView.key = null;
 }
 async function openCanvas(kind, scope) {
   ui.canvas = kind;
