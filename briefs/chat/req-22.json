@@ -1,0 +1,27 @@
+{
+  "model": "shop coding agent",
+  "snapshot": "req-22, commit 1",
+  "commit": "e549d909b123c0609ffd2793f2414cd35db11231",
+  "chat": [
+    {
+      "q": "Explain this change in plain words",
+      "keys": "explain plain words what does change mean summary simple",
+      "a": "Order Import used to accept a row with a negative subtotal, so `A-3,-500,0` became an order of minus 500 cents. Now such a row is rejected with a clear error. I added one check in `parseOrderRow()`."
+    },
+    {
+      "q": "What else uses the function you changed?",
+      "keys": "else uses callers affected who calls other parts reach",
+      "a": "Only `importOrder()` calls `parseOrderRow()`. Checkout never reads order rows, so its totals do not change."
+    },
+    {
+      "q": "How did you test it?",
+      "keys": "test tested proof coverage check evidence",
+      "a": "Three Order Import tests that name REQ-22: the negative row is rejected, a 105-cent row still totals 105 cents, and a zero subtotal is still allowed. All six tests pass."
+    },
+    {
+      "q": "Why not turn a negative subtotal into zero?",
+      "keys": "why approach instead clamp zero alternative reject",
+      "a": "That would hide a broken partner file. REQ-22 asks for a clear error, the same way a row with a missing column is rejected."
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+You are working in a copy of the shop-sample repository (TypeScript), at the commit just before the change. Solve the problem described below by editing files in this folder.
+
+Rules for this run:
+- You cannot run commands, so you cannot run the unit tests. Do not try. Reason from the code.
+- Work only inside this folder. Do not use the web. Do not use git.
+- When you are done, reply with a short list of the files you changed and why.
+
+How to work:
+Solve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.
+
+## Requirements (from the pull request description)
+
+Requirement: REQ-22 in the shop sample (requirements/REQ-22.md).
+
+Why: REQ-22: partner files sometimes carry a negative subtotal by mistake. Order Import accepted such a row, so it became an order of minus 500 cents.
+
+Before and after: Before: the row A-3,-500,0 imports as an order of -500 cents. After: the row A-3,-500,0 is rejected with a clear error, like a row with a missing column.
+
+Must preserve: A valid row still imports at its discounted total, and a zero subtotal is still allowed.
+
+## The requirement the Requirement row points to (requirements/REQ-22.md, word for word)
+
+# REQ-22 Order Import rejects a negative subtotal
+
+Partner files sometimes carry a negative subtotal by mistake. Today Order
+Import accepts such a row: `A-3,-500,0` imports as an order of -500 cents,
+which reads as money owed to the customer.
+
+- A row with a negative subtotal is rejected with a clear error, the same way
+  a row with a missing column is.
+- Behaviour to preserve: a valid row still imports at its discounted total
+  (105 cents at 0% totals 105 cents), and a zero subtotal is still allowed.
+
+Affected workflows: Order Import.

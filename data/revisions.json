@@ -69,8 +69,40 @@
       ]
     },
     {
-      "id": "ledger-note",
+      "id": "req-22",
       "number": 3,
+      "title": "REQ-22: Order Import rejects a row with a negative subtotal",
+      "requirement": "REQ-22",
+      "kind": "eval",
+      "branch": "pr/req-22",
+      "commits": [
+        {
+          "sha": "e549d909b123c0609ffd2793f2414cd35db11231",
+          "message": "REQ-22: reject a negative subtotal in Order Import; add tests",
+          "date": "2026-11-05T11:00:00Z",
+          "index": 1
+        }
+      ]
+    },
+    {
+      "id": "req-21",
+      "number": 4,
+      "title": "REQ-21: a negative promo percent means no discount",
+      "requirement": "REQ-21",
+      "kind": "eval",
+      "branch": "pr/req-21",
+      "commits": [
+        {
+          "sha": "977be6ed6999a61ba6da17444181688842068a80",
+          "message": "REQ-21: treat a negative promo percent as no discount",
+          "date": "2026-11-05T09:00:00Z",
+          "index": 1
+        }
+      ]
+    },
+    {
+      "id": "ledger-note",
+      "number": 5,
       "title": "Ledger: tidy the charge note text",
       "requirement": null,
       "kind": "eval",
@@ -86,7 +118,7 @@
     },
     {
       "id": "policy-self-patch",
-      "number": 4,
+      "number": 6,
       "title": "Ledger note tweak that also loosens review-policy.yml",
       "requirement": null,
       "kind": "eval",
@@ -96,22 +128,6 @@
           "sha": "522c41b9a79d4b90f25c295b969e0d17277f918e",
           "message": "Ledger note tweak; relax review policy",
           "date": "2026-11-04T11:00:00Z",
-          "index": 1
-        }
-      ]
-    },
-    {
-      "id": "req-21",
-      "number": 5,
-      "title": "REQ-21: a negative promo percent means no discount",
-      "requirement": "REQ-21",
-      "kind": "eval",
-      "branch": "pr/req-21",
-      "commits": [
-        {
-          "sha": "977be6ed6999a61ba6da17444181688842068a80",
-          "message": "REQ-21: treat a negative promo percent as no discount",
-          "date": "2026-11-05T09:00:00Z",
           "index": 1
         }
       ]

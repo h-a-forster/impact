@@ -1,0 +1,210 @@
+{
+ "schema": "impact-map/blast/v1",
+ "pr": "req-22",
+ "recordedAt": "2026-11-15T02:03:52.243Z",
+ "model": "claude-sonnet-5-5",
+ "base": "2e22bc2b2fe422595d6030cac407032205406315",
+ "how": {
+  "source": "Three agents run on the shop sample (pull request req-22), 2026-11-15: minimal = the 'careful' brief, normal = the 'normal' brief, wide = the 'greedy' brief. Each ran once, alone, at the same time as the others. None saw the pull request.",
+  "command": "claude -p --model claude-sonnet-5-5 --setting-sources user --permission-mode acceptEdits --disallowedTools Bash PowerShell WebFetch WebSearch Agent Skill --strict-mcp-config --output-format stream-json --verbose < the run's prompt (saved under runs[].prompt)",
+  "folders": "Each agent worked in its own clean copy of the base commit (git fetch --depth 1 of the base only), so the real change was never there. No shell, no git, no web. Files an agent saved with Windows line endings were turned back to the shop's own, so a line counts only when its text changed (listed per run under lineEndingsNormalised).",
+  "same": "Same model, same requirements and same code for all three. Only the 'How to work' lines differ.",
+  "functions": "Functions are found by a simple reader of the TypeScript text (scanFunctions in src/lib/blast.mjs: `function` declarations, ended by brace matching), the same way for all 4 changes. A function counts as edited when a changed line sits inside it. Callers come from the shop's saved Graphify code index at the base commit."
+ },
+ "notBuilt": "The agents had no shell. Nobody ran the unit tests on their changes.",
+ "given": {
+  "file": "requirements/REQ-22.md",
+  "text": "# REQ-22 Order Import rejects a negative subtotal\n\nPartner files sometimes carry a negative subtotal by mistake. Today Order\nImport accepts such a row: `A-3,-500,0` imports as an order of -500 cents,\nwhich reads as money owed to the customer.\n\n- A row with a negative subtotal is rejected with a clear error, the same way\n  a row with a missing column is.\n- Behaviour to preserve: a valid row still imports at its discounted total\n  (105 cents at 0% totals 105 cents), and a zero subtotal is still allowed.\n\nAffected workflows: Order Import.\n",
+  "kept": [
+   "The pull request description's Why, Before and after, and Must preserve",
+   "The requirement REQ-22, word for word",
+   "The shop's code and tests from before the change"
+  ],
+  "leftOut": [
+   "The pull request: its title, approach, commits and code"
+  ],
+  "note": null
+ },
+ "real": {
+  "id": "real",
+  "head": "e549d909b123c0609ffd2793f2414cd35db11231",
+  "source": "the shop sample's req-22 commit 1 (e549d90) against its base (2e22bc2)",
+  "files": [
+   {
+    "file": "requirements/REQ-22.md",
+    "status": "A",
+    "kind": "doc",
+    "added": 12,
+    "removed": 0,
+    "patch": "@@ -0,0 +1,12 @@\n+# REQ-22 Order Import rejects a negative subtotal\n+\n+Partner files sometimes carry a negative subtotal by mistake. Today Order\n+Import accepts such a row: `A-3,-500,0` imports as an order of -500 cents,\n+which reads as money owed to the customer.\n+\n+- A row with a negative subtotal is rejected with a clear error, the same way\n+  a row with a missing column is.\n+- Behaviour to preserve: a valid row still imports at its discounted total\n+  (105 cents at 0% totals 105 cents), and a zero subtotal is still allowed.\n+\n+Affected workflows: Order Import.",
+    "functions": []
+   },
+   {
+    "file": "src/import/orderImport.ts",
+    "status": "M",
+    "kind": "code",
+    "added": 3,
+    "removed": 0,
+    "patch": "@@ -17,6 +17,9 @@ export function parseOrderRow(row: string): { id: string; subtotalCents: number;\n   if (!id || !Number.isInteger(subtotalCents) || !Number.isInteger(discountPercent)) {\n     throw new Error(\"invalid order row: \" + row);\n   }\n+  if (subtotalCents < 0) {\n+    throw new Error(\"negative subtotal in order row: \" + row);\n+  }\n   return { id, subtotalCents, discountPercent };\n }\n ",
+    "functions": [
+     {
+      "key": "parseOrderRow",
+      "name": "parseOrderRow",
+      "line": 9,
+      "endLine": 24,
+      "isNew": false,
+      "added": 3,
+      "removed": 0
+     }
+    ],
+    "linesOutsideFunctions": 0
+   },
+   {
+    "file": "tests/orderImport.test.ts",
+    "status": "M",
+    "kind": "test",
+    "added": 12,
+    "removed": 0,
+    "patch": "@@ -5,3 +5,15 @@ import { importOrder } from \"../src/import/orderImport.ts\";\n test(\"import: a row with the wrong column count is rejected\", () => {\n   assert.throws(() => importOrder(\"A-1,105\"), /expected 3 columns/);\n });\n+\n+test(\"REQ-22 import: a row with a negative subtotal is rejected\", () => {\n+  assert.throws(() => importOrder(\"A-3,-500,0\"), /negative subtotal/);\n+});\n+\n+test(\"REQ-22 import: a valid row still imports at its total\", () => {\n+  assert.equal(importOrder(\"A-4,105,0\").totalCents, 105);\n+});\n+\n+test(\"REQ-22 import: a zero subtotal is still allowed\", () => {\n+  assert.equal(importOrder(\"A-5,0,10\").totalCents, 0);\n+});",
+    "functions": [],
+    "linesOutsideFunctions": 12
+   }
+  ]
+ },
+ "runs": [
+  {
+   "id": "minimal",
+   "brief": "careful",
+   "prompt": "You are working in a copy of the shop-sample repository (TypeScript), at the commit just before the change. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- You cannot run commands, so you cannot run the unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nMake the smallest change that meets the requirements. Touch as few files, as few functions and as few lines as you can. No refactoring, no tidy-ups, no renames and no doc changes. Add no unit tests unless the requirements cannot be met without them.\n\n## Requirements (from the pull request description)\n\nRequirement: REQ-22 in the shop sample (requirements/REQ-22.md).\n\nWhy: REQ-22: partner files sometimes carry a negative subtotal by mistake. Order Import accepted such a row, so it became an order of minus 500 cents.\n\nBefore and after: Before: the row A-3,-500,0 imports as an order of -500 cents. After: the row A-3,-500,0 is rejected with a clear error, like a row with a missing column.\n\nMust preserve: A valid row still imports at its discounted total, and a zero subtotal is still allowed.\n\n## The requirement the Requirement row points to (requirements/REQ-22.md, word for word)\n\n# REQ-22 Order Import rejects a negative subtotal\n\nPartner files sometimes carry a negative subtotal by mistake. Today Order\nImport accepts such a row: `A-3,-500,0` imports as an order of -500 cents,\nwhich reads as money owed to the customer.\n\n- A row with a negative subtotal is rejected with a clear error, the same way\n  a row with a missing column is.\n- Behaviour to preserve: a valid row still imports at its discounted total\n  (105 cents at 0% totals 105 cents), and a zero subtotal is still allowed.\n\nAffected workflows: Order Import.\n",
+   "instruction": "Make the smallest change that meets the requirements. Touch as few files, as few functions and as few lines as you can. No refactoring, no tidy-ups, no renames and no doc changes. Add no unit tests unless the requirements cannot be met without them.",
+   "startedAt": "2026-11-15T02:03:24.105Z",
+   "endedAt": "2026-11-15T02:03:43.886Z",
+   "exitCode": 0,
+   "modelInLog": "claude-sonnet-5-5",
+   "turns": 4,
+   "reply": "I changed one file, [orderImport.ts:17](src/import/orderImport.ts:17). I haven't run the tests.\n\n`parseOrderRow` now also treats `subtotalCents < 0` as invalid. So `A-3,-500,0` throws `invalid order row: A-3,-500,0`. A zero subtotal and valid rows go through the same path as before.",
+   "toolCalls": {
+    "Grep": 1,
+    "Read": 1,
+    "Edit": 1
+   },
+   "pathsOutsideFolder": [],
+   "lineEndingsNormalised": [],
+   "files": [
+    {
+     "file": "src/import/orderImport.ts",
+     "status": "M",
+     "kind": "code",
+     "added": 1,
+     "removed": 1,
+     "patch": "@@ -14,7 +14,7 @@ export function parseOrderRow(row: string): { id: string; subtotalCents: number;\n   const [id, subtotal, percent] = parts;\n   const subtotalCents = Number(subtotal);\n   const discountPercent = Number(percent);\n-  if (!id || !Number.isInteger(subtotalCents) || !Number.isInteger(discountPercent)) {\n+  if (!id || !Number.isInteger(subtotalCents) || !Number.isInteger(discountPercent) || subtotalCents < 0) {\n     throw new Error(\"invalid order row: \" + row);\n   }\n   return { id, subtotalCents, discountPercent };",
+     "functions": [
+      {
+       "key": "parseOrderRow",
+       "name": "parseOrderRow",
+       "line": 9,
+       "endLine": 21,
+       "isNew": false,
+       "added": 1,
+       "removed": 1
+      }
+     ],
+     "linesOutsideFunctions": 0
+    }
+   ]
+  },
+  {
+   "id": "normal",
+   "brief": "normal",
+   "prompt": "You are working in a copy of the shop-sample repository (TypeScript), at the commit just before the change. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- You cannot run commands, so you cannot run the unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nSolve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.\n\n## Requirements (from the pull request description)\n\nRequirement: REQ-22 in the shop sample (requirements/REQ-22.md).\n\nWhy: REQ-22: partner files sometimes carry a negative subtotal by mistake. Order Import accepted such a row, so it became an order of minus 500 cents.\n\nBefore and after: Before: the row A-3,-500,0 imports as an order of -500 cents. After: the row A-3,-500,0 is rejected with a clear error, like a row with a missing column.\n\nMust preserve: A valid row still imports at its discounted total, and a zero subtotal is still allowed.\n\n## The requirement the Requirement row points to (requirements/REQ-22.md, word for word)\n\n# REQ-22 Order Import rejects a negative subtotal\n\nPartner files sometimes carry a negative subtotal by mistake. Today Order\nImport accepts such a row: `A-3,-500,0` imports as an order of -500 cents,\nwhich reads as money owed to the customer.\n\n- A row with a negative subtotal is rejected with a clear error, the same way\n  a row with a missing column is.\n- Behaviour to preserve: a valid row still imports at its discounted total\n  (105 cents at 0% totals 105 cents), and a zero subtotal is still allowed.\n\nAffected workflows: Order Import.\n",
+   "instruction": "Solve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.",
+   "startedAt": "2026-11-15T02:03:25.268Z",
+   "endedAt": "2026-11-15T02:03:51.306Z",
+   "exitCode": 0,
+   "modelInLog": "claude-sonnet-5-5",
+   "turns": 7,
+   "reply": "I changed two files. I couldn't run anything, so the tests are unrun.\n\n- [src/import/orderImport.ts](src/import/orderImport.ts:20): `parseOrderRow` now throws `invalid order row (negative subtotal): <row>` when the subtotal is below 0. A zero subtotal still passes, and valid rows are priced as before.\n- [tests/orderImport.test.ts](tests/orderImport.test.ts:9) has two new tests:\n  - `A-3,-500,0` is rejected.\n  - `A-2,105,0` totals 105, and `A-4,0,0` totals 0.\n\nI put the check in the parser, not in `applyDiscount`. That keeps checkout pricing unchanged.",
+   "toolCalls": {
+    "Grep": 1,
+    "Read": 2,
+    "Glob": 1,
+    "Edit": 2
+   },
+   "pathsOutsideFolder": [],
+   "lineEndingsNormalised": [],
+   "files": [
+    {
+     "file": "src/import/orderImport.ts",
+     "status": "M",
+     "kind": "code",
+     "added": 3,
+     "removed": 0,
+     "patch": "@@ -17,6 +17,9 @@ export function parseOrderRow(row: string): { id: string; subtotalCents: number;\n   if (!id || !Number.isInteger(subtotalCents) || !Number.isInteger(discountPercent)) {\n     throw new Error(\"invalid order row: \" + row);\n   }\n+  if (subtotalCents < 0) {\n+    throw new Error(\"invalid order row (negative subtotal): \" + row);\n+  }\n   return { id, subtotalCents, discountPercent };\n }\n ",
+     "functions": [
+      {
+       "key": "parseOrderRow",
+       "name": "parseOrderRow",
+       "line": 9,
+       "endLine": 24,
+       "isNew": false,
+       "added": 3,
+       "removed": 0
+      }
+     ],
+     "linesOutsideFunctions": 0
+    },
+    {
+     "file": "tests/orderImport.test.ts",
+     "status": "M",
+     "kind": "test",
+     "added": 9,
+     "removed": 0,
+     "patch": "@@ -5,3 +5,12 @@ import { importOrder } from \"../src/import/orderImport.ts\";\n test(\"import: a row with the wrong column count is rejected\", () => {\n   assert.throws(() => importOrder(\"A-1,105\"), /expected 3 columns/);\n });\n+\n+test(\"import: a negative subtotal is rejected\", () => {\n+  assert.throws(() => importOrder(\"A-3,-500,0\"), /negative subtotal/);\n+});\n+\n+test(\"import: a valid row keeps its discounted total and zero subtotal is allowed\", () => {\n+  assert.deepEqual(importOrder(\"A-2,105,0\"), { id: \"A-2\", totalCents: 105 });\n+  assert.deepEqual(importOrder(\"A-4,0,0\"), { id: \"A-4\", totalCents: 0 });\n+});",
+     "functions": [],
+     "linesOutsideFunctions": 9
+    }
+   ]
+  },
+  {
+   "id": "wide",
+   "brief": "greedy",
+   "prompt": "You are working in a copy of the shop-sample repository (TypeScript), at the commit just before the change. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- You cannot run commands, so you cannot run the unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nYou are free to go well beyond the smallest fix. While you solve the problem, also refactor, tidy up and harden the code around it wherever you think it helps: similar weak spots elsewhere, shared helpers, naming, docs, unit tests. Prefer a broad, thorough change over a narrow one. The requirements must still be met.\n\n## Requirements (from the pull request description)\n\nRequirement: REQ-22 in the shop sample (requirements/REQ-22.md).\n\nWhy: REQ-22: partner files sometimes carry a negative subtotal by mistake. Order Import accepted such a row, so it became an order of minus 500 cents.\n\nBefore and after: Before: the row A-3,-500,0 imports as an order of -500 cents. After: the row A-3,-500,0 is rejected with a clear error, like a row with a missing column.\n\nMust preserve: A valid row still imports at its discounted total, and a zero subtotal is still allowed.\n\n## The requirement the Requirement row points to (requirements/REQ-22.md, word for word)\n\n# REQ-22 Order Import rejects a negative subtotal\n\nPartner files sometimes carry a negative subtotal by mistake. Today Order\nImport accepts such a row: `A-3,-500,0` imports as an order of -500 cents,\nwhich reads as money owed to the customer.\n\n- A row with a negative subtotal is rejected with a clear error, the same way\n  a row with a missing column is.\n- Behaviour to preserve: a valid row still imports at its discounted total\n  (105 cents at 0% totals 105 cents), and a zero subtotal is still allowed.\n\nAffected workflows: Order Import.\n",
+   "instruction": "You are free to go well beyond the smallest fix. While you solve the problem, also refactor, tidy up and harden the code around it wherever you think it helps: similar weak spots elsewhere, shared helpers, naming, docs, unit tests. Prefer a broad, thorough change over a narrow one. The requirements must still be met.",
+   "startedAt": "2026-11-15T02:03:26.794Z",
+   "endedAt": "2026-11-15T02:03:45.942Z",
+   "exitCode": 0,
+   "modelInLog": "claude-sonnet-5-5",
+   "turns": 4,
+   "reply": "I changed one file: `src/import/orderImport.ts`. In `parseOrderRow`, a row with a negative subtotal now throws `invalid order row (negative subtotal): <row>`. That's the same kind of error as the existing invalid-row check, so `A-3,-500,0` is rejected. A zero subtotal and valid rows are unaffected, so 105 cents at 0% still totals 105 cents. I didn't run any tests.\n\nYou said I could go broader, but I kept the change to this one check. The requirement is only about this row, and the rest of the code didn't need touching to meet it. I didn't add a unit test.",
+   "toolCalls": {
+    "Grep": 1,
+    "Read": 1,
+    "Edit": 1
+   },
+   "pathsOutsideFolder": [],
+   "lineEndingsNormalised": [],
+   "files": [
+    {
+     "file": "src/import/orderImport.ts",
+     "status": "M",
+     "kind": "code",
+     "added": 3,
+     "removed": 0,
+     "patch": "@@ -17,6 +17,9 @@ export function parseOrderRow(row: string): { id: string; subtotalCents: number;\n   if (!id || !Number.isInteger(subtotalCents) || !Number.isInteger(discountPercent)) {\n     throw new Error(\"invalid order row: \" + row);\n   }\n+  if (subtotalCents < 0) {\n+    throw new Error(\"invalid order row (negative subtotal): \" + row);\n+  }\n   return { id, subtotalCents, discountPercent };\n }\n ",
+     "functions": [
+      {
+       "key": "parseOrderRow",
+       "name": "parseOrderRow",
+       "line": 9,
+       "endLine": 24,
+       "isNew": false,
+       "added": 3,
+       "removed": 0
+      }
+     ],
+     "linesOutsideFunctions": 0
+    }
+   ]
+  }
+ ]
+}

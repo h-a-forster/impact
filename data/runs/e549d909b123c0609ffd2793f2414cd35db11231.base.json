@@ -1,0 +1,57 @@
+{
+  "check": "unit-tests",
+  "kind": "local",
+  "kindLabel": "Local run: this commit's tests against the base code",
+  "revision": "2e22bc2b2fe422595d6030cac407032205406315",
+  "testsFrom": "e549d909b123c0609ffd2793f2414cd35db11231",
+  "overlay": "tests/ taken from commit e549d90, everything else from base 2e22bc2",
+  "command": "node --test \"tests/**/*.test.ts\"",
+  "exitCode": 1,
+  "status": "failed",
+  "counts": {
+    "total": 6,
+    "passed": 5,
+    "failed": 1
+  },
+  "tests": [
+    {
+      "id": "test:tests/checkout.test.ts#checkout: 200 cents at 10% totals 180 cents",
+      "file": "tests/checkout.test.ts",
+      "name": "checkout: 200 cents at 10% totals 180 cents",
+      "status": "passed"
+    },
+    {
+      "id": "test:tests/ledger.test.ts#ledger: a charge is posted with its amount",
+      "file": "tests/ledger.test.ts",
+      "name": "ledger: a charge is posted with its amount",
+      "status": "passed"
+    },
+    {
+      "id": "test:tests/orderImport.test.ts#import: a row with the wrong column count is rejected",
+      "file": "tests/orderImport.test.ts",
+      "name": "import: a row with the wrong column count is rejected",
+      "status": "passed"
+    },
+    {
+      "id": "test:tests/orderImport.test.ts#REQ-22 import: a row with a negative subtotal is rejected",
+      "file": "tests/orderImport.test.ts",
+      "name": "REQ-22 import: a row with a negative subtotal is rejected",
+      "status": "failed"
+    },
+    {
+      "id": "test:tests/orderImport.test.ts#REQ-22 import: a valid row still imports at its total",
+      "file": "tests/orderImport.test.ts",
+      "name": "REQ-22 import: a valid row still imports at its total",
+      "status": "passed"
+    },
+    {
+      "id": "test:tests/orderImport.test.ts#REQ-22 import: a zero subtotal is still allowed",
+      "file": "tests/orderImport.test.ts",
+      "name": "REQ-22 import: a zero subtotal is still allowed",
+      "status": "passed"
+    }
+  ],
+  "rawOutput": "✔ checkout: 200 cents at 10% totals 180 cents \n✔ ledger: a charge is posted with its amount \n✔ import: a row with the wrong column count is rejected \n✖ REQ-22 import: a row with a negative subtotal is rejected \n✔ REQ-22 import: a valid row still imports at its total \n✔ REQ-22 import: a zero subtotal is still allowed \nℹ tests 6\nℹ suites 0\nℹ pass 5\nℹ fail 1\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms -\n\n✖ failing tests:\n\ntest at tests\\orderImport.test.ts:9:1\n✖ REQ-22 import: a row with a negative subtotal is rejected \n  AssertionError [ERR_ASSERTION]: Missing expected exception.\n      at TestContext.<anonymous> (<snapshot>/tests/orderImport.test.ts:10:10)\n      at Test.runInAsyncScope (node:async_hooks:227:14)\n      at Test.run (node:internal/test_runner/test:1402:25)\n      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)\n      at Test.postRun (node:internal/test_runner/test:1542:19)\n      at Test.run (node:internal/test_runner/test:1467:12)\n      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: /negative subtotal/,\n    operator: 'throws',\n    diff: 'simple'\n  }\n",
+  "nodeVersion": "v24.22.1",
+  "ranAt": "2026-11-15T02:11:00.752Z"
+}

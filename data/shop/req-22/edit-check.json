@@ -1,0 +1,20 @@
+{
+  "about": "Too much, too little: each edit taken out again with the tests re-run, and the untouched code searched for the old form of each edited line. Per commit, the PR's change up to that commit against the base. Written by npm run setup (src/lib/edit-check.mjs).",
+  "commits": {
+    "e549d909b123c0609ffd2793f2414cd35db11231": {
+      "commit": 1,
+      "testsPass": true,
+      "failedOnChange": [],
+      "edits": [
+        {
+          "where": "src/import/orderImport.ts:20-22",
+          "verdict": "needed",
+          "neededBy": [
+            "REQ-22 import: a row with a negative subtotal is rejected"
+          ]
+        }
+      ],
+      "leftBehind": []
+    }
+  }
+}
