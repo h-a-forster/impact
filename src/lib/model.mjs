@@ -12,6 +12,8 @@ import { buildReviewInput, finalizeReview, loadReview } from "./reviewer.mjs";
 import { BRIEFS, DATA, REVISIONS_FILE, ROOT } from "./paths.mjs";
 
 const short = (sha) => (sha ?? "").slice(0, 7);
+/** Map nodes that stand for code in a file (not the PR, the requirement or an area). */
+const CODE_NODE_TYPES = new Set(["function", "test", "file", "testfile"]);
 const concepts = JSON.parse(fs.readFileSync(path.join(ROOT, "config", "concepts.json"), "utf8")).groups;
 
 /** All pull requests the map can show: the shop sample, built and analysed here. */
@@ -622,6 +624,11 @@ export function buildModel(revisions, prId, sha, opts = {}) {
   const reviewInput = buildReviewInput(ctx);
   const reviewRecord = opts.reviewRecord !== undefined ? opts.reviewRecord : loadReview(sha);
   const review = finalizeReview(reviewRecord, ctx, reviewInput);
+  // Code nodes say whether the reviewer read their file. With no matching record, none are marked.
+  if (review.sawFiles) {
+    const saw = new Set(review.sawFiles);
+    for (const n of nodes) if (n.file && CODE_NODE_TYPES.has(n.type)) n.givenToReviewer = saw.has(n.file);
+  }
   const disputes = review.findings.map((f) => ({ ...f, id: f.id ?? f.title, spans: f.citations.filter((c) => c.valid) }));
   const claims = contestClaims(verifyClaims(briefRev.claims, ctx), disputes);
   // Every commit up to the selected one counts: one untrusted commit keeps the whole change out of the fast lane.
