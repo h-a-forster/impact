@@ -1,0 +1,208 @@
+{
+ "schema": "impact-map/swarm/v1",
+ "pr": "ledger-note",
+ "recordedAt": "2026-11-15T02:01:24.309Z",
+ "base": "2e22bc2b2fe422595d6030cac407032205406315",
+ "realFrom": {
+  "commit": "a3f1aeb6406e28403d024e3b160da7deb5c8b57e",
+  "note": "The real change: the first commit of ledger-note in the shop sample, against its base."
+ },
+ "real": {
+  "files": [
+   {
+    "file": "src/payments/ledger.ts",
+    "status": "M",
+    "kind": "code",
+    "added": 1,
+    "removed": 1,
+    "patch": "@@ -9,5 +9,5 @@ export function postCharge(orderId: string, amountCents: number): LedgerEntry {\n   if (!Number.isInteger(amountCents) || amountCents < 0) {\n     throw new RangeError(\"amountCents must be a non-negative integer\");\n   }\n-  return { orderId, amountCents, note: \"charge posted\" };\n+  return { orderId, amountCents, note: \"charge posted.\" };\n }",
+    "functions": [
+     {
+      "key": "postCharge",
+      "name": "postCharge",
+      "line": 8,
+      "endLine": 13,
+      "isNew": false,
+      "added": 1,
+      "removed": 1
+     }
+    ],
+    "linesOutsideFunctions": 0
+   }
+  ]
+ },
+ "prompt": {
+  "file": "data/shop/ledger-note/swarm-prompt.txt",
+  "text": "You are working in a copy of the shop-sample repository (TypeScript), at the commit just before the change. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- You cannot run commands, so you cannot run the unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nSolve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.\n\n## Requirements (from the pull request description)\n\nRequirement: None linked.\n\nWhy: The ledger note text had no full stop.\n\nBefore and after: Before: note reads: charge posted After: note reads: charge posted.\n\nMust preserve: Amounts and validation are unchanged.\n",
+  "note": "Every agent got this prompt, word for word: the normal agent's brief (own judgement, as for a normal pull request)."
+ },
+ "how": "Runs on the shop sample (pull request ledger-note), 2026-11-15. Each of 5 agents ran once with `claude -p --model claude-sonnet-5-5`, alone, in its own copy of the shop sample at the commit before ledger-note. Every agent got the same normal prompt (swarm-prompt.txt). No shell, no git, no web. All 5 ran at the same time.",
+ "notBuilt": "The agents had no shell. Nobody ran the unit tests on their changes. We do not know if any agent's change passes them.",
+ "models": {
+  "claude-sonnet-5-5": {
+   "label": "Sonnet 5.5",
+   "runs": [
+    {
+     "n": 1,
+     "startedAt": "2026-11-15T02:01:13.344Z",
+     "endedAt": "2026-11-15T02:01:23.778Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 4,
+     "reply": "I changed [ledger.ts:12](src/payments/ledger.ts:12). The ledger note is now `\"charge posted.\"`, with the full stop added.\n\nNothing else in the repo contains that text, so no tests or other files needed updating. Amounts and validation are untouched. I couldn't run the tests.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "src/payments/ledger.ts",
+       "status": "M",
+       "kind": "code",
+       "added": 1,
+       "removed": 1,
+       "patch": "@@ -9,5 +9,5 @@ export function postCharge(orderId: string, amountCents: number): LedgerEntry {\n   if (!Number.isInteger(amountCents) || amountCents < 0) {\n     throw new RangeError(\"amountCents must be a non-negative integer\");\n   }\n-  return { orderId, amountCents, note: \"charge posted\" };\n+  return { orderId, amountCents, note: \"charge posted.\" };\n }",
+       "functions": [
+        {
+         "key": "postCharge",
+         "name": "postCharge",
+         "line": 8,
+         "endLine": 13,
+         "isNew": false,
+         "added": 1,
+         "removed": 1
+        }
+       ],
+       "linesOutsideFunctions": 0
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "startedAt": "2026-11-15T02:01:14.235Z",
+     "endedAt": "2026-11-15T02:01:23.679Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 4,
+     "reply": "I changed one file: [src/payments/ledger.ts:12](src/payments/ledger.ts:12). The ledger note is now `\"charge posted.\"` instead of `\"charge posted\"`, with the full stop added. I didn't touch amounts or validation. A search found no other references to the old text, such as tests, so nothing else needed updating. I haven't run any tests.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "src/payments/ledger.ts",
+       "status": "M",
+       "kind": "code",
+       "added": 1,
+       "removed": 1,
+       "patch": "@@ -9,5 +9,5 @@ export function postCharge(orderId: string, amountCents: number): LedgerEntry {\n   if (!Number.isInteger(amountCents) || amountCents < 0) {\n     throw new RangeError(\"amountCents must be a non-negative integer\");\n   }\n-  return { orderId, amountCents, note: \"charge posted\" };\n+  return { orderId, amountCents, note: \"charge posted.\" };\n }",
+       "functions": [
+        {
+         "key": "postCharge",
+         "name": "postCharge",
+         "line": 8,
+         "endLine": 13,
+         "isNew": false,
+         "added": 1,
+         "removed": 1
+        }
+       ],
+       "linesOutsideFunctions": 0
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "startedAt": "2026-11-15T02:01:15.604Z",
+     "endedAt": "2026-11-15T02:01:23.893Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 4,
+     "reply": "I changed one file: [src/payments/ledger.ts:12](src/payments/ledger.ts:12). The ledger note is now `\"charge posted.\"`, with the full stop. Amounts and validation are untouched.\n\nA search found no other copy of the old text, so no tests or fixtures needed updating. I couldn't run the tests, as instructed.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "src/payments/ledger.ts",
+       "status": "M",
+       "kind": "code",
+       "added": 1,
+       "removed": 1,
+       "patch": "@@ -9,5 +9,5 @@ export function postCharge(orderId: string, amountCents: number): LedgerEntry {\n   if (!Number.isInteger(amountCents) || amountCents < 0) {\n     throw new RangeError(\"amountCents must be a non-negative integer\");\n   }\n-  return { orderId, amountCents, note: \"charge posted\" };\n+  return { orderId, amountCents, note: \"charge posted.\" };\n }",
+       "functions": [
+        {
+         "key": "postCharge",
+         "name": "postCharge",
+         "line": 8,
+         "endLine": 13,
+         "isNew": false,
+         "added": 1,
+         "removed": 1
+        }
+       ],
+       "linesOutsideFunctions": 0
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "startedAt": "2026-11-15T02:01:16.311Z",
+     "endedAt": "2026-11-15T02:01:23.195Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 4,
+     "reply": "I changed one file: [src/payments/ledger.ts:12](src/payments/ledger.ts:12). The ledger note is now `\"charge posted.\"`, with the full stop.\n\nAmounts and validation are untouched. A search found no other place that uses the old text, such as a test or fixture, so I changed nothing else. I couldn't run the tests.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "src/payments/ledger.ts",
+       "status": "M",
+       "kind": "code",
+       "added": 1,
+       "removed": 1,
+       "patch": "@@ -9,5 +9,5 @@ export function postCharge(orderId: string, amountCents: number): LedgerEntry {\n   if (!Number.isInteger(amountCents) || amountCents < 0) {\n     throw new RangeError(\"amountCents must be a non-negative integer\");\n   }\n-  return { orderId, amountCents, note: \"charge posted\" };\n+  return { orderId, amountCents, note: \"charge posted.\" };\n }",
+       "functions": [
+        {
+         "key": "postCharge",
+         "name": "postCharge",
+         "line": 8,
+         "endLine": 13,
+         "isNew": false,
+         "added": 1,
+         "removed": 1
+        }
+       ],
+       "linesOutsideFunctions": 0
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "startedAt": "2026-11-15T02:01:17.038Z",
+     "endedAt": "2026-11-15T02:01:23.660Z",
+     "exitCode": 0,
+     "modelInLog": "claude-sonnet-5-5",
+     "turns": 4,
+     "reply": "I changed one file: [src/payments/ledger.ts:12](src/payments/ledger.ts:12). The ledger note is now `\"charge posted.\"`, with the full stop.\n\nAmounts and validation are untouched. A search found no other copies of the old text, including in tests, so I didn't change any tests. I didn't run anything.",
+     "pathsOutsideFolder": [],
+     "files": [
+      {
+       "file": "src/payments/ledger.ts",
+       "status": "M",
+       "kind": "code",
+       "added": 1,
+       "removed": 1,
+       "patch": "@@ -9,5 +9,5 @@ export function postCharge(orderId: string, amountCents: number): LedgerEntry {\n   if (!Number.isInteger(amountCents) || amountCents < 0) {\n     throw new RangeError(\"amountCents must be a non-negative integer\");\n   }\n-  return { orderId, amountCents, note: \"charge posted\" };\n+  return { orderId, amountCents, note: \"charge posted.\" };\n }",
+       "functions": [
+        {
+         "key": "postCharge",
+         "name": "postCharge",
+         "line": 8,
+         "endLine": 13,
+         "isNew": false,
+         "added": 1,
+         "removed": 1
+        }
+       ],
+       "linesOutsideFunctions": 0
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

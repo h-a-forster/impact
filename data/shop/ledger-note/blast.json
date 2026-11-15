@@ -1,0 +1,176 @@
+{
+ "schema": "impact-map/blast/v1",
+ "pr": "ledger-note",
+ "recordedAt": "2026-11-15T02:01:24.530Z",
+ "model": "claude-sonnet-5-5",
+ "base": "2e22bc2b2fe422595d6030cac407032205406315",
+ "how": {
+  "source": "Three agents run on the shop sample (pull request ledger-note), 2026-11-15: minimal = the 'careful' brief, normal = the 'normal' brief, wide = the 'greedy' brief. Each ran once, alone, at the same time as the others. None saw the pull request.",
+  "command": "claude -p --model claude-sonnet-5-5 --setting-sources user --permission-mode acceptEdits --disallowedTools Bash PowerShell WebFetch WebSearch Agent Skill --strict-mcp-config --output-format stream-json --verbose < the run's prompt (saved under runs[].prompt)",
+  "folders": "Each agent worked in its own clean copy of the base commit (git fetch --depth 1 of the base only), so the real change was never there. No shell, no git, no web. Files an agent saved with Windows line endings were turned back to the shop's own, so a line counts only when its text changed (listed per run under lineEndingsNormalised).",
+  "same": "Same model, same requirements and same code for all three. Only the 'How to work' lines differ.",
+  "functions": "Functions are found by a simple reader of the TypeScript text (scanFunctions in src/lib/blast.mjs: `function` declarations, ended by brace matching), the same way for all 4 changes. A function counts as edited when a changed line sits inside it. Callers come from the shop's saved Graphify code index at the base commit."
+ },
+ "notBuilt": "The agents had no shell. Nobody ran the unit tests on their changes.",
+ "given": {
+  "file": null,
+  "text": null,
+  "kept": [
+   "The pull request description's Why, Before and after, and Must preserve",
+   "The shop's code and tests from before the change"
+  ],
+  "leftOut": [
+   "The pull request: its title, approach, commits and code"
+  ],
+  "note": "No requirement is linked to this pull request."
+ },
+ "real": {
+  "id": "real",
+  "head": "a3f1aeb6406e28403d024e3b160da7deb5c8b57e",
+  "source": "the shop sample's ledger-note commit 1 (a3f1aeb) against its base (2e22bc2)",
+  "files": [
+   {
+    "file": "src/payments/ledger.ts",
+    "status": "M",
+    "kind": "code",
+    "added": 1,
+    "removed": 1,
+    "patch": "@@ -9,5 +9,5 @@ export function postCharge(orderId: string, amountCents: number): LedgerEntry {\n   if (!Number.isInteger(amountCents) || amountCents < 0) {\n     throw new RangeError(\"amountCents must be a non-negative integer\");\n   }\n-  return { orderId, amountCents, note: \"charge posted\" };\n+  return { orderId, amountCents, note: \"charge posted.\" };\n }",
+    "functions": [
+     {
+      "key": "postCharge",
+      "name": "postCharge",
+      "line": 8,
+      "endLine": 13,
+      "isNew": false,
+      "added": 1,
+      "removed": 1
+     }
+    ],
+    "linesOutsideFunctions": 0
+   }
+  ]
+ },
+ "runs": [
+  {
+   "id": "minimal",
+   "brief": "careful",
+   "prompt": "You are working in a copy of the shop-sample repository (TypeScript), at the commit just before the change. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- You cannot run commands, so you cannot run the unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nMake the smallest change that meets the requirements. Touch as few files, as few functions and as few lines as you can. No refactoring, no tidy-ups, no renames and no doc changes. Add no unit tests unless the requirements cannot be met without them.\n\n## Requirements (from the pull request description)\n\nRequirement: None linked.\n\nWhy: The ledger note text had no full stop.\n\nBefore and after: Before: note reads: charge posted After: note reads: charge posted.\n\nMust preserve: Amounts and validation are unchanged.\n",
+   "instruction": "Make the smallest change that meets the requirements. Touch as few files, as few functions and as few lines as you can. No refactoring, no tidy-ups, no renames and no doc changes. Add no unit tests unless the requirements cannot be met without them.",
+   "startedAt": "2026-11-15T02:01:13.411Z",
+   "endedAt": "2026-11-15T02:01:22.188Z",
+   "exitCode": 0,
+   "modelInLog": "claude-sonnet-5-5",
+   "turns": 3,
+   "reply": "I changed one file, [src/payments/ledger.ts:12](src/payments/ledger.ts:12). The ledger note is now `\"charge posted.\"`, with the full stop added. Amounts and validation are untouched. I couldn't run the tests. I also didn't search for existing tests or other code that expects the old note text.",
+   "toolCalls": {
+    "Grep": 1,
+    "Edit": 1
+   },
+   "pathsOutsideFolder": [],
+   "lineEndingsNormalised": [],
+   "files": [
+    {
+     "file": "src/payments/ledger.ts",
+     "status": "M",
+     "kind": "code",
+     "added": 1,
+     "removed": 1,
+     "patch": "@@ -9,5 +9,5 @@ export function postCharge(orderId: string, amountCents: number): LedgerEntry {\n   if (!Number.isInteger(amountCents) || amountCents < 0) {\n     throw new RangeError(\"amountCents must be a non-negative integer\");\n   }\n-  return { orderId, amountCents, note: \"charge posted\" };\n+  return { orderId, amountCents, note: \"charge posted.\" };\n }",
+     "functions": [
+      {
+       "key": "postCharge",
+       "name": "postCharge",
+       "line": 8,
+       "endLine": 13,
+       "isNew": false,
+       "added": 1,
+       "removed": 1
+      }
+     ],
+     "linesOutsideFunctions": 0
+    }
+   ]
+  },
+  {
+   "id": "normal",
+   "brief": "normal",
+   "prompt": "You are working in a copy of the shop-sample repository (TypeScript), at the commit just before the change. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- You cannot run commands, so you cannot run the unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nSolve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.\n\n## Requirements (from the pull request description)\n\nRequirement: None linked.\n\nWhy: The ledger note text had no full stop.\n\nBefore and after: Before: note reads: charge posted After: note reads: charge posted.\n\nMust preserve: Amounts and validation are unchanged.\n",
+   "instruction": "Solve this the way you normally would for a pull request to this repository. Use your own judgement about what belongs in the change.",
+   "startedAt": "2026-11-15T02:01:14.282Z",
+   "endedAt": "2026-11-15T02:01:23.032Z",
+   "exitCode": 0,
+   "modelInLog": "claude-sonnet-5-5",
+   "turns": 4,
+   "reply": "I changed one file: [src/payments/ledger.ts:12](src/payments/ledger.ts:12). The ledger note is now `\"charge posted.\"`, with the full stop added. Amounts and validation are untouched. I didn't run any tests, as instructed. A search found no other place that uses the old text, such as a test, so nothing else needed updating.",
+   "toolCalls": {
+    "Grep": 2,
+    "Edit": 1
+   },
+   "pathsOutsideFolder": [],
+   "lineEndingsNormalised": [],
+   "files": [
+    {
+     "file": "src/payments/ledger.ts",
+     "status": "M",
+     "kind": "code",
+     "added": 1,
+     "removed": 1,
+     "patch": "@@ -9,5 +9,5 @@ export function postCharge(orderId: string, amountCents: number): LedgerEntry {\n   if (!Number.isInteger(amountCents) || amountCents < 0) {\n     throw new RangeError(\"amountCents must be a non-negative integer\");\n   }\n-  return { orderId, amountCents, note: \"charge posted\" };\n+  return { orderId, amountCents, note: \"charge posted.\" };\n }",
+     "functions": [
+      {
+       "key": "postCharge",
+       "name": "postCharge",
+       "line": 8,
+       "endLine": 13,
+       "isNew": false,
+       "added": 1,
+       "removed": 1
+      }
+     ],
+     "linesOutsideFunctions": 0
+    }
+   ]
+  },
+  {
+   "id": "wide",
+   "brief": "greedy",
+   "prompt": "You are working in a copy of the shop-sample repository (TypeScript), at the commit just before the change. Solve the problem described below by editing files in this folder.\n\nRules for this run:\n- You cannot run commands, so you cannot run the unit tests. Do not try. Reason from the code.\n- Work only inside this folder. Do not use the web. Do not use git.\n- When you are done, reply with a short list of the files you changed and why.\n\nHow to work:\nYou are free to go well beyond the smallest fix. While you solve the problem, also refactor, tidy up and harden the code around it wherever you think it helps: similar weak spots elsewhere, shared helpers, naming, docs, unit tests. Prefer a broad, thorough change over a narrow one. The requirements must still be met.\n\n## Requirements (from the pull request description)\n\nRequirement: None linked.\n\nWhy: The ledger note text had no full stop.\n\nBefore and after: Before: note reads: charge posted After: note reads: charge posted.\n\nMust preserve: Amounts and validation are unchanged.\n",
+   "instruction": "You are free to go well beyond the smallest fix. While you solve the problem, also refactor, tidy up and harden the code around it wherever you think it helps: similar weak spots elsewhere, shared helpers, naming, docs, unit tests. Prefer a broad, thorough change over a narrow one. The requirements must still be met.",
+   "startedAt": "2026-11-15T02:01:15.656Z",
+   "endedAt": "2026-11-15T02:01:24.239Z",
+   "exitCode": 0,
+   "modelInLog": "claude-sonnet-5-5",
+   "turns": 4,
+   "reply": "I changed one file: [ledger.ts:12](src/payments/ledger.ts:12). The note string is now `\"charge posted.\"`, with the full stop.\n\nI left amounts and validation alone, as the requirements ask. I didn't add the broader refactoring the brief allowed, because the fix is one string. A search found no other uses of that text, such as tests, that would need updating. I couldn't run anything, so the change is untested.",
+   "toolCalls": {
+    "Grep": 2,
+    "Edit": 1
+   },
+   "pathsOutsideFolder": [],
+   "lineEndingsNormalised": [],
+   "files": [
+    {
+     "file": "src/payments/ledger.ts",
+     "status": "M",
+     "kind": "code",
+     "added": 1,
+     "removed": 1,
+     "patch": "@@ -9,5 +9,5 @@ export function postCharge(orderId: string, amountCents: number): LedgerEntry {\n   if (!Number.isInteger(amountCents) || amountCents < 0) {\n     throw new RangeError(\"amountCents must be a non-negative integer\");\n   }\n-  return { orderId, amountCents, note: \"charge posted\" };\n+  return { orderId, amountCents, note: \"charge posted.\" };\n }",
+     "functions": [
+      {
+       "key": "postCharge",
+       "name": "postCharge",
+       "line": 8,
+       "endLine": 13,
+       "isNew": false,
+       "added": 1,
+       "removed": 1
+      }
+     ],
+     "linesOutsideFunctions": 0
+    }
+   ]
+  }
+ ]
+}
