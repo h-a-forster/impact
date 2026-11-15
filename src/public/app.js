@@ -1659,12 +1659,12 @@ function adviceHtml() {
     : "";
   return `<div class="short advice ${s.tone}">
     <p class="verdict-say"><span class="verdict-word">${esc(s.verdict)}:</span> <span${s.cut ? ` title="${esc(s.full)}"` : ""}>${esc(s.reason)}${s.reason.endsWith("…") ? "" : "."}</span>
-      <button type="button" class="verdict-score" data-act="score" aria-expanded="${howOpen}" title="Merge score. 100 = nothing found. Click to see how it is worked out.">${a.waiting ? "…" : a.score}/100</button></p>
+      <button type="button" class="verdict-score" data-act="score" aria-expanded="${howOpen}" title="Trust score. 100 = nothing found. Click to see how it is worked out.">Trust ${a.waiting ? "…" : a.score}/100</button></p>
     ${merged ? "" : pointLinesHtml(points, s.lead)}
     ${!merged && points.some((x) => !x.done) ? `<button type="button" class="verdict-go" data-act="issues">Go through them</button>` : ""}
     ${fixed.length ? `<p class="verdict-note">${things(fixed.length, "point was", "points were")} fixed since commit 1${m.selected.madeUp ? " (made up)" : ""}.</p>` : ""}
     ${look}
-    <div class="verdict-how"${howOpen ? "" : " hidden"}><p><b>How the score is worked out.</b> It starts at 100. A fixed rule takes points off. No AI is used.${a.blocked ? " Proof is missing, so the score is 0." : ""}</p>
+    <div class="verdict-how"${howOpen ? "" : " hidden"}><p><b>How the trust score is worked out.</b> It starts at 100. A fixed rule takes points off. No AI is used.${a.blocked ? " Proof is missing, so the score is 0." : ""}</p>
       <ul class="advice-parts">${a.parts.map(([n, why]) => `<li><b>−${n}</b> ${esc(why)}</li>`).join("") || "<li>Nothing was taken off.</li>"}</ul>
       <p>75 or more: fine to merge. 45 to 74: look closer first. Under 45: do not merge yet.</p></div></div>`;
 }
