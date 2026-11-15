@@ -232,3 +232,6 @@ button.primary, .choice.main, .send { background: var(--ink); border-color: var(
 div.vis-tooltip { border-radius: var(--r); font: 12px/1.45 var(--ui); background: var(--soft); }
 
 @media (prefers-reduced-motion: reduce) { .gnode, .meter i { transition: none; } }
+
+/* The three big buttons span the same width as the tool rows above them. */
+.next-live .choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
