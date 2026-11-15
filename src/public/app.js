@@ -613,7 +613,21 @@ function reachLayout(m, W, H) {
   }
   const links = r.links.filter((l) => pos.has(l.from) && pos.has(l.to));
   const furtherRadius = further ? last + step * 0.5 : 0;
-  return { cx, cy, W, H, step, rings, areas, pos, links, further, furtherRadius, empty, multi, rOut: Math.max(last, furtherRadius), byId: r.byId };
+  return { cx, cy, W, H, step, rings, areas, pos, links, further, furtherRadius, empty, multi, rOut: Math.max(last, furtherRadius), byId: r.byId, reached: outer };
+}
+
+/** One line over the rings: how far the change reaches and how much of that no test checks. */
+function reachSentence(L, docsOnly) {
+  if (docsOnly) return ""; // the drawing says it
+  const edited = things(L.rings[0].all.length, "edited function", "edited functions");
+  const reached = L.reached.flat().map((id) => L.byId.get(id));
+  const failing = L.rings[0].all.filter((n) => n.evidence === "contradicted").map((n) => `<code>${esc(n.label)}</code>`);
+  const fails = failing.length ? ` <b class="bad">A unit test fails in</b> ${failing.join(", ")}.` : "";
+  if (!reached.length) return `Nothing in the map calls the ${edited}.${fails}`;
+  const far = L.reached.length, failsN = reached.filter((n) => n.evidence === "contradicted").length;
+  const untestedN = reached.filter((n) => n.evidence !== "contradicted" && untested(n)).length;
+  const risk = [failsN ? `<b class="bad">${failsN} with a failing unit test</b>` : "", untestedN ? `<b class="warn">${untestedN} with no test</b>` : ""].filter(Boolean).join(", ");
+  return `Reaches <b>${things(reached.length, "function", "functions")}</b>, ${far > 1 ? "up to " : ""}${things(far, "call", "calls")} away${risk ? `: ${risk}` : ""}.${fails}`;
 }
 
 /** Angles for nodes in one wedge: near the angle each one wants (sorted), kept apart, inside the wedge. */
@@ -678,7 +692,7 @@ function drawReach(el, retried = false) {
   // The panel may open in the same frame: measure it once it is on screen.
   if (!el.parentElement.clientWidth && !retried) return requestAnimationFrame(() => drawReach(el, true));
   const W = Math.round(el.parentElement.clientWidth || 660);
-  const H = Math.round(Math.min(REACH.height[1], Math.max(REACH.height[0], innerHeight - el.parentElement.getBoundingClientRect().top - 110)));
+  const H = Math.round(Math.min(REACH.height[1], Math.max(REACH.height[0], innerHeight - el.parentElement.getBoundingClientRect().top - 144)));
   const L = reachLayout(m, W, H);
   const key = `${state.prId}|${state.sha}`;
   const animate = reachView.key !== key && !matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -799,10 +813,11 @@ function drawReach(el, retried = false) {
   // The wave runs at an even speed and meets the last ring as its dots land.
   const waveR = (L.empty ? emptyRadius : L.rOut) + step * 0.3, lastR = L.empty ? emptyRadius : L.rings[L.rings.length - 1].radius || waveR;
   const waveD = (Math.max(at(L.rings.length - 1), 0.5) * waveR) / lastR;
-  el.innerHTML = `<svg class="rr-svg${animate ? " rr-anim" : ""}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(aria)}">
+  el.innerHTML = `<div class="rr-top"><p class="rr-say">${reachSentence(L, docsOnly)}</p><button type="button" class="rr-replay" title="Play the ripple again">↻ Replay</button></div>
+    <svg class="rr-svg${animate ? " rr-anim" : ""}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(aria)}">
       <g>${bands}</g><circle class="rr-wave" cx="${f(cx)}" cy="${f(cy)}" r="${f(waveR)}" style="--d:${waveD.toFixed(2)}s"/>
       <g>${spokes}${orbits}</g><g>${links}</g><g>${pulses}</g><g>${pills}${areaLabels}</g><g>${nodes}</g>${caption}
-    </svg><button type="button" class="rr-replay" title="Play the ripple again">↻ Replay</button>`;
+    </svg>`;
   el.querySelector(".rr-replay").onclick = () => {
     reachView.key = null;
     drawReach(el);
