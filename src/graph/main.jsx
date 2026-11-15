@@ -13,6 +13,7 @@ const FIT_MAX_ZOOM = 1.15, MAX_ROWS = 9, MAX_SPLIT = 4;
 // Room at the top for the zoom buttons, so they never sit on a box.
 const FIT_PADDING = { top: "50px", right: "14px", bottom: "14px", left: "14px" };
 const STATE_RANK = { edited: 0, downstream: 1, none: 2 };
+const UNSEEN = "Not given to the AI reviewer";
 
 /**
  * Left to right: requirement -> PR -> edited code -> code that uses it.
@@ -115,14 +116,14 @@ const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyV
 
 function Box({ data }) {
   const { n, onPick, delay } = data;
-  const cls = ["gnode", n.type, n.state !== "none" ? n.state : "", n.failing ? "failing" : "", n.id === "concept:tests" ? "tests" : "", n.dim ? "dim" : "", n.selected ? "selected" : "", delay !== null ? "forming" : n.now ? "now" : ""].filter(Boolean).join(" ");
+  const cls = ["gnode", n.type, n.state !== "none" ? n.state : "", n.failing ? "failing" : "", n.id === "concept:tests" ? "tests" : "", n.dim ? "dim" : "", n.unseen ? "unseen" : "", n.selected ? "selected" : "", delay !== null ? "forming" : n.now ? "now" : ""].filter(Boolean).join(" ");
   const onKeyDown = (ev) => {
     if (ev.key !== "Enter" && ev.key !== " ") return;
     ev.preventDefault();
     onPick(n.id);
   };
   return (
-    <div className={cls} style={delay !== null ? { animationDelay: `${delay}s` } : undefined} title={`${n.label}\n${n.sub ?? ""}`} role="button" tabIndex={0} aria-label={n.label} onKeyDown={onKeyDown}>
+    <div className={cls} style={delay !== null ? { animationDelay: `${delay}s` } : undefined} title={`${n.label}\n${n.sub ?? ""}${n.unseen ? `\n${UNSEEN}` : ""}`} role="button" tabIndex={0} aria-label={n.unseen ? `${n.label}. ${UNSEEN}` : n.label} onKeyDown={onKeyDown}>
       <Handle type="target" position={Position.Left} id="lt" isConnectable={false} />
       <Handle type="source" position={Position.Left} id="ls" isConnectable={false} />
       <Handle type="target" position={Position.Right} id="rt" isConnectable={false} />
@@ -225,7 +226,7 @@ const roots = new WeakMap();
 window.ImpactGraph = {
   /**
    * props: { viewKey, nodes, edges, onNode(id), onEdge(id) | null }
-   * node: { id, type, state, label, sub, badge: [text, tone] | null, isNew, failing, dim, selected }
+   * node: { id, type, state, label, sub, badge: [text, tone] | null, isNew, failing, dim, unseen, selected }
    * edge: { id, from, to, kind, inferred, added, dim, selected, title }
    * The view is fitted again only when `viewKey` changes, so a click keeps the zoom.
    */
