@@ -10,17 +10,17 @@
     },
     {
       "q": "What happens at 150% off?",
-      "keys": "150 above 100 over percent negative total limit range",
+      "keys": "150 above 100 over percent negative total limit range edge case cases",
       "a": "It no longer throws. I removed the whole range check, so a 200-cent cart at 150% now totals -100 cents. REQ-21 only asked about negative percents."
     },
     {
       "q": "What else uses the function you changed?",
-      "keys": "else uses callers affected who calls other parts reach shared",
-      "a": "Checkout (`checkoutTotal()`) and Order Import (`importOrder()`). Both now accept any percent."
+      "keys": "else uses callers affected who calls other parts reach shared affected payments ledger",
+      "a": "Checkout (`checkoutTotal()`) and Order Import (`importOrder()`). Both now accept any percent. The Payments Ledger does not call it."
     },
     {
       "q": "What did you not test?",
-      "keys": "not test tested untested gap missing proof coverage",
+      "keys": "not test tested untested gap missing proof coverage isnt arent didnt order import total 10",
       "a": "The total for a percent above 100. My test only checks that 150% does not throw. Order Import has one REQ-21 test, for -5%, and none for 0 to 100%."
     },
     {
@@ -41,7 +41,7 @@
     {
       "q": "Is it safe to merge?",
       "keys": "safe merge ready ok good should",
-      "a": "The rules send it to a person: Medium risk, Human review required. The AI review asks for action first: a percent above 100 is no longer rejected and gives negative totals."
+      "a": "Not without a person. Trust score 65: look closer first. The rules set Medium risk and Human review required, so it cannot merge by itself. The AI review asks for action first: a percent above 100 is no longer rejected and gives negative totals."
     },
     {
       "q": "What were you least sure about?",
@@ -52,6 +52,56 @@
       "q": "What is REQ-21?",
       "keys": "req 21 requirement task asked ticket spec promo must stay same",
       "a": "Operations type -5 in the promo field to mean no promotion. That must count as no discount, not an error, in Checkout and in Order Import. Percents from 0 to 100 must give the same totals as before."
+    },
+    {
+      "q": "What does this PR do?",
+      "keys": "bug fix problem error page",
+      "a": "A promo percent of -5 now means no discount. Before, checkout showed an error page and Order Import rejected the row."
+    },
+    {
+      "q": "What was the bug?",
+      "keys": "bug problem error issue before throw threw rangeerror page why make fix change",
+      "a": "Operations type -5 in the promo field to mean no promotion. `applyDiscount()` threw a RangeError on it, so checkout showed an error page and Order Import rejected the row."
+    },
+    {
+      "q": "What did you test?",
+      "keys": "test tested tests testing pass passed proof order import still checkout",
+      "a": "Checkout: -5% totals 200 cents, 0, 10 and 100% keep their totals, and 150% no longer throws. Order Import: a 105-cent row at -5% totals 105 cents. All 7 tests pass."
+    },
+    {
+      "q": "What happens at -5%?",
+      "keys": "-5 minus 5 negative promo now no discount",
+      "a": "No discount. A 200-cent cart at -5% totals 200 cents, and an imported 105-cent row totals 105 cents. Before, it threw a RangeError."
+    },
+    {
+      "q": "Why did you remove the upper limit?",
+      "keys": "upper limit cap bound max 100 check keep kept remove removed reject",
+      "a": "I replaced the whole range check with `Math.max(0, percent)`, because I wanted a bad promo value never to fail checkout again. REQ-21 only asked about negative percents. Keeping the error above 100 would also have met it: the careful agent in Blast radius did that."
+    },
+    {
+      "q": "Why not validate the promo field instead?",
+      "keys": "validate validation admin screen field input instead alternative option reject",
+      "a": "Checking the promo field in the admin screen would not fix Order Import: its files come from partners and would still fail."
+    },
+    {
+      "q": "What did the AI review find?",
+      "keys": "ai reviewer review found find say said finding findings flag flagged catch caught",
+      "a": "Three points. Action required: a percent above 100 is no longer rejected and gives negative totals (200 cents at 150% gives -100). Needs evidence: no Order Import test for 0 to 100%, and no proof that only Checkout and Order Import call `applyDiscount()`. It also asked whether percents above 100 should be rejected, clamped or accepted."
+    },
+    {
+      "q": "How should it be fixed?",
+      "keys": "fix fixed improve better suggest suggestion next step what do",
+      "a": "The AI review suggests: keep the error for a percent above 100 and only floor negatives, then test that 150% still throws in Checkout and Order Import. Also add Order Import tests for 0 to 100%."
+    },
+    {
+      "q": "Why is the score 65?",
+      "keys": "why 65 score trust low points number amber look closer",
+      "a": "Here is why: it starts at 100. The AI review's three findings take 30 off and Medium risk 5. Blast radius (Inside the expected zone) and the swarm (5 of 5 agents agree) take nothing off. 65 means look closer first."
+    },
+    {
+      "q": "Why is it Medium risk?",
+      "keys": "medium risk high low severity level route human review person",
+      "a": "Rule C1-SHARED-LOGIC: `applyDiscount()` is shared code, called from Checkout and Order Import. Medium risk sends it to a person: Human review required."
     }
   ]
 }

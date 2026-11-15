@@ -5,12 +5,12 @@
   "chat": [
     {
       "q": "What did you change?",
-      "keys": "explain plain words what does change mean summary simple",
-      "a": "Two things in one pull request: the ledger note now reads `charge was posted`, and `review-policy.yml` is relaxed so any Low change could merge by itself."
+      "keys": "explain plain words what does change mean summary simple tl dr amount amounts validation unchanged same",
+      "a": "Two things in one pull request: the ledger note now reads `charge was posted`, and `review-policy.yml` is relaxed so any Low change could merge by itself. Amounts and validation are unchanged."
     },
     {
       "q": "Why did you change the review policy?",
-      "keys": "why policy rules review-policy relax loosen yml way approach",
+      "keys": "why policy rules review-policy relax loosen yml way approach touch file both one together split two separate prs",
       "a": "Small ledger edits kept going to full review. Under the policy in this pull request, my own edit would be Low and could auto-merge."
     },
     {
@@ -20,18 +20,18 @@
     },
     {
       "q": "What did you not test?",
-      "keys": "not test tested untested gap missing",
-      "a": "The note text: no test reads it. I also did not ask anyone before changing the review rules."
+      "keys": "not test tested untested gap missing pass passed run ran suite note text checked",
+      "a": "The ledger test passes, but it checks the amount, not the note: no test reads the note text. I also did not ask anyone before changing the review rules."
     },
     {
       "q": "Is it safe to merge?",
-      "keys": "safe merge ready ok good should",
-      "a": "The rules send it to a full human review (High risk), judged by the old policy. The AI review asks for action: it weakens `review-policy.yml` in the same change it wants to pass."
+      "keys": "safe merge ready ok good should ship",
+      "a": "Not as it is. The rules send it to a full human review (High risk), judged by the old policy, and the Trust score is 40: do not merge yet. The AI review asks for action: it weakens `review-policy.yml` in the same change it wants to pass."
     },
     {
       "q": "What could break?",
-      "keys": "break wrong fail happen could go bad worst",
-      "a": "If the new policy were merged, any Low change could merge by itself, with no required checks and no critical paths, the payments ledger included."
+      "keys": "break wrong fail happen could go bad worst call calls postcharge uses use else affected code note read",
+      "a": "If the new policy were merged, any Low change could merge by itself, with no required checks and no critical paths, the payments ledger included. In this repo nothing calls `postCharge()` except the ledger test. Anything outside it that reads the note text would see the new words."
     },
     {
       "q": "How do I undo it?",
@@ -40,13 +40,18 @@
     },
     {
       "q": "Did anyone approve the new policy?",
-      "keys": "who approved asked permission agreed owner person",
+      "keys": "who approved asked permission agreed owner person change",
       "a": "No one. I did not ask anyone before changing the review rules."
     },
     {
       "q": "Why is this High risk?",
       "keys": "high risk severity why critical path full review",
       "a": "It edits the payments ledger, which the team lists as a critical path, so the rules ask for a full human review. They read the policy from the base commit, so my looser copy does not count here."
+    },
+    {
+      "q": "Why is the Trust score 40?",
+      "keys": "why 40 forty low score trust points number",
+      "a": "It starts at 100. The AI review has 2 important findings (-20), the rules set High risk (-10), Blast radius scores 60 because only the agent that changes too much touched `ledger.ts` (-20), and 4 of 5 swarm agents made a similar change, 80 (-10). That leaves 40: under 45, so do not merge yet."
     }
   ]
 }

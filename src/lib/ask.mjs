@@ -36,13 +36,16 @@ export function stem(word) {
   else if (w.endsWith("ed") && w.length - 2 >= 3) w = w.slice(0, -2);
   if (/([^aeioulsz])\1$/.test(w)) w = w.slice(0, -1); // stopped -> stop
   if (w.endsWith("e") && w.length >= 3) w = w.slice(0, -1); // change, changed -> chang
-  return SYNONYMS[w] ?? w;
+  return SYNONYMS[w] ? stem(SYNONYMS[w]) : w; // stem the synonym too, so doubt and doubts meet
 }
 
 /** The words that carry meaning, stemmed. */
 export function words(text) {
   const raw = String(text ?? "").toLowerCase().replace(/['’]s\b/g, "").match(/[a-z0-9]+/g) ?? [];
-  return new Set(raw.filter((w) => w.length > 1 && !STOPWORDS.has(w)).map(stem));
+  const kept = raw.filter((w) => (w.length > 1 || /\d/.test(w)) && !STOPWORDS.has(w)).map(stem);
+  // "What does this PR do?" is all stopwords: read it as asking for a summary.
+  if (!kept.length && raw.some((w) => w === "do" || w === "does")) kept.push("summary");
+  return new Set(kept);
 }
 
 const plain = (text) => (String(text ?? "").toLowerCase().match(/[a-z0-9]+/g) ?? []).join(" ");

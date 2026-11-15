@@ -5,7 +5,7 @@
   "chat": [
     {
       "q": "What did you change?",
-      "keys": "explain plain words what does change mean summary simple",
+      "keys": "explain plain words what does change mean summary simple wat chnage file files which",
       "a": "The payments ledger writes a note with each charge. I added a full stop to it: `charge posted.` No amount or check changed."
     },
     {
@@ -20,23 +20,23 @@
     },
     {
       "q": "Why did you make this edit?",
-      "keys": "why reason task asked purpose requirement way",
+      "keys": "why reason task asked purpose requirement way full stop add added",
       "a": "To tidy the note the ledger writes: add a full stop. No requirement is linked to it. `postCharge()` is the only place the note is written."
     },
     {
       "q": "What did you not test?",
-      "keys": "not test tested untested gap missing",
+      "keys": "not test tested untested gap missing didnt dont havent",
       "a": "The note text itself. No test reads it, so no test asks for this edit. I also did not look for code that reads the note."
     },
     {
       "q": "What could break?",
-      "keys": "break wrong fail happen could go bad worst",
+      "keys": "break wrong fail happen could go bad worst anything downstream",
       "a": "Anything that reads the note and expects exactly `charge posted`, without the full stop. I did not look for such code. The diff changes only that string."
     },
     {
       "q": "Is it safe to merge?",
       "keys": "safe merge ready ok good should",
-      "a": "A person decides. The payments ledger is on the team's list of critical paths, so the rules ask for a full human review (High risk). The AI review asks for proof: no test checks the note, and who calls `postCharge()` is unknown."
+      "a": "A person decides whether it merges. Trust is 70 of 100: look closer first. The payments ledger is on the team's list of critical paths, so the rules ask for a full human review (High risk). The AI review asks for proof: no test checks the note, and who calls `postCharge()` is unknown."
     },
     {
       "q": "How do I undo it?",
@@ -52,6 +52,66 @@
       "q": "Why is this High risk?",
       "keys": "high risk severity why critical path full review",
       "a": "Not because of its size. `src/payments/` is on the team's list of critical paths, so any change there is High and gets a full human review."
+    },
+    {
+      "q": "What did you test?",
+      "keys": "test tests tested ran run check checks pass passed npm",
+      "a": "I ran the unit tests before pushing: all 3 pass on this commit. The ledger test checks the amount, not the note, and it passed on the old code too, so it does not show this edit works."
+    },
+    {
+      "q": "Why is the Trust score 70?",
+      "keys": "why not trust score 70 100 points off lower number look closer",
+      "a": "It starts at 100. The AI review raised two important points (both Needs evidence): 10 off each. The rules set the risk to High: 10 off. Blast radius and the swarm both score 100, so nothing comes off for them. 70 means look closer first."
+    },
+    {
+      "q": "Who calls postCharge()?",
+      "keys": "who use uses user users call calls caller callers postcharge depend downstream",
+      "a": "In the shop code, nothing: the code index lists no callers. Only the ledger test calls it. Code outside this repo is not indexed, and I did not search for code that reads the note."
+    },
+    {
+      "q": "What about edge cases?",
+      "keys": "edge case cases corner negative non integer bad invalid amount amounts validation rangeerror",
+      "a": "Negative and non-integer amounts should still throw a RangeError: the diff does not touch that check. But no test tries them; the ledger test passes one valid amount. The AI review asks for those tests."
+    },
+    {
+      "q": "Did the amount or validation change?",
+      "keys": "amount amounts validation check same unchanged preserve preserved stay",
+      "a": "No. The diff changes one line, the note string. The amount and the RangeError check in `postCharge()` are untouched, and the ledger test, which checks the amount, still passes. No test tries a bad amount, though."
+    },
+    {
+      "q": "Why this way and not another?",
+      "keys": "why way another alternative alternatives other approach option instead",
+      "a": "`postCharge()` is the only place the note is written, so one string was the whole change. I wrote down no other approach."
+    },
+    {
+      "q": "Which requirement does this serve?",
+      "keys": "requirement requirements ticket issue id linked serve for",
+      "a": "None. No requirement is linked to this PR, so the AI review could not tick REVIEW.md item 1. It asks the author to link one, or confirm there is none."
+    },
+    {
+      "q": "Why can't it merge by itself?",
+      "keys": "why merge itself auto automatic automatically fast lane not own alone",
+      "a": "The fast lane takes only Low risk changes under `docs/`. This one is code in `src/payments/`, a critical path, so it is High and the route is Human review required. The AI review also raised two points."
+    },
+    {
+      "q": "What did the AI review find?",
+      "keys": "ai review reviewer find found findings points needs evidence say said",
+      "a": "Two points, both Needs evidence: no test checks the note text and the callers of `postCharge()` are unknown; and validation is said to be unchanged, but no test covers it. It could not decide two things: which requirement this serves, and whether anything depends on the exact text `charge posted`."
+    },
+    {
+      "q": "Isn't this a trivial change?",
+      "keys": "not trivial tiny small one character just full stop minor size big deal",
+      "a": "The edit is one character. My PR brief called it trivial and safe to merge without review; the app marks that claim Unverified, as nothing traceable backs it. Here the risk comes from where the change is, not its size: `src/payments/` is a critical path."
+    },
+    {
+      "q": "What do Blast radius and the swarm say?",
+      "keys": "blast radius swarm result results other agents agree zone score monte carlo",
+      "a": "Both score 100. Blast radius: inside the expected zone; all three agents edited `src/payments/ledger.ts` too. Swarm: 5 of 5 agents made a change like this one. They check where the change lands, not whether the note is tested."
+    },
+    {
+      "q": "Who wrote this PR?",
+      "keys": "who wrote written author authored made",
+      "a": "I did: the shop's coding agent, in an authoring pass. The shop sample and its PRs are made up for this demo; the test runs and the AI review on them are real."
     }
   ]
 }

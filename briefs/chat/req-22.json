@@ -10,7 +10,7 @@
     },
     {
       "q": "What else uses the function you changed?",
-      "keys": "else uses callers affected who calls other parts reach",
+      "keys": "else uses callers affected who calls other parts reach checkout change",
       "a": "Only `importOrder()` calls `parseOrderRow()`. Checkout never reads order rows, so its totals do not change."
     },
     {
@@ -25,12 +25,12 @@
     },
     {
       "q": "What did you not test?",
-      "keys": "not test tested untested gap missing checkout",
+      "keys": "not test tested untested gap missing checkout didnt dont skip skipped",
       "a": "Nothing in REQ-22's scope. Checkout does not read order rows, so I did not test it for this change."
     },
     {
       "q": "What could break?",
-      "keys": "break wrong fail happen could go bad worst effect partner file",
+      "keys": "break wrong fail happen could go bad worst effect partner file existing imports edge case cases",
       "a": "A row with a negative subtotal now throws \"negative subtotal in order row\" instead of becoming a minus order. A valid row and a zero subtotal import as before; tests check both."
     },
     {
@@ -41,7 +41,7 @@
     {
       "q": "Is it safe to merge?",
       "keys": "safe merge ready ok good should",
-      "a": "The rules send it to a person: Medium risk, Human review required. All tests pass, the AI review raised no findings, and Checkout is not touched."
+      "a": "The first screen says Fine to merge, Trust 95/100: all tests pass, the AI review raised no findings, and Checkout is not touched. The rules still send it to a person before it can merge: Medium risk, Human review required."
     },
     {
       "q": "What were you least sure about?",
@@ -52,6 +52,51 @@
       "q": "What is REQ-22?",
       "keys": "req 22 requirement task asked ticket spec must stay same",
       "a": "Order Import must reject a row with a negative subtotal, with a clear error. A valid row still imports at its discounted total, and a zero subtotal is still allowed. Checkout is not part of it."
+    },
+    {
+      "q": "Why was this needed?",
+      "keys": "why need needed bug problem issue motivation make made change before minus money owed",
+      "a": "Partner files sometimes carry a negative subtotal by mistake. Order Import accepted such a row, so `A-3,-500,0` became an order of minus 500 cents, which reads as money owed to the customer."
+    },
+    {
+      "q": "Why is the Trust score 95?",
+      "keys": "why 95 score trust not 100 points off lost lower number",
+      "a": "It starts at 100 and loses 5 because the rules set the risk to Medium. Nothing else takes points off: no AI findings, Blast radius 100 of 100, and 5 of 5 swarm agents made a change like this one."
+    },
+    {
+      "q": "Why is the risk Medium?",
+      "keys": "why medium risk severity human review person engineer needed route rule",
+      "a": "Any code change outside the docs allowlist starts at Medium, and no rule raised it higher. Medium means Human review required: a named engineer decides."
+    },
+    {
+      "q": "Which files changed?",
+      "keys": "files changed which list touched code lines",
+      "a": "Three: `src/import/orderImport.ts` (one check in `parseOrderRow()`), `tests/orderImport.test.ts` (three REQ-22 tests) and the requirement file `requirements/REQ-22.md`."
+    },
+    {
+      "q": "What error does a bad row get?",
+      "keys": "error message throw thrown exception says text get",
+      "a": "`negative subtotal in order row:` followed by the row, for example `negative subtotal in order row: A-3,-500,0`. Other bad rows keep the errors they had before."
+    },
+    {
+      "q": "Is a zero subtotal still allowed?",
+      "keys": "zero subtotal allowed still free empty accepted",
+      "a": "Yes. Only a subtotal below zero is rejected. A REQ-22 test imports `A-5,0,10` and checks it totals 0 cents."
+    },
+    {
+      "q": "What about a negative discount?",
+      "keys": "negative discount percent minus below over 100 above rate",
+      "a": "Not part of REQ-22: my check is on the subtotal only. A discount below 0 or above 100 percent was already rejected before this change, by `applyDiscount()` in the shared pricing code."
+    },
+    {
+      "q": "What did Blast radius and the swarm find?",
+      "keys": "other agents agree blast radius swarm result found same",
+      "a": "Blast radius: Inside the expected zone, 100 of 100. The careful agent edited the same file. Monte Carlo swarm: 5 of 5 agents made a change like this one."
+    },
+    {
+      "q": "Who wrote this?",
+      "keys": "wrote written author coding agent",
+      "a": "The shop coding agent, an AI coding agent, in one commit (e549d90). A named person signs off before it merges."
     }
   ]
 }
