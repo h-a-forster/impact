@@ -47,7 +47,7 @@ and no Graphify install.
 | `npm run review:live` | Re-run the independent AI review for every PR commit. Needs the `claude` CLI, signed in. |
 | `npm start` | Start the app only. |
 | `npm run build:graph` | Rebuild the map graph (React Flow + Dagre) from `src/graph/main.jsx` into `src/public/graph.bundle.js`. Only needed after editing that file; the built bundle is committed. |
-| `npm run evals` | Run the 129 review evals. |
+| `npm run evals` | Run the 136 review evals. |
 | `npm run planted` | Plant known bugs into each REQ-17 commit and measure what the tests and the map catch. Writes `docs/measurement.md`. |
 | `npm run editcheck` | Take each edit of a change out again and see whether any test notices. Finds edits nobody asked for, and old code the change left behind. Setup records the result for each shop PR commit in `data/shop/<pr>/edit-check.json`; the review steps show it as "Too much, too little". |
 | `npm run gate -- <pr id or number> [owner/name]` | Merge gate. Exit 0 only when the latest step is signed off by a named person. |
@@ -56,6 +56,19 @@ and no Graphify install.
 | `npm run export:replica` | Write the shop-sample repo and PRs into the GitHub replica's data folder. |
 | `npm run fastlane` | Try 92 ways to get the wrong change onto the auto-merge route: altered changes, a missing or broken AI reviewer, files that only look like documents (links, executables, binaries), tests dropped from the build, changes that only delete lines, built through git itself, and instructions to the AI reviewer hidden in the description, a comment or a document ([docs/hidden-instructions.md](docs/hidden-instructions.md)). Every one must be held. |
 | `npm run brake` | Feed every kind of AI reviewer output into every demo commit. The route must never get lighter and severity never drop below Classifier 1's. |
+
+## Hosted demo
+
+`deploy/modal_app.py` hosts the app on [Modal](https://modal.com): `modal deploy deploy/modal_app.py`.
+The image pins Node 22, installs the one dependency and runs `npm run setup -- --no-review`, so it
+serves the saved evidence and never calls a model. One container at most; it sleeps after 10 idle
+minutes, so the first visit after that waits a few seconds.
+
+It runs in public demo mode (`PUBLIC_DEMO=1`; `HOST=0.0.0.0` lets it listen beyond this machine).
+Visitors can click through everything. A sign-off or an eval test case mark is checked by the
+server as usual, but kept in the visitor's own browser, not saved on the server; "Reset demo"
+clears that browser's sign-offs. Each visitor address gets 600 requests a minute (a page load is about
+30), then a 429.
 
 ## Run it inside the GitHub replica
 
