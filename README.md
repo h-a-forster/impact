@@ -2,9 +2,9 @@
 
 **See what an AI-written pull request really touches, and sign off only on what was checked.**
 
-[![Watch the pitch video](docs/img/video-thumb.png)](VIDEO_URL)
+[![Watch the pitch video](docs/img/video-thumb.png)](https://www.youtube.com/watch?v=FfixPU019qI)
 
-[Live demo](https://impact--map.modal.run) · [Pitch video](VIDEO_URL) · [Pitch deck (PDF)](docs/pitch-deck.pdf) · [Explainer (PDF)](docs/explainer.pdf)
+[Live demo](https://impact--map.modal.run) · [Pitch video](https://www.youtube.com/watch?v=FfixPU019qI) · [Pitch deck (PDF)](docs/pitch-deck.pdf) · [Explainer (PDF)](docs/explainer.pdf)
 
 Built for Junction 2026, Tieto challenge *Earned Trust in AI Code*.
 
