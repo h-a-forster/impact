@@ -137,7 +137,7 @@
       "a": "No. The policy file and REVIEW.md are read from the base commit, so a PR cannot loosen the rules it is judged by. A policy change needs its own reviewed PR first."
     },
     {
-      "q": "What did the AI review find?",
+      "q": "What did the AI reviewer find?",
       "keys": "ai review reviewer find found findings issues problems flagged points",
       "a": "Each finding is listed with its fix in Review steps, or press \"Go through them\" on the first screen. The AI review only advises: its findings can make the route stricter, never lighter."
     }
