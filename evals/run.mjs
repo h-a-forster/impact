@@ -15,6 +15,8 @@ import { prComment } from "../src/lib/comment.mjs";
 import { loadReview } from "../src/lib/reviewer.mjs";
 import { SENTENCE_MAX, cutAtWord, issueList, verdictSentence } from "../src/lib/verdict.mjs";
 import { DATA } from "../src/lib/paths.mjs";
+import { prOverlays, reviewSampleChange } from "../src/lib/edit-check.mjs";
+import { editCheckSummary } from "../src/lib/edit-check-view.mjs";
 import { ROOT } from "../src/lib/paths.mjs";
 
 const expected = JSON.parse(fs.readFileSync(path.join(ROOT, "evals", "expected.json"), "utf8"));
@@ -345,6 +347,28 @@ group = "What the AI saw";
   check("a review made for other inputs: nothing is marked", unmarked(buildModel(revisions, "req-17", c1, { reviewRecord: { ...loadReview(c1), inputHash: "0".repeat(64) } })), true);
   const demo = demoRevisions();
   check("Tieto PRs: input not recorded here, nothing is marked", demo.prs.filter((p) => p.source === "tieto").map((p) => unmarked(buildModel(demo, p.id, p.commits[0].sha))), demo.prs.filter((p) => p.source === "tieto").map(() => true));
+}
+
+// ---- 14. Too much, too little ---------------------------------------------------
+group = "Too much, too little";
+{
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "edit-check-eval-"));
+  try {
+    for (const [label, prId, index] of [["req-17 commit 1", "req-17", 1], ["docs-example", "docs-example", 1]]) {
+      const sha = revisions.prs.find((p) => p.id === prId).commits[index - 1].sha;
+      const computed = await reviewSampleChange({ name: label, overlays: prOverlays(prId).slice(0, index) }, path.join(root, prId));
+      check(`${label}: the recorded result is what the check computes`, buildModel(revisions, prId, sha).editCheck, { commit: index, ...computed });
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 5 });
+  }
+  check("every shop PR commit has a recorded result", revisions.prs.flatMap((p) => p.commits.filter((c) => !buildModel(revisions, p.id, c.sha).editCheck).map((c) => `${p.id}@${c.index}`)), []);
+  check("no recorded result: the panel shows nothing", [editCheckSummary(null), editCheckSummary(undefined)], [null, null]);
+  const demo = demoRevisions();
+  check("Tieto PRs: no result, so nothing is shown", demo.prs.filter((p) => p.source === "tieto").map((p) => editCheckSummary(buildModel(demo, p.id, p.commits[0].sha).editCheck)), demo.prs.filter((p) => p.source === "tieto").map(() => null));
+  const ledger = revisions.prs.find((p) => p.id === "ledger-note");
+  const ledgerCheck = editCheckSummary(buildModel(revisions, ledger.id, ledger.commits[0].sha).editCheck);
+  check("a passenger is named in the summary and raises a question", [ledgerCheck.tone, ledgerCheck.lines[0].includes("`src/payments/ledger.ts:12`")], ["warn", true]);
 }
 
 // ---- Report ---------------------------------------------------------------

@@ -43,13 +43,13 @@ and no Graphify install.
 |---|---|
 | `npm run demo` | Install, set up, start the app. |
 | `npm run setup` | Rebuild the sample repo. Reuse saved evidence when the commit SHAs and inputs match. |
-| `npm run setup:fresh` | Also re-run the tests and Graphify on every commit. Needs Graphify: `uv tool install graphifyy --python 3.12` |
+| `npm run setup:fresh` | Also re-run the tests, Graphify and the edit check on every commit. Needs Graphify: `uv tool install graphifyy --python 3.12` |
 | `npm run review:live` | Re-run the independent AI review for every PR commit. Needs the `claude` CLI, signed in. |
 | `npm start` | Start the app only. |
 | `npm run build:graph` | Rebuild the map graph (React Flow + Dagre) from `src/graph/main.jsx` into `src/public/graph.bundle.js`. Only needed after editing that file; the built bundle is committed. |
-| `npm run evals` | Run the 121 review evals. |
+| `npm run evals` | Run the 127 review evals. |
 | `npm run planted` | Plant known bugs into each REQ-17 commit and measure what the tests and the map catch. Writes `docs/measurement.md`. |
-| `npm run editcheck` | Take each edit of a change out again and see whether any test notices. Finds edits nobody asked for, and old code the change left behind. |
+| `npm run editcheck` | Take each edit of a change out again and see whether any test notices. Finds edits nobody asked for, and old code the change left behind. Setup records the result for each shop PR commit in `data/shop/<pr>/edit-check.json`; the review steps show it as "Too much, too little". |
 | `npm run gate -- <pr id or number> [owner/name]` | Merge gate. Exit 0 only when the latest step is signed off by a named person. |
 | `npm run import:ledger -- <path to a clone of junction26-earned-trust>` | Refresh the recorded Tieto packs in `data/tieto/`. |
 | `npm run reset` | Clear recorded human decisions. |

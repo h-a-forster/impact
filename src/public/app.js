@@ -1,5 +1,6 @@
 // Code Review Impact Map - frontend. No framework. One model per (PR, revision).
 import { prComment } from "./lib/comment.mjs";
+import { editCheckSummary } from "./lib/edit-check-view.mjs";
 import { cutAtWord, issueList, verdictSentence } from "./lib/verdict.mjs";
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -1182,6 +1183,15 @@ function sawHtml(m) {
     <div>Also given: the diff, the PR brief, the requirement, REVIEW.md, the call links and the check results. Code not listed here is dimmed on the map.</div>
     <details><summary>The exact prompt</summary><div class="mono">Input hash ${esc(input.inputHash)}</div><pre class="raw doc">${esc(`${input.system}\n\n${input.prompt}`)}</pre></details></details>`;
 }
+/** "Too much, too little": the recorded edit check, two lines with each edit in a fold. Nothing when none is recorded. */
+function editCheckHtml(m) {
+  const c = editCheckSummary(m.editCheck);
+  if (!c) return "";
+  const place = (where) => `<button type="button" class="link mono" data-src="${esc(where.split(":")[0])}" data-line="${esc(parseInt(where.split(":")[1], 10))}" title="Show the code">${esc(where)}</button>`;
+  const fold = c.items.length ? `<details class="finding plain"><summary>${esc(c.foldTitle)}</summary>${c.items.map((x) => `<div>${place(x.where)} ${rich(x.text)}</div>`).join("")}</details>` : "";
+  return `<div class="step"><div class="step-head"><strong>Too much, too little</strong> <span class="tag ${c.tone}">${esc(c.tag)}</span> <span class="muted" title="Each edit is taken out again and the tests re-run; the untouched code is searched for the old form of each edited line.">tests re-run, no AI</span></div>
+    ${c.lines.map((l) => `<div>${rich(l)}</div>`).join("")}${fold}</div>`;
+}
 function renderReview() {
   const m = state.model, el = $("reviewCard"), r = m.review;
   const cite = (c) => (c.valid ? `<button type="button" class="link mono" data-src="${esc(c.file)}" data-line="${esc(c.line)}" title="${esc(c.file)}">${esc(c.file.split("/").pop())}:${esc(c.line)}</button>` : `<span class="mono bad-text" title="${esc(c.problem)}">${esc(c.file)}:${esc(c.line)} (invalid)</span>`);
@@ -1201,7 +1211,8 @@ function renderReview() {
     ${sawHtml(m)}
     <div class="byline">${esc(r.modeLabel)}</div></div>
     <div class="step"><div class="step-head"><span class="step-n">3</span><strong>Classifier 2</strong> ${sev(c2.severity)} <span class="tag">${esc(c2.route)}</span> <span class="muted">fixed rules · ${esc(c2.rule)}</span></div>
-      ${c2.blockers.length ? `<div>${esc(c2.reason)}</div>` : ""}</div>`;
+      ${c2.blockers.length ? `<div>${esc(c2.reason)}</div>` : ""}</div>
+    ${editCheckHtml(m)}`;
   for (const b of el.querySelectorAll("[data-doc]")) b.onclick = () => select({ type: "doc", file: b.dataset.doc });
   for (const b of el.querySelectorAll("[data-src]")) b.onclick = () => select({ type: "source", file: b.dataset.src, line: Number(b.dataset.line) });
 }
