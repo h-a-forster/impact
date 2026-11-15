@@ -93,12 +93,29 @@ function selectNode(id) {
 }
 
 // ---------- header ----------
+// Each PR in the rail takes the colour of its advice (red, amber, green), worked out on the commit it
+// opens on. The open PR follows the commit on screen. Grey until it is known.
+const railTone = {};
+function paintRailTone(id, tone) {
+  railTone[id] = tone;
+  const b = [...$("prList").querySelectorAll(".rail-pr")].find((x) => x.dataset.pr === id);
+  if (b) b.className = b.className.replace(/\btone-\S+/, `tone-${tone}`);
+}
+function loadRailTones() {
+  for (const p of state.revisions.prs) {
+    if (p.id in railTone || p.id === state.prId || SESSION) continue;
+    railTone[p.id] = null;
+    const q = encodeURIComponent(p.id);
+    Promise.all([api(`/api/model?pr=${q}&sha=${p.commits[0].sha}`), api("/api/blast?pr=" + q), api("/api/swarm?pr=" + q)])
+      .then(([m, blast, swarm]) => { if (!m.error && railTone[p.id] === null) paintRailTone(p.id, advice(m, { blast, swarm }).verdict[1]); });
+  }
+}
 const GITHUB_URL = "http://localhost:3000"; // the GitHub replica
 const RAIL_GROUPS = { shop: "Shop sample", tieto: "From the challenge repo" };
 function renderHeader() {
   // Left rail: one row per PR, like a list of chats, grouped by where the PR comes from.
   const shown = state.revisions.prs.filter((p) => !SESSION || p.id === state.prId);
-  $("prList").innerHTML = shown.map((p, i) => `${!SESSION && p.source !== shown[i - 1]?.source ? `<div class="rail-group">${esc(RAIL_GROUPS[p.source] ?? p.source)}</div>` : ""}<button type="button" class="rail-pr ${p.id === state.prId ? "active" : ""}" data-pr="${esc(p.id)}" title="${esc(p.title)}"><span class="rail-num">#${p.number}</span><span class="rail-title">${esc(p.title)}</span></button>`).join("");
+  $("prList").innerHTML = shown.map((p, i) => `${!SESSION && p.source !== shown[i - 1]?.source ? `<div class="rail-group">${esc(RAIL_GROUPS[p.source] ?? p.source)}</div>` : ""}<button type="button" class="rail-pr tone-${railTone[p.id] ?? "none"} ${p.id === state.prId ? "active" : ""}" data-pr="${esc(p.id)}" title="${esc(p.title)}"><span class="rail-num">#${p.number}</span><span class="rail-title">${esc(p.title)}</span></button>`).join("");
   for (const b of $("prList").querySelectorAll("button")) b.onclick = () => {
     const next = state.revisions.prs.find((p) => p.id === b.dataset.pr);
     state.notice = null;
@@ -106,6 +123,7 @@ function renderHeader() {
     $("app").classList.remove("rail-open");
     load(next.id, next.commits[0].sha, { keepSelection: false });
   };
+  loadRailTones();
   $("chatTitle").innerHTML = `<strong>PR #${currentPr().number}</strong>`;
   $("chatTitle").title = currentPr().title;
   $("revPills").innerHTML = revList().map((r) => `<button type="button" class="pill ${r.sha === state.sha ? "active" : ""}" data-sha="${r.sha}" title="${esc(r.message)}">${esc(r.label)} <span class="mono">${r.short}</span></button>`).join("");
@@ -595,6 +613,7 @@ const patchBlock = (file, from, to) => changeBlock(file.file, parseHunks(file.pa
 // ---------- blast radius: 3 agents did the same task; the real change is laid over what they touched ----------
 // Data: GET /api/blast?pr=<id> (recorded runs + the numbers, worked out in src/lib/blast.mjs).
 const BLAST_ZONES = [
+  ["outside", "Outside every zone", "No agent touched this. Only the real change did."],
   ["wide", "Wide zone", "Only the agent that changes too much touched this."],
   ["normal", "Normal zone", "The normal agent touched this. The careful agent did not."],
   ["tight", "Tight zone", "The careful agent touched this."],
@@ -777,11 +796,12 @@ function renderBlast() {
   const zoneRank = { tight: 0, normal: 1, wide: 2, outside: 3 };
   const sorted = (list) => [...list].sort((p, q) => zoneRank[p.zone] - zoneRank[q.zone] || (p.by.real ? 0 : 1) - (q.by.real ? 0 : 1) || p.label.localeCompare(q.label));
   const inZone = (z) => sorted(files.filter((x) => x.zone === z));
-  const boxesOr = (boxes) => (boxes.length ? `<div class="bz-boxes">${boxes.map(blastBox).join("")}</div>` : `<div class="bz-empty">Nothing here.</div>`);
+  // A target: outside every zone, then wide, normal and tight, each band inside the one before. Empty bands stay, thin.
   const zoneHtml = (i) => {
     if (i >= BLAST_ZONES.length) return "";
-    const [z, name, text] = BLAST_ZONES[i];
-    return `<div class="bz bz-${z}"><div class="bz-title">${name} <span>${text}</span></div>${boxesOr(inZone(z))}${zoneHtml(i + 1)}</div>`;
+    const [z, name, text] = BLAST_ZONES[i], boxes = inZone(z);
+    return `<div class="bz bz-${z}${boxes.length ? "" : " empty"}"><div class="bz-title" title="${esc(text)}">${name} <span>${boxes.length || "none"}</span></div>
+      ${boxes.length ? `<div class="bz-boxes">${boxes.map(blastBox).join("")}</div>` : ""}${zoneHtml(i + 1)}</div>`;
   };
   const cols = b.columns;
   const num = (n) => Number(n).toLocaleString("en");
@@ -808,38 +828,26 @@ function renderBlast() {
   const things = (arr) => (arr.length ? arr.map((t) => `<code>${esc(t.label)}</code>${t.kind === "doc" ? " (doc)" : t.kind === "test" ? " (unit test)" : ""}`).join(", ") : "nothing");
   const head = `<thead><tr><th></th>${cols.map((c) => `<th class="${c.id === "real" ? "real" : ""}">${esc(c.label)}${c.id !== "real" && !c.ok ? note(`<span class="bad-text">the run failed</span>`) : c.noChange ? note("made no change") : ""}</th>`).join("")}</tr></thead>`;
   const secs = (r) => (r.startedAt && r.endedAt ? `${Math.max(1, Math.round((new Date(r.endedAt) - new Date(r.startedAt)) / 1000))} s` : "");
-  // The picture and the table are always shown. The extras are small "show more" links.
-  const fold = (id, title, hint, body) => (id === "zones" || id === "files" ? body : `<details class="blast-runs"><summary>${title}: ${hint}</summary>${body}</details>`);
+  // The table is always shown inside the details. The extras are small "show more" links.
+  const fold = (id, title, hint, body) => (id === "files" ? body : `<details class="blast-runs"><summary>${title}: ${hint}</summary>${body}</details>`);
   const realCol = cols.find((c) => c.id === "real");
-  // The simple view: the trust score, why, and how many files each one changed. The rest sits in one fold.
-  const trust = blastScore(b), most = Math.max(1, ...cols.map((c) => c.files));
+  // The simple view: the scope score, why, and the zone picture. The rest sits in one fold.
+  const trust = blastScore(b);
   trust.tone = toolTone(trust.tone, b);
-  if (state.sel?.type === "blast") blastRun.details = true; // a picked file lives in the fold: keep it open
-  // The bars count files, split by kind, so they match the "code files" in the lines above.
-  const split = (c) => {
-    const mine = files.filter((x) => x.by[c.id]);
-    const parts = ["code", "test", "doc"].map((k) => [mine.filter((x) => x.kind === k).length, k]).filter(([n]) => n);
-    return parts.length ? ` <span class="muted">(${parts.map(([n, k]) => `${n} ${k}`).join(", ")})</span>` : "";
-  };
   el.innerHTML = `<div class="blast-top">${trustHtml(trust, BLAST_WHAT + blastCaveat(b), "Scope")}<button type="button" id="blastAgain">↻ Replay</button></div>
     ${whyHtml(trust)}
-    <div class="bars"><div class="bars-title">Files each one changed</div>${cols.map((c) => `<div class="bar-row${c.id === "real" ? " real" : ""}"><span>${esc(BLAST_SHORT[c.id] ?? c.label)}${c.id === "real" ? "" : " agent"}</span><span class="bar"><i style="width:${Math.round((100 * c.files) / most)}%"></i></span><b>${c.files} file${c.files === 1 ? "" : "s"}${split(c)}</b></div>`).join("")}</div>
+    <div class="blast-zones">${zoneHtml(0)}</div>
+    <div class="legend blast-legend">
+      <span><i class="pip pip-minimal on"></i> careful</span>
+      <span><i class="pip pip-normal on"></i> normal</span>
+      <span><i class="pip pip-wide on"></i> changes too much</span>
+      <span><i class="sw sw-real"></i> the real change</span>
+      <span class="muted">Click a file to compare.</span>
+    </div>
     <div class="muted swarm-rec">3 agents${b.model ? `, ${esc(modelName(b.model))}` : ""}, recorded ${esc(b.recordedAt.slice(0, 10))}, no agent runs now.</div>
     <details class="tool-details" id="blastDetails" ${blastRun.details ? "open" : ""}><summary>Show the details</summary>
-    <p class="blast-what">The coloured zones show the files the 3 agents touched. The thick outline is the real change.</p>
     <div class="blast-label ${esc(b.label.tone)}"><span class="stamp-label">Trust label</span><strong>${esc(b.label.text)}</strong><span>${esc(b.label.how)}</span></div>
     ${blastTestsHtml(b)}
-    ${fold("zones", "Zone picture", "Which files each agent touched, and where the real change sits", `
-    <div class="blast-zones">${zoneHtml(0)}
-      <div class="bz bz-outside"><div class="bz-title">Outside every zone <span>No agent touched this. Only the real change did.</span></div>${boxesOr(inZone("outside"))}</div>
-    </div>
-    <div class="legend blast-legend">
-      <span><i class="pip pip-minimal on"></i> careful agent</span>
-      <span><i class="pip pip-normal on"></i> normal agent</span>
-      <span><i class="pip pip-wide on"></i> agent that changes too much</span>
-      <span><i class="sw sw-real"></i> thick outline: the real change</span>
-      <span class="muted">Click a file to see what each one changed in it.</span>
-    </div>`)}
     ${fold("files", "Lines changed per file", `Real change: ${num(realCol.files)} files, +${num(realCol.added)} −${num(realCol.removed)}`, `
     <table class="blast-table files">${head}<tbody>${fileRows}${totalRow}</tbody></table>
     <div class="blast-key muted"><span class="plus">+</span> lines added, <span class="minus">−</span> lines removed, · not touched. The real change is ${SESSION ? "the pull request under review" : "Tieto's AI-written branch, shown as a PR"}. ${esc(b.tests ? "The agents could not build the code; the unit tests were run afterwards on another machine (see above)." : b.notBuilt)}</div>`)}
@@ -1561,6 +1569,8 @@ function briefHtml() {
 }
 /** Every issue list in the chat shows the same live state. */
 function refreshIssues() {
+  const a = advice();
+  if (!a.waiting) paintRailTone(state.prId, a.verdict[1]);
   for (const el of $("thread").querySelectorAll(".advice-live")) el.innerHTML = adviceHtml();
   for (const el of $("thread").querySelectorAll(".scores-live")) el.innerHTML = scoresHtml();
   for (const el of $("thread").querySelectorAll(".next-live")) el.innerHTML = choicesHtml();
@@ -1621,8 +1631,8 @@ function scoreRows() {
  * A fixed rule, no AI: start at 100 and take points off for what the review and the tools found.
  * Missing proof means 0: the rules refuse a sign-off there.
  */
-function advice() {
-  const m = state.model, c2 = m.classifier2, sc = ui.scores[state.prId] ?? {}, parts = [];
+function advice(m = state.model, sc = ui.scores[state.prId] ?? {}) {
+  const c2 = m.classifier2, parts = [];
   const take = (n, why) => parts.push([n, why]);
   const important = m.review.findings.filter((f) => f.category !== "Minor").length, minor = m.review.findings.length - important;
   const blocked = c2.blockers.length > 0, red = c2.rule === "T-contradicted";
@@ -1682,7 +1692,7 @@ function adviceHtml() {
   const look = a.look
     ? `<p><b>Look at this first:</b> <button type="button" class="link" data-act="${a.look.act}" data-scope="${a.look.scope ?? ""}" data-sha="${a.look.sha ?? ""}">${esc(a.look.name)}</button>. ${esc(a.look.why)}</p>`
     : "";
-  return `<div class="short advice ${a.verdict[1]}"><span class="short-label">My advice · fixed rules, no AI</span>
+  return `<div class="short advice ${a.verdict[1]}" style="--score: ${a.waiting ? 0 : a.score}"><span class="short-label">My advice · fixed rules, no AI</span>
     <div class="advice-main"><span><strong>${a.verdict[0]}</strong><span class="advice-route">${routeHtml()}</span></span><span class="advice-score" title="Merge score. 100 = nothing found.">${a.waiting ? "…" : a.score}<small> / 100</small></span></div>
     ${look}
     <details class="since-line" data-more="advice" ${ui.openMore.has("advice") ? "open" : ""}><summary>How the score is worked out <button type="button" class="link advice-steps" data-act="page" data-page="review">Review steps</button></summary>
@@ -1704,6 +1714,7 @@ function scoresHtml() {
 function choicesHtml() {
   const fine = advice().verdict[0] === "Fine to merge";
   return `<div class="choices"><button type="button" class="choice${fine ? " main" : ""}" data-act="merge"><b>Merge this PR</b><span>Sign off with your name.</span></button>
+    <button type="button" class="choice map" data-act="tool" data-scope="pr"><b>Impact Map</b><span>What this change touches.</span></button>
     <button type="button" class="choice" data-act="ask"><b>Ask the agent</b><span>Why it was written this way.</span></button></div>`;
 }
 const nextHtml = () => `<p><b>What the tools say.</b> <span class="muted">Click one to drill down.</span></p>
