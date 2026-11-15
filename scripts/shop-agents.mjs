@@ -5,7 +5,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileRecord } from "../src/lib/blast.mjs";
-import { BRIEFS, SAMPLE_REPO } from "../src/lib/paths.mjs";
+import { BRIEFS, REVISIONS_FILE, SAMPLE_REPO } from "../src/lib/paths.mjs";
 
 export const MODEL = "claude-sonnet-5-5";
 const TIMEOUT_MS = 15 * 60 * 1000;
@@ -76,6 +76,15 @@ export const runAgent = (cwd, prompt, logs, name) =>
     });
   });
 
+/** Runs `tasks` (functions that return promises) with at most `limit` running at the same time. */
+export async function inBatches(tasks, limit = 3) {
+  const queue = [...tasks];
+  const worker = async () => {
+    while (queue.length) await queue.shift()();
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, queue.length) }, worker));
+}
+
 /** Drop a folder from paths in a reply, so only the path inside the repository is left. */
 const local = (text, home) => text.replace(new RegExp(home.split("/").map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[\\\\/]") + "[\\\\/]", "gi"), "");
 
@@ -118,9 +127,11 @@ Rules for this run:
 /**
  * The prompt for a shop PR: the shop's rules, the given "How to work" lines, then the PR description's
  * Requirement, Why, Before and after and Must preserve (from briefs/<pr>.json), and the linked
- * requirement word for word. The PR's approach, title, commits and code are left out.
+ * requirement word for word, read at the PR's first commit (a PR may add its own requirement file).
+ * The PR's approach, title, commits and code are left out.
  */
-export function shopPrompt(prId, howToWork, baseSha) {
+export function shopPrompt(prId, howToWork) {
+  const reqSha = JSON.parse(fs.readFileSync(REVISIONS_FILE, "utf8")).prs.find((p) => p.id === prId).commits[0].sha;
   const brief = JSON.parse(fs.readFileSync(path.join(BRIEFS, `${prId}.json`), "utf8"));
   const lower = (s) => s[0].toLowerCase() + s.slice(1);
   const reqFile = brief.requirement ? `requirements/${brief.requirement}.md` : null;
@@ -133,6 +144,10 @@ export function shopPrompt(prId, howToWork, baseSha) {
     `Before and after: Before: ${lower(brief.before)} After: ${lower(brief.after)}`,
     `Must preserve: ${brief.preserve}`,
   ];
-  if (reqFile) parts.push(`## The requirement the Requirement row points to (${reqFile}, word for word)\n\n${show(SAMPLE_REPO, baseSha, reqFile).replace(/\n$/, "")}`);
+  if (reqFile) {
+    const text = show(SAMPLE_REPO, reqSha, reqFile);
+    if (text === null) throw new Error(`${reqFile} is not in commit ${reqSha.slice(0, 7)}`);
+    parts.push(`## The requirement the Requirement row points to (${reqFile}, word for word)\n\n${text.replace(/\n$/, "")}`);
+  }
   return parts.join("\n\n") + "\n";
 }

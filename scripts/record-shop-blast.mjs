@@ -8,7 +8,7 @@
 // requirement and the shop's code from before the change, never the pull request. Each patch is laid
 // on its own copy of the base commit, and the diff is read back from there. This mode calls no model.
 //
-// --run: runs the three agents now, at the same time, with `claude -p` (scripts/shop-agents.mjs).
+// --run: runs the three agents now, at the same time (at most 3), with `claude -p` (scripts/shop-agents.mjs).
 // Each prompt is the shop's rules, the "How to work" lines of the app's Blast radius prompts
 // (data/tieto/ju26-issue-2283/blast-prompts), and the PR description's requirements from
 // briefs/<pr>.json. The full prompt, model, times and tool calls are saved with each run.
@@ -21,7 +21,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { AGENTS } from "../src/lib/blast.mjs";
 import { DATA, DEMO, REVISIONS_FILE, ROOT, SAMPLE_REPO } from "../src/lib/paths.mjs";
-import { CLAUDE_ARGS, MODEL, copyFiles, freshCopy, git, readRun, realFiles, runAgent, shopPrompt, show, unix } from "./shop-agents.mjs";
+import { CLAUDE_ARGS, MODEL, copyFiles, freshCopy, git, inBatches, readRun, realFiles, runAgent, shopPrompt, show, unix } from "./shop-agents.mjs";
 
 const arg = (name, def) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -63,9 +63,9 @@ const real = {
 };
 
 // ---- the 3 agents: run now, or each recorded patch on a clean copy of the base commit ----
-const prompts = Object.fromEntries(AGENTS.map((id) => [id, run ? shopPrompt(prId, instructionOf(id), baseSha) : null]));
+const prompts = Object.fromEntries(AGENTS.map((id) => [id, run ? shopPrompt(prId, instructionOf(id)) : null]));
 if (run && !recordOnly) {
-  await Promise.all(todo.map((id) => {
+  await inBatches(todo.map((id) => () => {
     const cwd = path.join(home, id);
     freshCopy(cwd, baseSha);
     return runAgent(cwd, prompts[id], logs, id);
@@ -134,7 +134,7 @@ const out = run
       notBuilt: "The agents had no shell. Nobody ran the unit tests on their changes.",
       given: {
         file: reqFile,
-        text: reqFile ? show(SAMPLE_REPO, baseSha, reqFile) : null,
+        text: reqFile ? show(SAMPLE_REPO, headSha, reqFile) : null,
         kept: ["The pull request description's Why, Before and after, and Must preserve", ...(reqFile ? [`The requirement ${pr.requirement}, word for word`] : []), "The shop's code and tests from before the change"],
         leftOut: ["The pull request: its title, approach, commits and code"],
         note: reqFile ? null : "No requirement is linked to this pull request.",
@@ -158,7 +158,7 @@ const out = run
       notBuilt: "This record did not run the tests on the agents' changes. Each agent ran the shop's tests itself and said what it saw in its reply.",
       given: {
         file: reqFile,
-        text: show(SAMPLE_REPO, baseSha, reqFile),
+        text: show(SAMPLE_REPO, headSha, reqFile),
         kept: [`The requirement ${pr.requirement}, word for word`, "The shop's code and tests from before the change"],
         leftOut: ["The pull request: its title, description, commits and code"],
         note: `${pr.requirement} itself names the two workflows it affects, Checkout and Order Import.`,

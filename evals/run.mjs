@@ -18,6 +18,7 @@ import { SENTENCE_MAX, cutAtWord, issueList, verdictSentence } from "../src/lib/
 import { DATA } from "../src/lib/paths.mjs";
 import { prOverlays, reviewSampleChange } from "../src/lib/edit-check.mjs";
 import { editCheckSummary } from "../src/lib/edit-check-view.mjs";
+import { shopPrompt } from "../scripts/shop-agents.mjs";
 import { ROOT } from "../src/lib/paths.mjs";
 
 const expected = JSON.parse(fs.readFileSync(path.join(ROOT, "evals", "expected.json"), "utf8"));
@@ -246,6 +247,9 @@ group = "Swarm agreement";
 {
   const similar = (prId) => buildSwarm(prId).runs.map((r) => r.similar);
   check("docs-only change: agents that edit the same doc agree", similar("docs-example"), [true, true, true, true, true]);
+  // A PR may add its own requirement file, so the agents' prompt reads it at the PR's commit, not at the base.
+  const promptMisses = (p) => !shopPrompt(p.id, "-").includes(readFileAt(p.commits[0].sha, `requirements/${p.requirement}.md`).trim());
+  check("every shop PR with a requirement: the agents' prompt has it word for word", revisions.prs.filter((p) => p.requirement && promptMisses(p)).map((p) => p.id), []);
   // A docs-only real change, against a run that failed and one that changed nothing.
   const doc = { file: "docs/pricing.md", kind: "doc", added: 1, removed: 0, patch: "@@ -1 +1 @@\n+x", functions: [] };
   const run = (n, exitCode, files) => ({ n, exitCode, files, reply: "" });
