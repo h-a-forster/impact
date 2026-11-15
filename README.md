@@ -17,6 +17,14 @@ On the real PR #1 (issue 2283) the suite is green (170/170), the route is *Waiti
 evidence*, and the check the AI reviewer asked for then **fails on the change**: severity goes to High
 and the route to *Human review required*.
 
+**The AI can stop a merge, never start one.** The AI review advises; fixed rules set severity and
+route. A finding can raise severity or keep a change off the auto-merge route, but no reviewer
+output can put severity below Classifier 1's or the route on a lighter one (auto-merge is lighter
+than human review, which is lighter than waiting for checks). A silent review is one condition for
+auto-merge, never enough alone. `npm run brake` checks this on every demo commit against every kind
+of reviewer output: silent, each finding category, made-up citations, broken, empty or missing
+answers, and reviews made for other inputs.
+
 ## Run it
 
 Needs Node 22.6+ (built with Node 26) and Git.
@@ -47,6 +55,7 @@ and no Graphify install.
 | `npm run reset` | Clear recorded human decisions. |
 | `npm run export:replica` | Write the shop-sample repo and PRs into the GitHub replica's data folder. |
 | `npm run fastlane` | Try 92 ways to get the wrong change onto the auto-merge route: altered changes, a missing or broken AI reviewer, files that only look like documents (links, executables, binaries), tests dropped from the build, changes that only delete lines, built through git itself, and instructions to the AI reviewer hidden in the description, a comment or a document ([docs/hidden-instructions.md](docs/hidden-instructions.md)). Every one must be held. |
+| `npm run brake` | Feed every kind of AI reviewer output into every demo commit. The route must never get lighter and severity never drop below Classifier 1's. |
 
 ## Run it inside the GitHub replica
 

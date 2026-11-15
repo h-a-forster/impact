@@ -1173,7 +1173,7 @@ function renderReview() {
   el.innerHTML = `<div class="card-head"><div class="head-left"><h2>Review steps</h2><span class="muted">Rules: <button type="button" class="link" data-doc="REVIEW.md">REVIEW.md</button> · <button type="button" class="link" data-doc="review-policy.yml">review-policy.yml</button></span></div>${cardToggle("reviewCard")}</div>
     <div class="step"><div class="step-head"><span class="step-n">1</span><strong>Classifier 1</strong> ${sev(c1.severity)} <span class="muted">fixed rules · ${esc(c1.rule)}</span></div>
       <div>${esc(c1.reason)}</div></div>
-    <div class="step"><div class="step-head"><span class="step-n">2</span><strong>AI review</strong> <span class="tag ${r.findings.length ? "warn" : "ok"}">${r.findings.length} finding${r.findings.length === 1 ? "" : "s"}</span> <span class="muted">advice only</span></div>
+    <div class="step"><div class="step-head"><span class="step-n">2</span><strong>AI review</strong> <span class="tag ${r.findings.length ? "warn" : "ok"}">${r.findings.length} finding${r.findings.length === 1 ? "" : "s"}</span> <span class="muted" title="Advises only. It can raise the risk, never lower it.">advice only</span></div>
     <div>${esc(r.summary)}</div>
     ${r.findings.map((f) => `<details class="finding ${f.category === "Minor" ? "plain" : "warn"}">
         <summary><span class="tag ${f.category === "Minor" ? "" : "warn"}">${esc(f.category)}</span> <strong>${esc(f.title)}</strong></summary>
