@@ -253,7 +253,6 @@ function showDrawing(kind) {
   $("graphFlow").hidden = kind !== "boxes";
   $("graphVis").hidden = kind !== "dots";
   $("graphReach").hidden = kind !== "reach";
-  $("graphWrap").parentElement.dataset.draw = kind;
 }
 function drawDots(el, nodes, allEdges, onNode, onEdge) {
   const ids = new Set(nodes.map((n) => n.id));

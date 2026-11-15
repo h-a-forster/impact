@@ -116,7 +116,6 @@ button.primary { background: var(--accent); color: var(--card); border-color: va
 /* Graph */
 .graph-wrap { border: 1px solid var(--line); border-radius: 8px; background: var(--bg); position: relative; overflow: hidden; }
 #graphFlow { height: 420px; }
-[data-draw="dots"] .for-boxes, [data-draw="boxes"] .for-dots { display: none; }
 /* Full map: step controls */
 .timeline { display: flex; align-items: center; gap: 6px; }
 .timeline button { min-width: 38px; }
@@ -295,7 +294,6 @@ details.finding > summary { cursor: pointer; }
 .form-grid { display: grid; grid-template-columns: 170px 1fr; gap: 10px 12px; align-items: start; }
 .form-grid input[type="text"], .form-grid textarea { width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; background: var(--card); }
 .form-grid textarea { min-height: 52px; resize: vertical; }
-.actions { display: flex; gap: 14px; flex-wrap: wrap; }
 .history { list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-direction: column; gap: 6px; }
 .history li { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
 .history li.other { background: var(--soft); color: var(--muted); }
