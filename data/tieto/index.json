@@ -1,6 +1,5 @@
 {
-  "note": "Recorded review packs for the real Tieto sample PRs. Produced by the teammate project Impact Ledger. Read-only here.",
-  "source": "https://github.com/h-a-forster/junction26-earned-trust",
+  "note": "Recorded review packs for the real Tieto sample PRs. Produced by the companion tool Impact Ledger. Read-only here.",
   "sourceCommit": "8435e5b528eb9e9863ff295012ed4fc689383c0b",
   "repo": "te-industry-tech-office/junction26-messagepack-csharp",
   "changes": [

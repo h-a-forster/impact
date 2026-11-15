@@ -2,7 +2,7 @@
 // Recorded by scripts/record-swarm.mjs into data/tieto/<pr>/swarm.json. This file only does the maths.
 // The shop sample's runs live in data/shop/<pr>/swarm.json (scripts/record-shop-swarm.mjs), which carries its own real change.
 //
-// THE SIMILARITY RULE (the README says the same):
+// THE SIMILARITY RULE:
 //   Each change is a set of "things": the product code files it touches, plus the functions
 //   in them it edits that already existed. Docs and unit tests are left out, as in the trust label.
 //   Similarity = things both changes touch / things either change touches   (Jaccard, 0 to 100%)

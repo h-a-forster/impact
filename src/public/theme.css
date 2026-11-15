@@ -1,4 +1,4 @@
-/* Look B: Instrument. A quiet, dense dev tool: neutral near-black, hairlines, mono for data, white for the primary action.
+/* Theme: a quiet, dense dev tool: neutral near-black, hairlines, mono for data, white for the primary action.
    Blue is for focus only. Loads after style.css and only overrides colours, type, borders, radius and spacing.
 
    Tokens
@@ -61,7 +61,7 @@ code { border-radius: 4px; background: var(--soft); }
 .ask:focus-within { border-color: var(--focus); }
 
 /* Links: ink with a quiet underline, not blue */
-.link, .about-link, .back, .tool-details > summary, .issue-more summary, .minor > summary,
+.link, .about-link, .tool-details > summary, .issue-more summary, .minor > summary,
 .pr-links + .since-line summary, .about-body summary, .blast-runs summary { color: var(--ink); }
 .link { text-decoration-color: var(--muted); text-underline-offset: 3px; }
 .link:hover { text-decoration-color: var(--ink); }

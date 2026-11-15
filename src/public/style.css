@@ -116,7 +116,6 @@ button.primary { background: var(--accent); color: var(--card); border-color: va
 /* Graph */
 .graph-wrap { border: 1px solid var(--line); border-radius: 8px; background: var(--bg); position: relative; overflow: hidden; }
 #graphFlow { height: 420px; }
-[data-draw="dots"] .for-boxes, [data-draw="boxes"] .for-dots { display: none; }
 /* Full map: step controls */
 .timeline { display: flex; align-items: center; gap: 6px; }
 .timeline button { min-width: 38px; }
@@ -295,7 +294,6 @@ details.finding > summary { cursor: pointer; }
 .form-grid { display: grid; grid-template-columns: 170px 1fr; gap: 10px 12px; align-items: start; }
 .form-grid input[type="text"], .form-grid textarea { width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; background: var(--card); }
 .form-grid textarea { min-height: 52px; resize: vertical; }
-.actions { display: flex; gap: 14px; flex-wrap: wrap; }
 .history { list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-direction: column; gap: 6px; }
 .history li { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
 .history li.other { background: var(--soft); color: var(--muted); }
@@ -326,15 +324,11 @@ details.finding > summary { cursor: pointer; }
 .code-line.hunk { background: var(--soft); color: var(--muted); }
 pre.raw { border: 1px solid var(--line); border-radius: 8px; padding: 9px; background: var(--bg); overflow: auto; max-height: 300px; font-size: 12px; margin: 6px 0; }
 
-/* Back link */
-.back { color: var(--accent); text-decoration: none; font-weight: 600; }
-.back:hover { text-decoration: underline; }
-
 /* Session mode: the whole app, for one pull request and one commit, judged by a person in a timed test.
-   The rail lists only that pull request and the pills stop at that commit (app.js). Hidden: the way out
-   to GitHub, "Reset demo" (it deletes the sign-off the test reads), the eval-case mark (it writes data),
+   The rail lists only that pull request and the pills stop at that commit (app.js). Hidden:
+   "Reset demo" (it deletes the sign-off the test reads), the eval-case mark (it writes data),
    and the whole-repo map (its saved picture is of the demo's repository, not the shop). */
-body.session .back, body.session #resetDemo, body.session .evalcase, body.session #evalBtn, body.session [data-act="commit"],
+body.session #resetDemo, body.session .evalcase, body.session #evalBtn, body.session [data-act="commit"],
 body.session [data-scope="full"] { display: none !important; }
 
 /* Review steps */
@@ -739,7 +733,7 @@ details.minor { margin-top: 10px; }
 /* The ☰ button shows the rail over the chat. */
 .app.rail-open .rail { display: flex !important; position: fixed; left: 0; top: 0; bottom: 0; width: 264px; z-index: 10; box-shadow: 10px 0 30px rgba(0, 0, 0, .2); }
 
-/* Embedded in the GitHub replica's PR tab, or no analysis for the linked PR: no rail. */
+/* Embedded in a PR page, or no analysis for the linked PR: no rail. */
 body.embed .app, .app.bare { grid-template-columns: minmax(0, 1fr); }
 body.embed .app.canvas-open { grid-template-columns: minmax(340px, 420px) minmax(0, 1fr); }
 body.embed .rail, body.embed .rail-btn, .app.bare .rail, .app.bare .composer, .app.bare .pills { display: none !important; }

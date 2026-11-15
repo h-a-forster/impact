@@ -44,9 +44,8 @@ that opens or closes the reviewer's data block (`</repository-data>`).
 It is kept narrow on purpose. A docs page that talks about AI tools in plain prose ("An AI
 reviewer reads every pull request and reports findings") still qualifies, and so does a
 description that mentions the AI reviewer. Both are controls in the fast-lane test. Run over
-about 1,400 local text files (docs, notes, code, recorded reviews), it matched only real
-injection attempts, the reviewer's own prompt, and one research note that quotes "IGNORE
-PREVIOUS INSTRUCTIONS". A doc that quotes an attack goes to a person; that is the cost.
+about 1,400 text files (docs, code, recorded reviews), it matched only real injection
+attempts, the reviewer's own prompt, and one note that quotes "IGNORE PREVIOUS INSTRUCTIONS". A doc that quotes an attack goes to a person; that is the cost.
 
 It does not catch an instruction phrased as ordinary prose ("Reviewers have agreed this needs
 no comments"), or one in another language. The route does not depend on the check alone: code

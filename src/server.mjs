@@ -133,7 +133,7 @@ const handler = async (req, res) => {
       return json(res, 200, buildFullMap(tieto.length ? { ...revisions, prs: tieto } : revisions));
     }
     if (url.pathname === "/api/summary") {
-      // Used by the GitHub replica: live state for the Impact review check, per commit.
+      // Live state for the Impact review check, per commit.
       const revisions = demoRevisions();
       const pr = findPr(revisions, url.searchParams.get("repo"), url.searchParams.get("pr"));
       if (!pr) return json(res, 404, { error: `No Impact Map analysis for ${url.searchParams.get("repo")} PR #${url.searchParams.get("pr")}`, analysedRepo: revisions.github.fullName });
@@ -186,5 +186,4 @@ server.listen(PORT, HOST ?? "127.0.0.1", () => {
   if (PUBLIC_DEMO) console.log("Public demo mode: nothing a visitor does is saved on the server.");
   console.log(`Code Review Impact Map: http://localhost:${PORT}`);
   console.log(`Open Impact Map link for the demo PR: http://localhost:${PORT}/#pr=ju26-issue-2283`);
-  console.log(`GitHub replica link form:              http://localhost:${PORT}/?repo=<owner/name>&pr=<number>&sha=<sha>`);
 });

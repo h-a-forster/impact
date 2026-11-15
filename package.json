@@ -14,7 +14,6 @@
     "fastlane": "node evals/fast-lane.mjs",
     "brake": "node evals/brake.mjs",
     "reset": "node -e \"require('fs').rmSync('.demo/decisions.json',{force:true});console.log('Decisions cleared.')\"",
-    "export:replica": "node scripts/export-replica.mjs",
     "planted": "node scripts/planted.mjs",
     "editcheck": "node evals/edit-check.mjs",
     "gate": "node scripts/gate.mjs",

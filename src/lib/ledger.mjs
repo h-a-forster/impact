@@ -1,6 +1,6 @@
 // Adapter: recorded Impact Ledger packs (data/tieto/) -> the model the Impact Map shows.
 //
-// The packs come from the teammate project (https://github.com/h-a-forster/junction26-earned-trust).
+// The packs come from the companion tool Impact Ledger, built by the same team.
 // They hold the real Tieto sample PRs: git facts, Roslyn symbol links, recorded `dotnet test` runs
 // on base and head, one recorded AI review per change, and the ledger rows built from them.
 // Nothing is recomputed here. Severity and route are read from that project's factory.json.
@@ -323,6 +323,6 @@ export function buildLedgerModel(pr, key) {
     trackRecord: { kind: "planted-faults-upstream", area: pack.area_trust.area, tier: pack.area_trust.tier, basis: pack.area_trust.basis },
     readingList: { depth: pack.routing[stage].depth, rows: pack.routing[stage].reading_list.length, lines: pack.routing[stage].reading_lines, diffLines: pack.routing[stage].diff_lines },
     labels: { claimVerifier: "Labels from ledger row states (rule-based)" },
-    provenance: { producedBy: "Impact Ledger", source: index.source, sourceCommit: index.sourceCommit, packSha256: pack.pack_sha256 },
+    provenance: { producedBy: "Impact Ledger", sourceCommit: index.sourceCommit, packSha256: pack.pack_sha256 },
   };
 }

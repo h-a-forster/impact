@@ -4,7 +4,7 @@
     "by": "Stelian Vultur (vultuste) · commit message on branch ju26-issue-2283",
     "text": "implementation for #2283"
   },
-  "generatedBy": "Written by AI (Claude), saved for the demo",
+  "generatedBy": "AI-written, saved for this demo",
   "verdict": {
     "classifier1": "The changed code is used in 31 other places that this PR does not edit.",
     "reason": "One extra unit test passes on the old code and fails on the new code. A named person must decide if that is OK.",

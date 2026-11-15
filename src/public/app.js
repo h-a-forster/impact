@@ -138,7 +138,6 @@ function loadRailTones() {
       .then(([m, blast, swarm]) => { if (!m.error && railTone[p.id] === null) paintRailTone(p.id, advice(m, { blast, swarm }).verdict[1]); });
   }
 }
-const GITHUB_URL = "http://localhost:3000"; // the GitHub replica
 const RAIL_GROUPS = { shop: "Shop sample", tieto: "From the challenge repo" };
 function renderHeader() {
   // Left rail: one row per PR, like a list of chats, grouped by where the PR comes from.
@@ -156,7 +155,6 @@ function renderHeader() {
   $("chatTitle").title = currentPr().title;
   $("revPills").innerHTML = revList().map((r) => `<button type="button" class="pill ${r.sha === state.sha ? "active" : ""}" data-sha="${r.sha}" title="${esc(r.message)}">${esc(r.label)} <span class="mono">${r.short}</span></button>`).join("");
   for (const b of $("revPills").querySelectorAll("button")) b.onclick = () => load(state.prId, b.dataset.sha);
-  $("backLink").href = `${GITHUB_URL}/${currentPr().repo}/pull/${currentPr().number}`;
   const n = $("notice");
   n.hidden = !state.notice;
   n.textContent = state.notice ?? "";
@@ -280,7 +278,6 @@ function showDrawing(kind) {
   $("graphFlow").hidden = kind !== "boxes";
   $("graphVis").hidden = kind !== "dots";
   $("graphReach").hidden = kind !== "reach";
-  $("graphWrap").parentElement.dataset.draw = kind;
 }
 function drawDots(el, nodes, allEdges, onNode, onEdge) {
   const ids = new Set(nodes.map((n) => n.id));
@@ -2387,7 +2384,7 @@ async function init() {
   initTheme();
   state.revisions = await api("/api/revisions");
   const h = readHash();
-  // Link form used by the GitHub replica: /?repo=<owner/name>&pr=<number>&sha=<sha>&embed=1
+  // Link form for a PR page that embeds the map: /?repo=<owner/name>&pr=<number>&sha=<sha>&embed=1
   const q = new URLSearchParams(location.search);
   if (q.get("embed") === "1" && !SESSION) document.body.classList.add("embed"); // a session shows the whole app
   if (SESSION) document.body.classList.add("session");
