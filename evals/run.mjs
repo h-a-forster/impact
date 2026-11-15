@@ -414,8 +414,8 @@ group = "Public demo";
     check("reset answers", (await call("/api/reset", {})).status, 200);
     check("no shared file changed", sharedNow(), before);
     let limitedAt = null;
-    for (let n = 1; n <= 200 && !limitedAt; n++) if ((await call("/no-such-page")).status === 429) limitedAt = n;
-    check("a visitor over 120 requests a minute gets 429", limitedAt !== null && limitedAt <= 121, true);
+    for (let n = 1; n <= 700 && !limitedAt; n++) if ((await call("/no-such-page")).status === 429) limitedAt = n;
+    check("a visitor over 600 requests a minute gets 429", limitedAt !== null && limitedAt <= 601, true);
   } catch (err) {
     check("the public demo app answers", err.message, "no error");
   } finally {

@@ -16,7 +16,9 @@ const HOST = process.env.HOST; // unset: this machine only (127.0.0.1 and ::1)
 // Public demo (PUBLIC_DEMO=1, for a hosted copy): visitors can try everything, but no request changes
 // the shared files. Sign-offs and eval marks are checked and sent back, and the visitor's browser keeps them.
 const PUBLIC_DEMO = process.env.PUBLIC_DEMO === "1";
-const RATE_LIMIT = 120; // requests per visitor per minute, public demo only
+// Requests per visitor address per minute, public demo only. One page load is about 30 requests,
+// and people at one venue can share an address.
+const RATE_LIMIT = 600;
 const PUBLIC = path.join(ROOT, "src", "public");
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".mjs": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml" };
 // Browser-safe lib modules the page imports, so the UI and the evals share one copy.
