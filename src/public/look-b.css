@@ -62,11 +62,11 @@ code { border-radius: 4px; background: var(--soft); }
 
 /* Links: ink with a quiet underline, not blue */
 .link, .about-link, .back, .tool-details > summary, .issue-more summary, .minor > summary,
-.short .since-line summary, .about-body summary, .blast-runs summary { color: var(--ink); }
+.pr-links + .since-line summary, .about-body summary, .blast-runs summary { color: var(--ink); }
 .link { text-decoration-color: var(--muted); text-underline-offset: 3px; }
 .link:hover { text-decoration-color: var(--ink); }
-.short .since-line summary, .tool-details > summary, .issue-more summary { color: var(--muted); }
-.short .since-line summary:hover, .tool-details > summary:hover, .issue-more summary:hover { color: var(--ink); }
+.pr-links + .since-line summary, .tool-details > summary, .issue-more summary { color: var(--muted); }
+.pr-links + .since-line summary:hover, .tool-details > summary:hover, .issue-more summary:hover { color: var(--ink); }
 
 /* Buttons: white primary, hairline secondary */
 button { border-radius: var(--r); border-color: var(--line); background: transparent; }
@@ -117,46 +117,24 @@ button.primary, .choice.main, .send { background: var(--ink); border-color: var(
 .bubble { border-radius: var(--r); background: var(--soft); border: 1px solid var(--line); padding: 8px 12px; }
 
 .pr-title { font-size: 20px; line-height: 1.3; }
-.pr-sub { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+.pr-sub { font-size: 14px; line-height: 1.55; }
+.pr-links .link { color: var(--muted); } .pr-links .link:hover { color: var(--ink); }
 
 /* Eyebrow labels that only add reading are hidden; the blocks speak for themselves */
-.short-label, .tldr-tag { display: none; }
+.tldr-tag { display: none; }
 .stamp-label, .trust-num span { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 12px; color: var(--muted); }
 
-/* PR and review in short: plain text under a hairline, no colour bars, capped line length.
+/* Verdict block: the first thing the eye lands on. One box, a risk-colour bar, the sentence first.
    The only colour bar on the first screen belongs to the verdict. */
-.short { border-left: 0; padding: 0; margin: 0 0 16px; max-width: 64ch; }
-.short + .short { border-top: 1px solid var(--line); padding-top: 12px; }
-.short > p { font-size: 14px; line-height: 1.55; margin: 0 0 6px; }
-.short .tags { margin-bottom: 6px; }
-.short .link { font-size: 13px; color: var(--muted); }
-.short .link:hover { color: var(--ink); }
-
-/* Verdict block: the first thing the eye lands on. One box, thick risk-colour bar, verdict large, score beside it. */
 .short.advice {
-  max-width: none; border: 1px solid var(--line); border-left: 6px solid var(--muted); border-radius: var(--r);
-  background: var(--card); padding: 14px 18px 12px; margin: 4px 0 20px;
+  border: 1px solid var(--line); border-left: 4px solid var(--muted); border-radius: var(--r);
+  background: var(--card); padding: 14px 18px; margin: 0 0 16px;
 }
 .short.advice.ok { border-left-color: var(--ok); background: color-mix(in srgb, var(--ok) 6%, var(--card)); }
 .short.advice.warn { border-left-color: var(--warn); background: color-mix(in srgb, var(--warn) 6%, var(--card)); }
 .short.advice.bad { border-left-color: var(--bad); background: color-mix(in srgb, var(--bad) 6%, var(--card)); }
-.advice-main { flex-wrap: wrap; justify-content: flex-start; align-items: baseline; column-gap: 16px; row-gap: 10px; margin: 0 0 10px; }
-.advice-main strong { font-size: 26px; line-height: 1.15; font-weight: 650; letter-spacing: -0.02em; }
-.advice-score { font-family: var(--mono); font-size: 22px; font-weight: 500; letter-spacing: -0.02em; }
-.advice-score small { font-family: var(--mono); font-size: 12px; letter-spacing: 0; color: var(--muted); font-weight: 400; }
-.advice-main::after {
-  content: ""; flex-basis: 100%; height: 4px;
-  background: linear-gradient(to right, currentColor calc(round(down, var(--score, 0) * 1%, 5%)), var(--line) 0);
-  -webkit-mask: repeating-linear-gradient(to right, #000 0 calc(5% - 2px), transparent calc(5% - 2px) 5%);
-          mask: repeating-linear-gradient(to right, #000 0 calc(5% - 2px), transparent calc(5% - 2px) 5%);
-}
-.short.advice > p { font-size: 14px; line-height: 1.5; margin: 0 0 6px; }
+.verdict-say { font-size: 19px; line-height: 1.35; letter-spacing: -0.01em; }
 .short.advice .link { font-size: inherit; color: var(--ink); font-weight: 600; }
-.short.advice > p.advice-tally { font-family: var(--mono); font-size: 11.5px; text-align: left; margin: 0 0 8px; }
-.short.advice > p.advice-outside { font-size: 13px; color: var(--muted); }
-.short.advice > p.advice-outside b { color: var(--ink); font-weight: 600; }
-.short.advice .since-line { font-size: 12px; margin: 4px 0 0; }
-.short.advice .since-line p { font-size: 12.5px; color: var(--muted); }
 .advice-parts { font-family: var(--mono); font-size: 12px; color: var(--muted); }
 .advice-parts b { color: var(--ink); }
 
@@ -166,9 +144,6 @@ button.primary, .choice.main, .send { background: var(--ink); border-color: var(
 .tag.bad, .chip.bad, .chip.failed, .chip.unverified { border-color: color-mix(in srgb, var(--bad) 50%, transparent); background: color-mix(in srgb, var(--bad) 10%, transparent); color: var(--bad); }
 .tag.warn, .chip.warn, .chip.stale, .chip.missing, .chip.pending { border-color: color-mix(in srgb, var(--warn) 50%, transparent); background: color-mix(in srgb, var(--warn) 10%, transparent); color: var(--warn); }
 .tag.info, .chip.info, .chip.edited { border-color: color-mix(in srgb, var(--ink) 35%, transparent); background: color-mix(in srgb, var(--ink) 6%, transparent); color: var(--ink); }
-
-/* Issue list bullets: small squares */
-.brief li::before { border-radius: 2px; width: 6px; height: 6px; top: .68em; }
 
 /* Tool scores: a real table, row rules and a key hint. The rows share one grid, so the result column fits its longest label. */
 .scores { display: grid; grid-template-columns: 160px max-content minmax(0, 1fr) auto; border-radius: var(--r); border-color: var(--line); margin: 8px 0 16px; }
